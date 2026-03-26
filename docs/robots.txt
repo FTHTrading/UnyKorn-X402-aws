@@ -1,4 +1,14 @@
 User-agent: *
 Allow: /
 
+# Agent Discovery (A2A Protocol)
+# AI agents and orchestrators should check these well-known endpoints:
+#   /.well-known/agent.json  — A2A Agent Card (Google A2A protocol)
+#   /.well-known/x402-pay    — x402 payment protocol descriptor
+#   /.well-known/ai-plugin.json — OpenAI plugin manifest
+#   /.well-known/openapi.json — OpenAPI 3.1 specification
+
+# LLM discovery — see /llms.txt for structured agent service info
+
 Sitemap: https://407.unykorn.org/sitemap.xml
+Sitemap: https://fthtrading.github.io/UnyKorn-X402-aws/sitemap.xml

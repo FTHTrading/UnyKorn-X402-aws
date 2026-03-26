@@ -20,6 +20,7 @@ import { extractProof, ProofParseError } from "./proof";
 import { emitApiRequest } from "./metering";
 import { interpolateBraces } from "../../fth-x402-core/src/helpers";
 import { createServiceHeaders } from "./service-auth";
+import { handleWellKnown } from "./a2a";
 
 export default {
   async fetch(
@@ -35,6 +36,12 @@ export default {
         request,
         new Response(null, { status: 204 }),
       );
+    }
+
+    // --- A2A / .well-known discovery endpoints ---
+    if (url.pathname.startsWith("/.well-known/")) {
+      const wellKnownResponse = handleWellKnown(url.pathname);
+      if (wellKnownResponse) return withCors(request, wellKnownResponse);
     }
 
     if (url.pathname === "/") {

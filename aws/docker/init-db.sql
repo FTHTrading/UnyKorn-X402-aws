@@ -358,3 +358,32 @@ CREATE INDEX IF NOT EXISTS idx_guardian_revenue_time
 -- Ensure the app user has full access
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO fth_x402_app;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO fth_x402_app;
+
+-- ═══════════════════════════════════════════════════════════
+--  Seed fth.* namespace records (A2A discovery + paid routes)
+-- ═══════════════════════════════════════════════════════════
+
+INSERT INTO namespace_records (fqn, owner, resolve_type, resolve_network, resolve_value, visibility, payment_required, payment_config)
+VALUES
+  -- Core services
+  ('fth.x402.gateway', 'fth-ops', 'endpoint', 'cloudflare', 'https://api.fth.trading', 'public', false, null),
+  ('fth.x402.facilitator', 'fth-ops', 'endpoint', 'aws-ec2', 'https://facilitator.l1.unykorn.org', 'public', false, null),
+  ('fth.x402.treasury', 'fth-ops', 'endpoint', 'aws-ec2', 'https://treasury.l1.unykorn.org', 'public', false, null),
+  ('fth.x402.guardian', 'fth-ops', 'endpoint', 'aws-ec2', 'https://guardian.l1.unykorn.org', 'public', false, null),
+  ('fth.x402.financial-core', 'fth-ops', 'endpoint', 'aws-ec2', 'http://localhost:4400', 'private', false, null),
+  -- Paid routes
+  ('fth.x402.route.agent-pay-api', 'fth-ops', 'endpoint', 'cloudflare', 'https://api.fth.trading/api/v1/agent/pay-api', 'public', true, '{"asset":"UNY","amount":"0.0001","rail":"unykorn-l1"}'::jsonb),
+  ('fth.x402.route.genesis-repro', 'fth-ops', 'endpoint', 'cloudflare', 'https://api.fth.trading/api/v1/genesis/repro-pack', 'public', true, '{"asset":"UNY","amount":"0.0005","rail":"unykorn-l1"}'::jsonb),
+  ('fth.x402.route.trade-verify', 'fth-ops', 'endpoint', 'cloudflare', 'https://api.fth.trading/api/v1/trade/verify', 'public', true, '{"asset":"UNY","amount":"0.00025","rail":"unykorn-l1"}'::jsonb),
+  ('fth.x402.route.invoice-export', 'fth-ops', 'endpoint', 'cloudflare', 'https://api.fth.trading/api/v1/invoices/export', 'public', true, '{"asset":"UNY","amount":"0.001","rail":"unykorn-l1","min_pass_level":"pro"}'::jsonb),
+  -- A2A discovery
+  ('fth.a2a.gateway', 'fth-ops', 'endpoint', 'cloudflare', 'https://api.fth.trading/.well-known/agent.json', 'public', false, null),
+  ('fth.a2a.facilitator', 'fth-ops', 'endpoint', 'aws-ec2', 'https://facilitator.l1.unykorn.org/.well-known/agent.json', 'public', false, null),
+  ('fth.a2a.treasury', 'fth-ops', 'endpoint', 'aws-ec2', 'https://treasury.l1.unykorn.org/.well-known/agent.json', 'public', false, null),
+  ('fth.a2a.guardian', 'fth-ops', 'endpoint', 'aws-ec2', 'https://guardian.l1.unykorn.org/.well-known/agent.json', 'public', false, null),
+  -- Assets
+  ('fth.asset.uny', 'fth-ops', 'asset', 'unykorn-l1', 'UNY', 'public', false, null),
+  ('fth.asset.usdf', 'fth-ops', 'asset', 'avalanche-c', 'USDF', 'public', false, null),
+  ('fth.asset.susdf', 'fth-ops', 'asset', 'stellar-testnet', 'sUSDF', 'public', false, null),
+  ('fth.asset.xusdf', 'fth-ops', 'asset', 'xrpl-testnet', 'xUSDF', 'public', false, null)
+ON CONFLICT (fqn) DO NOTHING;

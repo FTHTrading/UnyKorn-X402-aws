@@ -1,0 +1,132 @@
+{
+  "name": "FTH x402 Agent Commerce Network",
+  "version": "2.0.0",
+  "description": "Master A2A discovery registry for the FTH x402 agent commerce infrastructure. Lists all agent services, their capabilities, and endpoints for automated discovery by AI agents, orchestrators, and payment systems.",
+  "protocol": "a2a",
+  "protocolVersion": "0.2",
+  "organization": {
+    "name": "FTH Trading Limited",
+    "url": "https://fthtrading.com",
+    "contact": "ops@fthtrading.com"
+  },
+  "agents": [
+    {
+      "name": "FTH x402 Payment Gateway",
+      "url": "https://api.fth.trading",
+      "agent_card": "https://api.fth.trading/.well-known/agent.json",
+      "role": "edge-gateway",
+      "description": "Edge payment gateway — routes paid API calls, enforces x402 payment challenges, serves premium resources.",
+      "status": "live",
+      "port": 8788,
+      "runtime": "Cloudflare Worker"
+    },
+    {
+      "name": "FTH x402 Facilitator",
+      "url": "https://facilitator.l1.unykorn.org",
+      "agent_card": "https://facilitator.l1.unykorn.org/.well-known/agent.json",
+      "role": "payment-facilitator",
+      "description": "Settlement brain — invoice issuance, payment verification, credit ledger, receipt anchoring, namespace resolution.",
+      "status": "live",
+      "port": 3100,
+      "runtime": "Node.js / Fastify"
+    },
+    {
+      "name": "FTH x402 Treasury",
+      "url": "https://treasury.l1.unykorn.org",
+      "agent_card": "https://treasury.l1.unykorn.org/.well-known/agent.json",
+      "role": "treasury-manager",
+      "description": "Treasury management — agent wallet funding, auto-refill policies, exposure monitoring, spending limits.",
+      "status": "live",
+      "port": 3200,
+      "runtime": "Node.js / Fastify"
+    },
+    {
+      "name": "FTH Guardian Daemon Army",
+      "url": "https://guardian.l1.unykorn.org",
+      "agent_card": "https://guardian.l1.unykorn.org/.well-known/agent.json",
+      "role": "infrastructure-guardian",
+      "description": "8-daemon monitoring army — health, security, revenue collection, fund management, L1 anchoring, external monitoring.",
+      "status": "live",
+      "port": 3300,
+      "runtime": "Node.js / Fastify"
+    },
+    {
+      "name": "FTH Financial Core",
+      "url": "http://localhost:4400",
+      "role": "financial-engine",
+      "description": "Rust-based financial engine — ledger, settlement, vault, risk engine. 6 crates (fth-api, fth-ledger, fth-settlement, fth-vault, fth-risk, fth-types).",
+      "status": "live",
+      "port": 4400,
+      "runtime": "Rust / Axum"
+    }
+  ],
+  "discovery_endpoints": {
+    "a2a_cards": {
+      "gateway": "https://api.fth.trading/.well-known/agent.json",
+      "facilitator": "https://facilitator.l1.unykorn.org/.well-known/agent.json",
+      "treasury": "https://treasury.l1.unykorn.org/.well-known/agent.json",
+      "guardian": "https://guardian.l1.unykorn.org/.well-known/agent.json"
+    },
+    "x402_protocol": "https://facilitator.l1.unykorn.org/.well-known/x402-pay",
+    "openapi": "https://facilitator.l1.unykorn.org/.well-known/openapi.json",
+    "ai_plugin": "https://facilitator.l1.unykorn.org/.well-known/ai-plugin.json",
+    "stellar_toml": "https://l1.unykorn.org/.well-known/stellar.toml",
+    "namespace_registry": "https://facilitator.l1.unykorn.org/namespaces"
+  },
+  "revenue_endpoints": {
+    "description": "These are the paid routes that generate revenue. Any agent calling them gets a 402 payment challenge.",
+    "routes": [
+      {
+        "path": "/api/v1/agent/pay-api/:provider",
+        "method": "GET",
+        "price": "0.0001 UNY",
+        "description": "Pay-per-call proxy to premium AI/data APIs"
+      },
+      {
+        "path": "/api/v1/genesis/repro-pack/:suite",
+        "method": "GET",
+        "price": "0.0005 UNY",
+        "description": "Genesis reproduction data packs"
+      },
+      {
+        "path": "/api/v1/trade/verify/:trade_id",
+        "method": "GET",
+        "price": "0.00025 UNY",
+        "description": "Trade-finance verification"
+      },
+      {
+        "path": "/api/v1/invoices/export/:format",
+        "method": "GET",
+        "price": "0.001 UNY",
+        "description": "Invoice export (Pro PASS required)"
+      }
+    ]
+  },
+  "onboarding": {
+    "steps": [
+      {
+        "step": 1,
+        "action": "Register wallet",
+        "endpoint": "POST https://facilitator.l1.unykorn.org/credits/register",
+        "body": { "wallet_address": "<your-wallet>", "pubkey": "<ed25519-pubkey-base64>" }
+      },
+      {
+        "step": 2,
+        "action": "Deposit credits",
+        "endpoint": "POST https://facilitator.l1.unykorn.org/credits/deposit",
+        "body": { "wallet": "<your-wallet>", "amount": "10.0" }
+      },
+      {
+        "step": 3,
+        "action": "Call any paid route",
+        "endpoint": "GET https://api.fth.trading/api/v1/agent/pay-api/demo",
+        "note": "If you have credits, payment is auto-deducted. Otherwise sign the 402 invoice."
+      }
+    ],
+    "sdk": {
+      "package": "fth-x402-sdk",
+      "repository": "https://github.com/FTHTrading/UnyKorn-X402-aws/tree/main/packages/fth-x402-sdk",
+      "install": "npm install fth-x402-sdk"
+    }
+  }
+}

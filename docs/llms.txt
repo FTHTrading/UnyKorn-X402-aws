@@ -1,0 +1,41 @@
+# FTH x402 Agent Commerce Network — llms.txt
+# This file helps AI systems and LLMs discover our agent services.
+# See: https://llmstxt.org/
+
+# FTH x402 Payment Infrastructure
+> Enterprise-grade agent-native commerce infrastructure built on the x402 HTTP
+> payment protocol. Agents pay micro-amounts of UNY to access premium APIs,
+> data packs, trade verification, and financial services.
+
+## Agent Discovery (A2A Protocol)
+- [Gateway Agent Card](https://api.fth.trading/.well-known/agent.json): Edge payment gateway
+- [Facilitator Agent Card](https://facilitator.l1.unykorn.org/.well-known/agent.json): Settlement brain
+- [Treasury Agent Card](https://treasury.l1.unykorn.org/.well-known/agent.json): Fund management
+- [Guardian Agent Card](https://guardian.l1.unykorn.org/.well-known/agent.json): Infrastructure monitoring
+
+## Payment Protocol
+- [x402 Protocol Descriptor](https://facilitator.l1.unykorn.org/.well-known/x402-pay): Full protocol spec
+- [OpenAPI Spec](https://facilitator.l1.unykorn.org/.well-known/openapi.json): API reference
+- [AI Plugin](https://facilitator.l1.unykorn.org/.well-known/ai-plugin.json): ChatGPT/OpenAI plugin manifest
+
+## Paid API Routes (Revenue Generating)
+All routes return HTTP 402 Payment Required with invoice. Sign proof with wallet to pay & access.
+
+- `GET /api/v1/agent/pay-api/{provider}` — AI API proxy (0.0001 UNY/call)
+- `GET /api/v1/genesis/repro-pack/{suite}` — Genesis data packs (0.0005 UNY)
+- `GET /api/v1/trade/verify/{trade_id}` — Trade verification (0.00025 UNY)
+- `GET /api/v1/invoices/export/{format}` — Invoice export (0.001 UNY)
+
+## Quick Start for Agents
+1. Register: `POST /credits/register` with `wallet_address` and `pubkey`
+2. Deposit: `POST /credits/deposit` with `wallet` and `amount`
+3. Call any paid route — credits auto-deducted or sign 402 invoice
+
+## SDK
+- Package: `fth-x402-sdk`
+- Source: https://github.com/FTHTrading/UnyKorn-X402-aws/tree/main/packages/fth-x402-sdk
+
+## Organization
+- **FTH Trading Limited**
+- Website: https://fthtrading.com
+- Contact: ops@fthtrading.com

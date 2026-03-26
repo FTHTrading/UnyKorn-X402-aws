@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 
 import healthRoutes from "./routes/health";
 import treasuryRoutes from "./routes/treasury";
+import treasuryA2aRoutes from "./routes/a2a";
 import { startTreasuryWorker, stopTreasuryWorker } from "./services/treasury";
 import { registerAuthMiddleware } from "./middleware/auth";
 
@@ -57,6 +58,7 @@ async function main() {
 
   await app.register(healthRoutes);
   await app.register(treasuryRoutes);
+  await app.register(treasuryA2aRoutes);
 
   startTreasuryWorker(app.log);
 

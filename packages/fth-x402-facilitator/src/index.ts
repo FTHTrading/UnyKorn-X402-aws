@@ -22,6 +22,7 @@ import namespaceRoutes from "./routes/namespaces";
 import l1Routes from "./routes/l1";
 import webhookRoutes from "./routes/webhooks";
 import operatorRoutes from "./routes/operator";
+import a2aRoutes from "./routes/a2a";
 
 // Auth
 import { registerAuthMiddleware } from "./middleware/auth";
@@ -137,6 +138,7 @@ async function main() {
   await app.register(l1Routes);
   await app.register(webhookRoutes);
   await app.register(operatorRoutes);
+  await app.register(a2aRoutes);
 
   // Start receipt batcher
   startBatcher();

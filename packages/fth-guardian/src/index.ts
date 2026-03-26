@@ -32,6 +32,7 @@ import { healthRoutes } from "./routes/health.js";
 import { daemonRoutes } from "./routes/daemons.js";
 import { metricsRoutes } from "./routes/metrics.js";
 import { commandRoutes } from "./routes/commands.js";
+import guardianA2aRoutes from "./routes/a2a.js";
 
 import { registerAuthMiddleware } from "./middleware/auth.js";
 
@@ -109,6 +110,7 @@ async function main() {
   await app.register(daemonRoutes);
   await app.register(metricsRoutes);
   await app.register(commandRoutes);
+  await app.register(guardianA2aRoutes);
 
   // Root endpoint — status overview
   app.get("/", async () => {

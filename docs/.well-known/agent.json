@@ -1,0 +1,112 @@
+{
+  "name": "FTH x402 Agent Commerce Network",
+  "description": "Enterprise-grade agent-native payment infrastructure built on the x402 HTTP payment protocol. Provides pay-per-call API monetization, prepaid credit ledger, multi-rail settlement (UnyKorn L1, Stellar, XRPL), receipt anchoring, treasury management, and autonomous daemon operations.",
+  "url": "https://api.fth.trading",
+  "version": "2.0.0",
+  "protocol": "a2a",
+  "protocolVersion": "0.2",
+  "provider": {
+    "organization": "FTH Trading Limited",
+    "url": "https://fthtrading.com",
+    "contact": "ops@fthtrading.com"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "authentication": {
+    "schemes": [
+      {
+        "scheme": "x402",
+        "description": "HTTP 402 Payment Required — hit any paid route without proof to receive a 402 with invoice. Sign a proof with your wallet, resend, and pay for access."
+      },
+      {
+        "scheme": "bearer",
+        "description": "Admin bearer token for operator endpoints."
+      }
+    ]
+  },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {
+      "id": "agent-pay-api",
+      "name": "Agent Pay API Proxy",
+      "description": "Pay-per-call proxy to premium AI and data provider APIs. 0.0001 UNY per call.",
+      "tags": ["payment", "api-proxy", "ai", "monetization"],
+      "endpoint": "https://api.fth.trading/api/v1/agent/pay-api/{provider}"
+    },
+    {
+      "id": "genesis-repro-pack",
+      "name": "Genesis Reproduction Pack",
+      "description": "Premium genesis data packs for AI training and simulation. 0.0005 UNY per suite.",
+      "tags": ["data", "genesis", "ai-training", "premium-content"],
+      "endpoint": "https://api.fth.trading/api/v1/genesis/repro-pack/{suite}"
+    },
+    {
+      "id": "trade-verify",
+      "name": "Trade Verification",
+      "description": "Verify trade-finance settlements on UnyKorn L1. 0.00025 UNY per verification.",
+      "tags": ["trade-finance", "verification", "settlement", "compliance"],
+      "endpoint": "https://api.fth.trading/api/v1/trade/verify/{trade_id}"
+    },
+    {
+      "id": "invoice-export",
+      "name": "Invoice Export",
+      "description": "Export invoices (PDF/JSON). Pro PASS required. 0.001 UNY per export.",
+      "tags": ["invoices", "export", "compliance", "reporting"],
+      "endpoint": "https://api.fth.trading/api/v1/invoices/export/{format}"
+    },
+    {
+      "id": "credit-deposit",
+      "name": "Prepaid Credit System",
+      "description": "Register wallets and deposit UNY credits for frictionless API access.",
+      "tags": ["credits", "deposit", "prepaid", "wallet", "onboarding"],
+      "endpoint": "https://facilitator.l1.unykorn.org/credits/register"
+    },
+    {
+      "id": "treasury-management",
+      "name": "Treasury Agent Management",
+      "description": "Register and manage agent wallets with auto-refill policies and spending limits.",
+      "tags": ["treasury", "funding", "policy", "agents"],
+      "endpoint": "https://treasury.l1.unykorn.org/treasury/agents/register"
+    },
+    {
+      "id": "namespace-resolution",
+      "name": "Namespace Resolution",
+      "description": "Resolve fully-qualified names to services, wallets, or resources.",
+      "tags": ["namespace", "dns", "resolution", "discovery"],
+      "endpoint": "https://facilitator.l1.unykorn.org/namespaces/{fqn}"
+    },
+    {
+      "id": "receipt-verification",
+      "name": "Receipt & Audit",
+      "description": "Verify payment receipts anchored on UnyKorn L1 blockchain.",
+      "tags": ["receipts", "verification", "audit", "compliance", "blockchain"],
+      "endpoint": "https://facilitator.l1.unykorn.org/receipts/{id}"
+    }
+  ],
+  "services": [
+    {
+      "name": "Payment Gateway",
+      "url": "https://api.fth.trading",
+      "card": "https://api.fth.trading/.well-known/agent.json"
+    },
+    {
+      "name": "Facilitator",
+      "url": "https://facilitator.l1.unykorn.org",
+      "card": "https://facilitator.l1.unykorn.org/.well-known/agent.json"
+    },
+    {
+      "name": "Treasury",
+      "url": "https://treasury.l1.unykorn.org",
+      "card": "https://treasury.l1.unykorn.org/.well-known/agent.json"
+    },
+    {
+      "name": "Guardian",
+      "url": "https://guardian.l1.unykorn.org",
+      "card": "https://guardian.l1.unykorn.org/.well-known/agent.json"
+    }
+  ]
+}
