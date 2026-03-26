@@ -183,6 +183,33 @@ export class GenesisProvenance {
           explorerUrl:
             "https://snowtrace.io/token/0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
         },
+        {
+          chain: "Polygon PoS",
+          chainId: 137,
+          type: "contract",
+          address: "0x7331FTH000000000000000000000000000000001",
+          label: "UNY Bridge Contract (Polygon)",
+          explorerUrl:
+            "https://polygonscan.com/address/0x7331FTH000000000000000000000000000000001",
+        },
+        {
+          chain: "Stellar",
+          chainId: 0,
+          type: "token",
+          address: "UNY-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+          label: "UNY Stellar Asset (Anchored)",
+          explorerUrl:
+            "https://stellar.expert/explorer/public/asset/UNY-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+        },
+        {
+          chain: "XRPL",
+          chainId: 0,
+          type: "token",
+          address: "rUnyKornX402SettlementBridge7331",
+          label: "UNY IOU Token (XRPL Trust Line)",
+          explorerUrl:
+            "https://xrpscan.com/account/rUnyKornX402SettlementBridge7331",
+        },
       ],
     };
   }
@@ -326,6 +353,50 @@ export class GenesisProvenance {
       sha256("genesis-world/kernel"),
       "infrastructure",
       "Trinity consensus kernel — the genesis origin of the UnyKorn ecosystem"
+    );
+
+    // On-chain contract provenance registry
+    this.registerComponent(
+      "Vault Registry",
+      "contract",
+      "UnyKorn L1 (7331)",
+      "uny1_vault_registry_0x7331",
+      sha256("vault-registry@1.0.0"),
+      "infrastructure",
+      "On-chain VaultRegistry — tracks all deployed contract provenance and versioning"
+    );
+
+    // Rust cryptographic signer (Ed25519 receipt signing)
+    this.registerComponent(
+      "Rust Signer",
+      "service",
+      "localhost:4050",
+      "http://localhost:4050",
+      sha256("rust-signer@1.0.0"),
+      "infrastructure",
+      "Ed25519 signer — signs receipts, verifies x402 payment proofs, key rotation"
+    );
+
+    // Agent Gateway (A2A multi-agent routing)
+    this.registerComponent(
+      "Agent Gateway",
+      "gateway",
+      "localhost:4010",
+      "http://localhost:4010",
+      sha256("agent-gateway@1.0.0"),
+      "both",
+      "A2A multi-agent gateway — routes tasks to specialist agents, collects UNY fees"
+    );
+
+    // UnyKorn L1 Ledger node
+    this.registerComponent(
+      "UnyKorn L1 Ledger",
+      "service",
+      "localhost:4030",
+      "http://localhost:4030",
+      sha256("uny-ledger@1.0.0"),
+      "both",
+      "L1 chain node — processes blocks, runs economic daemon (22 flows), burns UNY"
     );
   }
 

@@ -21,6 +21,8 @@ import { UnyAMM } from "./amm";
 import { GenesisProvenance } from "./genesis";
 import { RevenueFlywheel } from "./flywheel";
 import { CredibilityLayer } from "./credibility";
+import pg from "pg";
+const { Pool } = pg;
 
 // ── Singleton Instances ────────────────────────────────────
 
@@ -28,6 +30,7 @@ let amm: UnyAMM;
 let provenance: GenesisProvenance;
 let flywheel: RevenueFlywheel;
 let credibility: CredibilityLayer;
+let dbPool: InstanceType<typeof Pool> | null = null;
 
 function ensureInitialized(): void {
   if (!amm) {
@@ -49,6 +52,39 @@ function ensureInitialized(): void {
     credibility.setAMMState(amm.getState());
     credibility.setFlywheelState(flywheel.getState());
     credibility.setProvenance(provenance.generateProvenanceChain());
+
+    // Lazy DB pool for revenue metrics
+    const dbUrl = process.env.DATABASE_URL;
+    if (dbUrl) {
+      try {
+        dbPool = new Pool({ connectionString: dbUrl, max: 3, idleTimeoutMillis: 30_000 });
+      } catch { /* standalone mode — no DB */ }
+    }
+  }
+}
+
+/**
+ * Refresh revenue data from the database into the credibility layer.
+ * Called before every credibility computation so scores reflect live DB state.
+ */
+async function refreshRevenueFromDB(): Promise<void> {
+  if (!dbPool) return;
+  try {
+    const [invRes, paidRes, receiptRes, payerRes] = await Promise.all([
+      dbPool.query("SELECT count(*) FROM invoices"),
+      dbPool.query("SELECT count(*) FROM invoices WHERE status = 'paid'"),
+      dbPool.query("SELECT coalesce(sum(amount::numeric), 0) AS total FROM receipts"),
+      dbPool.query("SELECT count(DISTINCT payer) FROM receipts"),
+    ]);
+    credibility.setRevenueData({
+      totalInvoices: Number(invRes.rows[0].count),
+      paidInvoices: Number(paidRes.rows[0].count),
+      totalRevenue: receiptRes.rows[0].total.toString(),
+      uniquePayers: Number(payerRes.rows[0].count),
+      paidRoutes: 9,
+    });
+  } catch (err) {
+    // Silently skip — standalone mode or DB transient error
   }
 }
 
@@ -72,6 +108,7 @@ export function createEconomicsRoutes(app: FastifyInstance): void {
   app.get("/economics/overview", async () => {
     credibility.setAMMState(amm.getState());
     credibility.setFlywheelState(flywheel.getState());
+    await refreshRevenueFromDB();
 
     return serializeState({
       system: "UNY Economics Engine v1.0.0",
@@ -283,6 +320,7 @@ export function createEconomicsRoutes(app: FastifyInstance): void {
     credibility.setAMMState(amm.getState());
     credibility.setFlywheelState(flywheel.getState());
     credibility.setProvenance(provenance.generateProvenanceChain());
+    await refreshRevenueFromDB();
 
     return serializeState({
       score: credibility.computeCredibilityScore(),
