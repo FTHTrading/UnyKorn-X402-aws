@@ -9,7 +9,7 @@
 const FACILITATOR_URL =
   import.meta.env.VITE_FACILITATOR_URL ?? "http://localhost:3100";
 
-const GATEWAY_URL =
+export const GATEWAY_URL =
   import.meta.env.VITE_GATEWAY_URL ??
   "https://fth-x402-gateway-staging.kevanbtc.workers.dev";
 
@@ -82,6 +82,39 @@ export interface ReceiptRoot {
   anchored_at: string | null;
 }
 
+export interface ExplorerStats {
+  invoices: {
+    total_invoices: number;
+    paid: number;
+    pending: number;
+    expired: number;
+    total_revenue: string;
+  };
+  receipts: {
+    total_receipts: number;
+    unique_payers: number;
+    total_batches: number;
+  };
+  namespaces: {
+    total_namespaces: number;
+    paid_namespaces: number;
+  };
+  services: Record<string, string>;
+  chain: { id: number; name: string; symbol: string };
+  timestamp: string;
+}
+
+/** Premium x402-gated API route config */
+export interface PremiumRoute {
+  path: string;
+  method: string;
+  price: string;
+  asset: string;
+  namespace: string;
+  description: string;
+  example: string;
+}
+
 export interface NamespaceRecord {
   fqn: string;
   owner: string;
@@ -152,7 +185,7 @@ export async function getFacilitatorHealth(): Promise<FacilitatorHealth> {
 
 export async function getInvoices(): Promise<Invoice[]> {
   try {
-    const data = await facilitatorGet<{ invoices: Invoice[] }>("/invoices?limit=50");
+    const data = await facilitatorGet<{ invoices: Invoice[]; count: number }>("/explorer/invoices?limit=50");
     return data.invoices ?? [];
   } catch {
     return [];
@@ -161,7 +194,7 @@ export async function getInvoices(): Promise<Invoice[]> {
 
 export async function getReceipts(): Promise<Receipt[]> {
   try {
-    const data = await facilitatorGet<{ receipts: Receipt[] }>("/receipts?limit=50");
+    const data = await facilitatorGet<{ receipts: Receipt[]; count: number }>("/explorer/receipts?limit=50");
     return data.receipts ?? [];
   } catch {
     return [];
@@ -170,7 +203,7 @@ export async function getReceipts(): Promise<Receipt[]> {
 
 export async function getReceiptRoots(): Promise<ReceiptRoot[]> {
   try {
-    const data = await facilitatorGet<{ roots: ReceiptRoot[] }>("/receipts/roots?limit=20");
+    const data = await facilitatorGet<{ roots: ReceiptRoot[]; count: number }>("/explorer/roots?limit=20");
     return data.roots ?? [];
   } catch {
     return [];
@@ -179,8 +212,25 @@ export async function getReceiptRoots(): Promise<ReceiptRoot[]> {
 
 export async function getNamespaces(): Promise<NamespaceRecord[]> {
   try {
-    const data = await facilitatorGet<{ namespaces: NamespaceRecord[] }>("/namespaces");
+    const data = await facilitatorGet<{ namespaces: NamespaceRecord[]; count: number }>("/explorer/namespaces");
     return data.namespaces ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getExplorerStats(): Promise<ExplorerStats | null> {
+  try {
+    return await facilitatorGet<ExplorerStats>("/explorer/stats");
+  } catch {
+    return null;
+  }
+}
+
+export async function getRevenueFeed(): Promise<any[]> {
+  try {
+    const data = await facilitatorGet<{ revenue: any[]; count: number }>("/explorer/revenue?limit=20");
+    return data.revenue ?? [];
   } catch {
     return [];
   }
@@ -296,4 +346,108 @@ export function timeAgo(iso: string): string {
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
+}
+
+// ── Premium x402 Routes Catalog ────────────────────────────
+
+export const PREMIUM_ROUTES: PremiumRoute[] = [
+  {
+    path: "/api/v1/explorer/analytics/:period",
+    method: "GET",
+    price: "0.0002",
+    asset: "UNY",
+    namespace: "fth.x402.route.explorer-analytics",
+    description: "Deep analytics — revenue over time, payer distribution, namespace breakdown",
+    example: "/api/v1/explorer/analytics/24h",
+  },
+  {
+    path: "/api/v1/explorer/receipt/:receipt_id",
+    method: "GET",
+    price: "0.00015",
+    asset: "UNY",
+    namespace: "fth.x402.route.explorer-receipt-detail",
+    description: "Full receipt detail with Merkle proof, anchor tx, and settlement status",
+    example: "/api/v1/explorer/receipt/rcp_abc123",
+  },
+  {
+    path: "/api/v1/explorer/namespace/:fqn",
+    method: "GET",
+    price: "0.0001",
+    asset: "UNY",
+    namespace: "fth.x402.route.explorer-namespace-detail",
+    description: "Full namespace resolution with hierarchy, payment config, and resolve chain",
+    example: "/api/v1/explorer/namespace/fth.agents.pay",
+  },
+  {
+    path: "/api/v1/explorer/agent/:agent_id",
+    method: "GET",
+    price: "0.0003",
+    asset: "UNY",
+    namespace: "fth.x402.route.explorer-agent-exec",
+    description: "Execute an A2A agent task — invoke agent capability via x402 payment",
+    example: "/api/v1/explorer/agent/orchestrator",
+  },
+  {
+    path: "/api/v1/explorer/export/:format",
+    method: "GET",
+    price: "0.002",
+    asset: "UNY",
+    namespace: "fth.x402.route.explorer-export",
+    description: "Full data export — invoices, receipts, revenue in CSV/JSON/PDF",
+    example: "/api/v1/explorer/export/csv",
+  },
+  {
+    path: "/api/v1/agent/pay-api/:provider",
+    method: "GET",
+    price: "0.0001",
+    asset: "UNY",
+    namespace: "fth.x402.route.agent-pay-api",
+    description: "Pay-per-call agent API execution",
+    example: "/api/v1/agent/pay-api/demo",
+  },
+  {
+    path: "/api/v1/trade/verify/:trade_id",
+    method: "GET",
+    price: "0.00025",
+    asset: "UNY",
+    namespace: "fth.x402.route.trade-verify",
+    description: "Verify trade document authenticity and compliance",
+    example: "/api/v1/trade/verify/TRD-001",
+  },
+  {
+    path: "/api/v1/genesis/repro-pack/:suite",
+    method: "GET",
+    price: "0.0005",
+    asset: "UNY",
+    namespace: "fth.x402.route.genesis-repro",
+    description: "Download genesis reproduction proof pack",
+    example: "/api/v1/genesis/repro-pack/alpha",
+  },
+  {
+    path: "/api/v1/invoices/export/:format",
+    method: "GET",
+    price: "0.001",
+    asset: "UNY",
+    namespace: "fth.x402.route.invoice-export",
+    description: "Bulk invoice data export (Pro tier)",
+    example: "/api/v1/invoices/export/pdf",
+  },
+];
+
+/**
+ * Call a premium x402-gated route on the Gateway.
+ * Returns the 402 Payment Required response with invoice details.
+ */
+export async function tryPaidRoute(examplePath: string): Promise<{
+  status: number;
+  body: any;
+  paymentHeader?: string;
+}> {
+  const res = await fetch(`${GATEWAY_URL}${examplePath}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  const body = await res.json().catch(() => null);
+  const paymentHeader = res.headers.get("x-payment-required") ?? undefined;
+  return { status: res.status, body, paymentHeader };
 }

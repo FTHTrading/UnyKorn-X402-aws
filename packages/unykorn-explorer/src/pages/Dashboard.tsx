@@ -6,8 +6,11 @@ import {
   getRecentTransactions,
   getFacilitatorHealth,
   getGatewayHealth,
-  getInvoices,
+  getExplorerStats,
+  getRevenueFeed,
   CHAIN,
+  PREMIUM_ROUTES,
+  GATEWAY_URL,
   truncHash,
   timeAgo,
   type ChainStatus,
@@ -15,7 +18,7 @@ import {
   type Transaction,
   type FacilitatorHealth,
   type GatewayHealth,
-  type Invoice,
+  type ExplorerStats,
 } from "../api";
 
 export default function Dashboard() {
@@ -24,8 +27,8 @@ export default function Dashboard() {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [fHealth, setFHealth] = useState<FacilitatorHealth | null>(null);
   const [gHealth, setGHealth] = useState<GatewayHealth | null>(null);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [stats, setStats] = useState<ExplorerStats | null>(null);
+  const [revenueFeed, setRevenueFeed] = useState<any[]>([]);
 
   useEffect(() => {
     setChain(getChainStatus());
@@ -33,21 +36,25 @@ export default function Dashboard() {
     setTxs(getRecentTransactions(8));
     getFacilitatorHealth().then(setFHealth).catch(() => {});
     getGatewayHealth().then(setGHealth).catch(() => {});
-    getInvoices().then((inv) => {
-      setInvoices(inv);
-      setTotalRevenue(inv.reduce((s, i) => s + parseFloat(i.amount || "0"), 0));
-    }).catch(() => {});
+    getExplorerStats().then(setStats).catch(() => {});
+    getRevenueFeed().then(setRevenueFeed).catch(() => {});
 
     const t = setInterval(() => {
       setChain(getChainStatus());
       setBlocks(getRecentBlocks(6));
       setTxs(getRecentTransactions(8));
+      getExplorerStats().then(setStats).catch(() => {});
+      getRevenueFeed().then(setRevenueFeed).catch(() => {});
     }, 6000);
     return () => clearInterval(t);
   }, []);
 
-  const pendingInvoices = invoices.filter((i) => i.status === "pending").length;
-  const paidInvoices = invoices.filter((i) => i.status === "paid").length;
+  const totalInvoices = stats?.invoices.total_invoices ?? 0;
+  const paidInvoices = stats?.invoices.paid ?? 0;
+  const pendingInvoices = stats?.invoices.pending ?? 0;
+  const totalRevenue = parseFloat(stats?.invoices.total_revenue ?? "0");
+  const totalReceipts = stats?.receipts.total_receipts ?? 0;
+  const uniquePayers = stats?.receipts.unique_payers ?? 0;
 
   return (
     <>
@@ -100,7 +107,7 @@ export default function Dashboard() {
         </div>
         <div className="stat-card glass glass-glow">
           <div className="stat-label">x402 Invoices</div>
-          <div className="stat-value">{invoices.length}</div>
+          <div className="stat-value">{totalInvoices}</div>
           <div className="stat-sub">
             {pendingInvoices} pending · {paidInvoices} paid
           </div>
@@ -109,7 +116,7 @@ export default function Dashboard() {
           <div className="stat-label">Revenue (UNY)</div>
           <div className="stat-value">{totalRevenue.toFixed(4)}</div>
           <div className="stat-sub">
-            Across {CHAIN.rails.length} settlement rails
+            {uniquePayers} payers · {totalReceipts} receipts
           </div>
         </div>
         <div className="stat-card glass glass-glow">
@@ -268,32 +275,71 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Paid Routes ── */}
+      {/* ── Revenue Feed ── */}
+      {revenueFeed.length > 0 && (
+        <>
+          <div className="section-header">
+            <h2 className="section-title">Live <span className="accent">Revenue Feed</span></h2>
+            <span className="section-badge">{revenueFeed.length} events</span>
+          </div>
+          <div className="glass" style={{ marginBottom: "var(--sov-space-xl)" }}>
+            <table className="data-table">
+              <thead>
+                <tr><th>Invoice</th><th>Resource</th><th>Payer</th><th>Amount</th><th>Rail</th><th>Time</th></tr>
+              </thead>
+              <tbody>
+                {revenueFeed.slice(0, 10).map((ev: any, i: number) => (
+                  <tr key={i}>
+                    <td className="mono" style={{ color: "var(--sov-accent-1)", fontSize: "0.85rem" }}>{truncHash(ev.invoice_id || "", 6)}</td>
+                    <td className="mono" style={{ fontSize: "0.85rem" }}>{ev.resource || "—"}</td>
+                    <td className="mono" style={{ fontSize: "0.85rem" }}>{truncHash(ev.payer || "", 6)}</td>
+                    <td style={{ fontWeight: 600 }}>{ev.amount} {ev.asset}</td>
+                    <td><span className="pill pill-info">{ev.rail || "—"}</span></td>
+                    <td className="mono">{ev.paid_at ? timeAgo(ev.paid_at) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* ── Paid Routes (all 9) ── */}
       <div className="section-header">
         <h2 className="section-title">Revenue <span className="accent">Routes</span></h2>
-        <span className="section-badge">HTTP 402</span>
+        <span className="section-badge">HTTP 402 · {PREMIUM_ROUTES.length} endpoints</span>
       </div>
       <div className="glass" style={{ marginBottom: "var(--sov-space-xl)" }}>
         <table className="data-table">
           <thead>
             <tr>
               <th>Endpoint</th>
-              <th>Namespace</th>
               <th>Price</th>
-              <th>Asset</th>
+              <th>Description</th>
               <th>Status</th>
+              <th>Try</th>
             </tr>
           </thead>
           <tbody>
-            {PAID_ROUTES.map((r) => (
+            {PREMIUM_ROUTES.map((r) => (
               <tr key={r.path}>
                 <td>
-                  <code style={{ color: "var(--sov-accent-1)" }}>{r.path}</code>
+                  <code style={{ color: "var(--sov-accent-1)", fontSize: "0.85rem" }}>{r.path}</code>
                 </td>
-                <td className="mono">{r.namespace}</td>
-                <td style={{ fontWeight: 600 }}>{r.price}</td>
-                <td>{r.asset}</td>
+                <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{r.price} {r.asset}</td>
+                <td style={{ fontSize: "0.85rem", opacity: 0.8 }}>{r.description}</td>
                 <td><span className="pill pill-success">LIVE</span></td>
+                <td>
+                  <a
+                    href={`${GATEWAY_URL}${r.example}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pill pill-purple"
+                    style={{ textDecoration: "none", cursor: "pointer" }}
+                  >
+                    402 →
+                  </a>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -302,13 +348,6 @@ export default function Dashboard() {
     </>
   );
 }
-
-const PAID_ROUTES = [
-  { path: "/api/v1/agent/pay-api/:provider", namespace: "fth.x402.route.agent-pay-api", price: "0.0001", asset: "UNY" },
-  { path: "/api/v1/trade/verify/:trade_id", namespace: "fth.x402.route.trade-verify", price: "0.00025", asset: "UNY" },
-  { path: "/api/v1/genesis/repro-pack/:suite", namespace: "fth.x402.route.genesis-repro", price: "0.0005", asset: "UNY" },
-  { path: "/api/v1/invoices/export/:format", namespace: "fth.x402.route.invoice-export", price: "0.001", asset: "UNY" },
-];
 
 function txTypePill(type: string): string {
   switch (type) {

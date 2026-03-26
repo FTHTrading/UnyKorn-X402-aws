@@ -20,7 +20,7 @@ workers_dev = true
 # route = { pattern = "staging-api.fth.trading/api/*", zone_name = "fth.trading" }
 
 [env.staging.vars]
-FACILITATOR_URL = "https://challenging-textile-researchers-alexander.trycloudflare.com"
+FACILITATOR_URL = "https://accountability-opponents-longest-parade.trycloudflare.com"
 ENVIRONMENT = "staging"
 UNYKORN_TREASURY_ADDRESS = "uny1_755098bacf6f6d9ef9d0f391a8e7c467e7db7190"
 

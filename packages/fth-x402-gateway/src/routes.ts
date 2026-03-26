@@ -23,6 +23,7 @@ const DEFAULT_POLICY: RoutePolicy = {
 // ---------------------------------------------------------------------------
 
 export const PAID_ROUTES: RouteConfig[] = [
+  // ── Original agent/trade/genesis routes ──
   {
     path: "/api/v1/agent/pay-api/:provider",
     namespace: "fth.x402.route.agent-pay-api",
@@ -76,6 +77,71 @@ export const PAID_ROUTES: RouteConfig[] = [
       min_pass_level: "pro",
     },
     origin: "https://api.fth.trading/internal/invoices/export/{format}",
+  },
+
+  // ── Explorer Premium Routes (MONEY MAKERS) ──
+  {
+    path: "/api/v1/explorer/analytics/:period",
+    namespace: "fth.x402.route.explorer-analytics",
+    payment: {
+      asset: "UNY",
+      amount: "0.0002",
+      receiver: "$UNYKORN_TREASURY_ADDRESS",
+      memo_prefix: "fth:explorer:analytics",
+      rail: "unykorn-l1",
+    },
+    policy: DEFAULT_POLICY,
+  },
+  {
+    path: "/api/v1/explorer/receipt/:receipt_id",
+    namespace: "fth.x402.route.explorer-receipt-detail",
+    payment: {
+      asset: "UNY",
+      amount: "0.00015",
+      receiver: "$UNYKORN_TREASURY_ADDRESS",
+      memo_prefix: "fth:explorer:receipt",
+      rail: "unykorn-l1",
+    },
+    policy: DEFAULT_POLICY,
+  },
+  {
+    path: "/api/v1/explorer/namespace/:fqn",
+    namespace: "fth.x402.route.explorer-namespace-detail",
+    payment: {
+      asset: "UNY",
+      amount: "0.0001",
+      receiver: "$UNYKORN_TREASURY_ADDRESS",
+      memo_prefix: "fth:explorer:namespace",
+      rail: "unykorn-l1",
+    },
+    policy: DEFAULT_POLICY,
+  },
+  {
+    path: "/api/v1/explorer/agent/:agent_id",
+    namespace: "fth.x402.route.explorer-agent-exec",
+    payment: {
+      asset: "UNY",
+      amount: "0.0003",
+      receiver: "$UNYKORN_TREASURY_ADDRESS",
+      memo_prefix: "fth:explorer:agent",
+      rail: "unykorn-l1",
+    },
+    policy: DEFAULT_POLICY,
+  },
+  {
+    path: "/api/v1/explorer/export/:format",
+    namespace: "fth.x402.route.explorer-export",
+    payment: {
+      asset: "UNY",
+      amount: "0.002",
+      receiver: "$UNYKORN_TREASURY_ADDRESS",
+      memo_prefix: "fth:explorer:export",
+      rail: "unykorn-l1",
+    },
+    policy: {
+      ...DEFAULT_POLICY,
+      min_pass_level: "pro",
+    },
   },
 ];
 

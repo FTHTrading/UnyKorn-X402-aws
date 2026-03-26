@@ -30,7 +30,10 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 /** Route prefixes that are fully public (health checks, root). */
-const PUBLIC_PREFIXES: string[] = [];
+const PUBLIC_PREFIXES: string[] = [
+  "/explorer/",      // Explorer public data endpoints
+  "/.well-known/",   // A2A discovery
+];
 
 /** Route prefixes handled by operator.ts's own admin hook. */
 const ADMIN_PREFIXES = ["/admin/"];
