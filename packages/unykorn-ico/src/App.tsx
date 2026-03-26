@@ -34,7 +34,7 @@ const ICO = {
   price: "$0.008",
   softCap: "$500,000",
   hardCap: "$5,000,000",
-  raised: 1_847_000,
+  raised: 0,
   hardCapNum: 5_000_000,
   startDate: new Date("2026-04-15T00:00:00Z"),
   endDate: new Date("2026-06-15T00:00:00Z"),
@@ -42,18 +42,17 @@ const ICO = {
     { name: "UnyKorn L1", color: "#3b82f6", contract: "Chain 7331 · Native Token" },
   ],
   tiers: [
-    { name: "Seed", price: "$0.005", bonus: "+60% Bonus", min: "$100", max: "$25,000", alloc: "50,000,000 UNY", status: "SOLD OUT", featured: false },
-    { name: "Private Sale", price: "$0.008", bonus: "+30% Bonus", min: "$500", max: "$100,000", alloc: "80,000,000 UNY", status: "LIVE NOW", featured: true },
+    { name: "Seed", price: "$0.005", bonus: "+60% Bonus", min: "$100", max: "$25,000", alloc: "50,000,000 UNY", status: "COMING SOON", featured: false },
+    { name: "Private Sale", price: "$0.008", bonus: "+30% Bonus", min: "$500", max: "$100,000", alloc: "80,000,000 UNY", status: "COMING SOON", featured: true },
     { name: "Public Sale", price: "$0.012", bonus: "+10% Bonus", min: "$50", max: "$50,000", alloc: "70,000,000 UNY", status: "UPCOMING", featured: false },
   ],
   tokenomics: [
+    { label: "Infrastructure & Validators", pct: 35, color: "#22c55e" },
     { label: "ICO Sale", pct: 20, color: "#3b82f6" },
-    { label: "Ecosystem & Rewards", pct: 25, color: "#a855f7" },
-    { label: "Team & Advisors", pct: 15, color: "#22d3ee" },
-    { label: "Treasury", pct: 15, color: "#f5a623" },
-    { label: "Liquidity Provision", pct: 10, color: "#22c55e" },
-    { label: "Staking Rewards", pct: 10, color: "#ef4444" },
-    { label: "Marketing & Partnerships", pct: 5, color: "#ec4899" },
+    { label: "Protocol Treasury", pct: 15, color: "#f5a623" },
+    { label: "AI Compute Subsidies", pct: 10, color: "#a855f7" },
+    { label: "Ecosystem Grants", pct: 10, color: "#22d3ee" },
+    { label: "Team & Advisors", pct: 10, color: "#ec4899" },
   ],
   roadmap: [
     { date: "Q3 2025", title: "Genesis & Foundation", desc: "UNY token created at genesis for AI-to-AI x402 protocol. FTH Trading entity formed. Smart contract architecture designed. x402 protocol research begins.", active: true },
@@ -283,8 +282,8 @@ function Tokenomics() {
               ["ICO Price", "$0.008"],
               ["Soft Cap", "$500,000"],
               ["Hard Cap", "$5,000,000"],
-              ["Vesting", "Team: 24mo cliff + 12mo linear"],
-              ["Treasury Lock", "Multi-sig, 6-month timelock"],
+              ["Vesting", "Team: 12mo cliff + 36mo linear"],
+              ["Treasury Lock", "6-month timelock (multi-sig planned)"],
             ].map(([k, v]) => (
               <div className="info-row" key={k}>
                 <span className="label">{k}</span>
