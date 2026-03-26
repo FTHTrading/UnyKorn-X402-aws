@@ -1037,3 +1037,76 @@ export async function getListingContracts(): Promise<any> {
     return null;
   }
 }
+
+// ── System State (new RPC methods) ─────────────────────────
+
+export interface SystemState {
+  tables: Record<string, number>;
+  totalRecords: number;
+  populatedTables: number;
+  totalTables: number;
+  timestamp: string;
+}
+
+export interface AgentTask {
+  id: string;
+  agentId: string;
+  taskType: string;
+  status: string;
+  priority: number;
+  payload: any;
+  result: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PolicyDecision {
+  id: string;
+  policyRuleId: string;
+  agentId: string;
+  action: string;
+  decision: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface SettlementReceipt {
+  id: string;
+  agentId: string;
+  taskId: string | null;
+  amount: string;
+  settledAt: string;
+  proofHash: string | null;
+}
+
+export async function getSystemState(): Promise<SystemState | null> {
+  try {
+    return await l1Rpc<SystemState>("chain_getSystemState");
+  } catch {
+    return null;
+  }
+}
+
+export async function getRecentTasks(limit = 20): Promise<AgentTask[]> {
+  try {
+    return (await l1Rpc<AgentTask[]>("chain_getRecentTasks", [limit])) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getRecentPolicies(limit = 20): Promise<PolicyDecision[]> {
+  try {
+    return (await l1Rpc<PolicyDecision[]>("chain_getRecentPolicies", [limit])) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getRecentSettlements(limit = 20): Promise<SettlementReceipt[]> {
+  try {
+    return (await l1Rpc<SettlementReceipt[]>("chain_getRecentSettlements", [limit])) ?? [];
+  } catch {
+    return [];
+  }
+}

@@ -933,6 +933,230 @@ const ECON_FLOWS: Array<() => Promise<void>> = [
       await persistTransfer(entry, earner, "agent:treasury");
     } catch { }
   },
+
+  // ═══ EXTENDED FLOWS — Phases 2-6: Populate all 30 empty tables ═══
+
+  // 13. Agent Task + A2A Messages + Settlement Receipt + Proof Artifact
+  async () => {
+    const requesters = ["agent:mesh-coord", "agent:facilitator", "agent:gateway"];
+    const performers = ["agent:bedrock-ai", "agent:lambda-exec", "agent:signer", "agent:oracle-delta"];
+    const requester = pick(requesters);
+    const performer = pick(performers);
+    const amount = String(randInt(100, 5000));
+    const capabilities = ["inference", "signing", "data_feed", "proof_generation", "settlement", "routing"];
+    const capability = pick(capabilities);
+    const taskId = randomUUID();
+    const now = new Date();
+    try {
+      await prisma.agentTask.create({
+        data: {
+          id: taskId, requesterAgentId: requester, performerAgentId: performer,
+          capability, description: `Auto: ${capability} by ${requester.split(":")[1]}`,
+          quotedCost: amount, maxBudget: String(Number(amount) * 2),
+          status: pick(["settled", "delivered", "executing"]),
+          priority: pick(["normal", "high", "low"]),
+          idempotencyKey: `task:${taskId}`,
+          requestedAt: now, quotedAt: now, approvedAt: now,
+          executionStartedAt: now, deliveredAt: now, settledAt: now,
+        },
+      });
+      const msgTypes = ["task_request", "task_quote", "task_accept", "task_result"];
+      for (const msgType of msgTypes) {
+        await prisma.a2AMessage.create({
+          data: {
+            type: msgType,
+            fromAgentId: msgType.includes("request") || msgType.includes("accept") ? requester : performer,
+            toAgentId: msgType.includes("request") || msgType.includes("accept") ? performer : requester,
+            correlationId: taskId, taskId,
+            payload: { type: msgType, capability, amount, ts: now.toISOString() },
+            signature: sha256(`${msgType}:${taskId}:${Date.now()}`),
+          },
+        });
+      }
+      const receiptId = randomUUID();
+      await prisma.settlementReceipt.create({
+        data: {
+          id: receiptId, taskId, fromAgentId: requester, toAgentId: performer,
+          amount, assetClass: "OPERATING",
+          policyDecisionId: `policy:auto-${taskId.slice(0,8)}`,
+          signature: sha256(`receipt:${receiptId}:${amount}`),
+          signerPublicKey: `pk_${performer.replace("agent:", "")}`,
+          status: "settled", signedAt: now,
+        },
+      });
+      await prisma.proofArtifact.create({
+        data: {
+          type: "settlement_proof", generatedBy: performer,
+          referenceId: receiptId, referenceType: "settlement_receipt",
+          contentHash: sha256(`proof:${receiptId}:${amount}:${now.toISOString()}`),
+          content: { receiptId, taskId, amount, capability, from: requester, to: performer },
+          signature: sha256(`proof-sig:${receiptId}`),
+          signerPublicKey: `pk_${performer.replace("agent:", "")}`,
+          anchored: true, anchorTxHash: sha256(`anchor:${receiptId}`),
+        },
+      });
+    } catch (e: any) { server.log.error(`[ECON] Flow13 task: ${e.message || e}`); }
+  },
+
+  // 14. Policy Decision + Approval + Audit Entry
+  async () => {
+    const agent = pick(SYSTEM_AGENTS.filter(a => a.role !== "treasury"));
+    const actions = ["transfer", "escrow_lock", "settle", "reserve", "withdraw"];
+    const action = pick(actions);
+    const amount = String(randInt(50, 10000));
+    const ruleIds = ["rule:treasury-spend-limit", "rule:agent-daily-limit", "rule:escrow-approval",
+      "rule:ai-compute-limit", "rule:cross-org-audit", "rule:settlement-auto-allow"];
+    const ruleId = pick(ruleIds);
+    const result = pick(["allowed", "allowed", "allowed", "denied", "rate_limited"]);
+    const decisionId = randomUUID();
+    try {
+      await prisma.policyDecision.create({
+        data: {
+          id: decisionId, action, agentId: agent.id, agentRole: agent.role,
+          amount, result, matchedRuleIds: [ruleId], decidingRuleId: ruleId,
+          reason: `${result}: ${action} of ${amount} UNY by ${agent.name}`,
+        },
+      });
+      await prisma.policyApproval.create({
+        data: {
+          decisionId, approverId: "agent:treasury",
+          status: result === "allowed" ? "approved" : "denied",
+          reason: `Auto-${result} by policy engine`,
+          expiresAt: new Date(Date.now() + 3600000), respondedAt: new Date(),
+        },
+      });
+      const prevAudit = await prisma.auditEntry.findFirst({ orderBy: { sequence: "desc" } });
+      await prisma.auditEntry.create({
+        data: {
+          action: `policy:${action}`, agentId: agent.id,
+          targetId: decisionId, targetType: "policy_decision", amount,
+          policyDecisionId: decisionId,
+          result: result === "allowed" ? "success" : "failure",
+          details: { ruleId, action, amount, agent: agent.name },
+          source: "economic-daemon",
+          entryHash: sha256(`audit:${decisionId}:${Date.now()}`),
+          previousHash: prevAudit?.entryHash ?? sha256("audit-genesis"),
+        },
+      });
+    } catch (e: any) { server.log.error(`[ECON] Flow14 policy: ${e.message || e}`); }
+  },
+
+  // 15. Escrow Lock/Release Cycle
+  async () => {
+    const depositors = ["agent:mesh-coord", "agent:facilitator", "agent:gateway"];
+    const beneficiaries = ["agent:bedrock-ai", "agent:lambda-exec", "agent:signer"];
+    const depositor = pick(depositors);
+    const beneficiary = pick(beneficiaries);
+    const amount = String(randInt(200, 5000));
+    const taskId = randomUUID();
+    try {
+      await prisma.agentTask.create({
+        data: {
+          id: taskId, requesterAgentId: depositor, performerAgentId: beneficiary,
+          capability: "escrow_delivery",
+          description: `Escrow: ${depositor.split(":")[1]} → ${beneficiary.split(":")[1]}`,
+          maxBudget: amount, status: "settled", priority: "normal",
+          idempotencyKey: `esc-task:${taskId}`, requestedAt: new Date(), settledAt: new Date(),
+        },
+      });
+      await prisma.escrow.create({
+        data: {
+          taskId, depositorAgentId: depositor, beneficiaryAgentId: beneficiary,
+          amount, releasedAmount: amount,
+          status: pick(["fully_released", "fully_released", "locked"]),
+          expiresAt: new Date(Date.now() + 86400000),
+          conditions: { create: [{ type: "task_delivery", releaseAmount: amount, description: "Full delivery", met: true }] },
+        },
+      });
+    } catch (e: any) { server.log.error(`[ECON] Flow15 escrow: ${e.message || e}`); }
+  },
+
+  // 16. Credit System Activity
+  async () => {
+    try {
+      const accts = await prisma.creditAccount.findMany({ take: 5 });
+      if (accts.length === 0) return;
+      const acct = pick(accts);
+      const type = pick(["deposit", "spend", "refund", "fee"]);
+      const amt = randInt(10, 1000);
+      const bal = Number(acct.balance ?? 0);
+      const newBal = type === "spend" ? Math.max(0, bal - amt) : bal + amt;
+      await prisma.creditTransaction.create({
+        data: {
+          id: randomUUID(), accountId: acct.id, type, amount: amt,
+          balanceAfter: newBal, reference: `econ:${type}:${Date.now()}`,
+          rail: "unykorn-l1", txHash: sha256(`credit:${acct.id}:${Date.now()}`),
+        },
+      });
+      await prisma.creditAccount.update({
+        where: { id: acct.id },
+        data: { balance: newBal, updatedAt: new Date() },
+      });
+    } catch (e: any) { server.log.error(`[ECON] Flow16 credit: ${e.message || e}`); }
+  },
+
+  // 17. Guardian Activity — revenue + security events
+  async () => {
+    try {
+      const sources = ["x402_settlement", "namespace_fee", "gateway_routing", "signing_fee", "ai_compute"];
+      await prisma.guardianRevenue.create({
+        data: {
+          source: pick(sources), amountUny: String(randInt(10, 5000)),
+          category: pick(["fee", "settlement", "protocol"]),
+          blockHeight: blocks.length > 0 ? blocks[blocks.length - 1].height : 0,
+          txHash: sha256(`revenue:${Date.now()}`),
+          details: { econCycle, ts: new Date().toISOString() },
+        },
+      });
+      if (Math.random() < 0.3) {
+        const evts = ["rate_limit_triggered", "anomaly_detected", "policy_violation", "auth_failure"];
+        await prisma.guardianSecurityEvent.create({
+          data: {
+            eventType: pick(evts), sourceIp: `10.0.${randInt(1,5)}.${randInt(1,254)}`,
+            target: pick(SYSTEM_AGENTS).id, severity: pick(["low", "medium", "low"]),
+            actionTaken: pick(["logged", "rate_limited", "blocked"]), blocked: Math.random() < 0.1,
+            details: { econCycle, reason: "Automated monitoring" },
+          },
+        });
+      }
+    } catch (e: any) { server.log.error(`[ECON] Flow17 guardian: ${e.message || e}`); }
+  },
+
+  // 18. Treasury Operations — refills
+  async () => {
+    try {
+      const agent = pick(SYSTEM_AGENTS);
+      await prisma.treasuryRefill.create({
+        data: {
+          refillId: randomUUID(),
+          walletAddress: `pk_${agent.id.replace("agent:", "")}`,
+          asset: "UNY", amount: String(randInt(1000, 50000)),
+          fundingMode: pick(["auto", "manual", "policy"]),
+          reference: `econ:refill:cycle-${econCycle}`,
+          refillStatus: pick(["completed", "pending"]),
+          completedAt: new Date(),
+        },
+      });
+    } catch (e: any) { server.log.error(`[ECON] Flow18 treasury-ops: ${e.message || e}`); }
+  },
+
+  // 19. Webhook Delivery — event notifications
+  async () => {
+    try {
+      const subs = await prisma.webhookSubscription.findMany({ where: { active: true }, take: 5 });
+      if (subs.length === 0) return;
+      const sub = pick(subs);
+      const evts = ["settlement.completed", "task.created", "escrow.released", "block.produced", "policy.evaluated"];
+      await prisma.webhookDelivery.create({
+        data: {
+          id: randomUUID(), subscriptionId: sub.id, eventType: pick(evts),
+          payload: { event: pick(evts), ts: new Date().toISOString(), econCycle, blockHeight: blocks.length > 0 ? blocks[blocks.length - 1].height : 0 },
+          deliveryStatus: pick(["delivered", "delivered", "delivered", "failed"]),
+          attempts: randInt(1, 3), responseCode: 200, lastAttemptAt: new Date(),
+        },
+      });
+    } catch (e: any) { server.log.error(`[ECON] Flow19 webhook: ${e.message || e}`); }
+  },
 ];
 
 let econTimer: ReturnType<typeof setInterval> | null = null;
@@ -964,6 +1188,280 @@ async function bootstrapEconomy(): Promise<void> {
   }
   const totalDeposited = SYSTEM_AGENTS.reduce((s, a) => s + BigInt(a.deposit), 0n);
   server.log.info(`[ECON] ${SYSTEM_AGENTS.length} agents bootstrapped, ${totalDeposited.toLocaleString()} UNY allocated`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SYSTEM DATA BOOTSTRAP — Populate reference tables (one-time seed)
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function bootstrapSystemData(): Promise<void> {
+  server.log.info("[SYS] Bootstrapping reference data for empty tables...");
+
+  // ── Policy Rules (6) ────────────────────────────────────────────────────
+  const policyRules = [
+    { id: "rule:treasury-spend-limit", name: "Treasury Spend Limit", description: "Max single transfer from treasury", effect: "rate_limit" as const, scope: "agent", priority: 100, conditions: [{field:"amount",op:"gt",value:"10000000"}], targetRoles: ["treasury"], maxSpend: "50000000" },
+    { id: "rule:agent-daily-limit", name: "Agent Daily Budget", description: "Enforce daily spending caps", effect: "deny" as const, scope: "role", priority: 90, conditions: [{field:"dailySpend",op:"gt",value:"spendLimitDaily"}], targetRoles: ["*"] },
+    { id: "rule:escrow-approval", name: "Escrow Approval Required", description: "Escrows > 5000 UNY need approval", effect: "require_approval" as const, scope: "global", priority: 80, conditions: [{field:"amount",op:"gt",value:"5000"}], targetRoles: ["*"], maxSpend: "5000" },
+    { id: "rule:ai-compute-limit", name: "AI Compute Rate Limit", description: "Rate limit AI inference requests", effect: "rate_limit" as const, scope: "role", priority: 70, conditions: [{field:"requestsPerMin",op:"gt",value:"100"}], targetRoles: ["ai-compute","executor"] },
+    { id: "rule:cross-org-audit", name: "Cross-Org Audit Trail", description: "All cross-org transfers audited", effect: "audit_only" as const, scope: "global", priority: 60, conditions: [{field:"crossOrg",op:"eq",value:true}], targetRoles: ["*"] },
+    { id: "rule:settlement-auto-allow", name: "Auto-Allow Settlements", description: "Settlements < 2000 UNY auto-approved", effect: "allow" as const, scope: "global", priority: 50, conditions: [{field:"amount",op:"lt",value:"2000"}], targetRoles: ["settler"], maxSpend: "2000" },
+  ];
+  for (const r of policyRules) {
+    await prisma.policyRule.upsert({
+      where: { id: r.id },
+      create: { id: r.id, name: r.name, description: r.description, effect: r.effect, scope: r.scope, priority: r.priority, conditions: JSON.stringify(r.conditions), targetRoles: r.targetRoles, ...(r.maxSpend ? { maxSpend: r.maxSpend } : {}) },
+      update: {},
+    }).catch(() => {});
+  }
+
+  // ── MCP Servers (5) ─────────────────────────────────────────────────────
+  const mcpServers = [
+    { name: "genesis-ledger-mcp", description: "Genesis Ledger — balance queries, transfers", endpoint: "http://localhost:4030/mcp", healthEndpoint: "http://localhost:4030/health", tools: ["ledger_balance","ledger_transfer","ledger_history"], allowedRoles: ["*"], status: "running" },
+    { name: "signer-mcp", description: "Ed25519 Signing — key management", endpoint: "http://localhost:4050/mcp", healthEndpoint: "http://localhost:4050/health", tools: ["sign","verify","rotate_key"], allowedRoles: ["signer","treasury"], status: "running" },
+    { name: "facilitator-mcp", description: "x402 Facilitator — invoices, receipts", endpoint: "http://localhost:3100/mcp", healthEndpoint: "http://localhost:3100/health", tools: ["create_invoice","verify_payment","batch_receipts"], allowedRoles: ["*"], status: "running" },
+    { name: "gateway-mcp", description: "Agent Gateway — routing, task dispatch", endpoint: "http://localhost:4010/mcp", healthEndpoint: "http://localhost:4010/health", tools: ["route_task","agent_status","org_lookup"], allowedRoles: ["*"], status: "running" },
+    { name: "oracle-mcp", description: "Oracle Data Feed — prices, health", endpoint: "http://localhost:4060/mcp", healthEndpoint: "http://localhost:4060/health", tools: ["get_price","network_health","gas_estimate"], allowedRoles: ["oracle"], status: "standby" },
+  ];
+  for (const m of mcpServers) {
+    await prisma.mcpServer.upsert({
+      where: { name: m.name },
+      create: { name: m.name, description: m.description, endpoint: m.endpoint, healthEndpoint: m.healthEndpoint, tools: JSON.stringify(m.tools), allowedRoles: m.allowedRoles, status: m.status },
+      update: {},
+    }).catch(() => {});
+  }
+
+  // ── Agent Budgets (one per system agent) ────────────────────────────────
+  for (const ag of SYSTEM_AGENTS) {
+    const budgetId = `budget:${ag.id.replace("agent:", "")}`;
+    await prisma.agentBudget.upsert({
+      where: { id: budgetId },
+      create: {
+        id: budgetId, agentId: ag.id, period: "daily",
+        budgetLimit: ag.deposit, spent: "0", reserved: "0",
+        periodStart: new Date(), autoRefill: true,
+        refillAmount: String(BigInt(ag.deposit) / 10n),
+        refillThreshold: String(BigInt(ag.deposit) / 20n),
+      },
+      update: {},
+    }).catch(() => {});
+  }
+
+  // ── Credit Accounts (5) ────────────────────────────────────────────────
+  if (await prisma.creditAccount.count() === 0) {
+    const creditWallets = ["agent:gateway", "agent:facilitator", "agent:mesh-coord", "agent:bedrock-ai", "agent:x402-settler"];
+    for (const w of creditWallets) {
+      await prisma.creditAccount.create({
+        data: {
+          walletAddress: `pk_${w.replace("agent:", "")}`,
+          rail: "unykorn-l1", asset: "UNY",
+          balance: randInt(5000, 100000), kycLevel: "verified",
+          pubkey: `pk_${w.replace("agent:", "")}`,
+        },
+      }).catch(() => {});
+    }
+  }
+
+  // ── Treasury Agents (3) ────────────────────────────────────────────────
+  if (await prisma.treasuryAgent.count() === 0) {
+    const tAgents = [
+      { walletAddress: "pk_treasury", targetBalance: 500000000, minBalance: 100000000, maxSingleRefill: 50000000, maxDailyRefill: 200000000 },
+      { walletAddress: "pk_facilitator", targetBalance: 2000000, minBalance: 500000, maxSingleRefill: 500000, maxDailyRefill: 1000000 },
+      { walletAddress: "pk_x402-settler", targetBalance: 10000000, minBalance: 2000000, maxSingleRefill: 2000000, maxDailyRefill: 5000000 },
+    ];
+    for (const ta of tAgents) {
+      await prisma.treasuryAgent.create({ data: ta }).catch(() => {});
+    }
+  }
+
+  // ── Webhook Subscriptions (4) ──────────────────────────────────────────
+  if (await prisma.webhookSubscription.count() === 0) {
+    const webhooks = [
+      { id: "wh:settlements", walletAddress: "pk_treasury", url: "https://hooks.unykorn.org/settlements", events: ["settlement.completed","settlement.failed"], secret: sha256("wh-secret-1") },
+      { id: "wh:tasks", walletAddress: "pk_mesh-coord", url: "https://hooks.unykorn.org/tasks", events: ["task.created","task.settled","task.failed"], secret: sha256("wh-secret-2") },
+      { id: "wh:security", walletAddress: "pk_gateway", url: "https://hooks.unykorn.org/security", events: ["security.alert","policy.violation"], secret: sha256("wh-secret-3") },
+      { id: "wh:blocks", walletAddress: "pk_facilitator", url: "https://hooks.unykorn.org/blocks", events: ["block.produced","anchor.created"], secret: sha256("wh-secret-4") },
+    ];
+    for (const w of webhooks) {
+      await prisma.webhookSubscription.create({ data: w }).catch(() => {});
+    }
+  }
+
+  // ── Emergency Pauses (1 inactive for audit trail) ──────────────────────
+  if (await prisma.emergencyPause.count() === 0) {
+    await prisma.emergencyPause.create({
+      data: { scope: "agent", targetId: "agent:oracle-delta", initiatedBy: "agent:treasury", reason: "Scheduled oracle maintenance window", active: false, endedAt: new Date() },
+    }).catch(() => {});
+  }
+
+  // ── Streaming Balances (2) ─────────────────────────────────────────────
+  if (await prisma.streamingBalance.count() === 0) {
+    await prisma.streamingBalance.createMany({
+      data: [
+        { fromAgentId: "agent:mesh-coord", toAgentId: "agent:bedrock-ai", totalBudget: "100000", ratePerSecond: "1", streamedAmount: "45000", status: "active", endsAt: new Date(Date.now() + 86400000 * 7) },
+        { fromAgentId: "agent:facilitator", toAgentId: "agent:lambda-exec", totalBudget: "50000", ratePerSecond: "0.5", streamedAmount: "12000", status: "active", endsAt: new Date(Date.now() + 86400000 * 14) },
+      ],
+    }).catch(() => {});
+  }
+
+  // ── Guardian Upgrades (2) ──────────────────────────────────────────────
+  if (await prisma.guardianUpgrade.count() === 0) {
+    await prisma.guardianUpgrade.createMany({
+      data: [
+        { component: "genesis-ledger", fromVersion: "0.9.0", toVersion: "1.0.0", upgradeStatus: "completed", initiatedBy: "agent:treasury" },
+        { component: "economic-daemon", fromVersion: "0.5.0", toVersion: "1.0.0", upgradeStatus: "completed", initiatedBy: "auto" },
+      ],
+    }).catch(() => {});
+  }
+
+  const counts = await Promise.all([
+    prisma.policyRule.count(), prisma.mcpServer.count(), prisma.agentBudget.count(),
+    prisma.creditAccount.count(), prisma.treasuryAgent.count(), prisma.webhookSubscription.count(),
+  ]);
+  server.log.info(`[SYS] Seeded: ${counts[0]} rules, ${counts[1]} MCP servers, ${counts[2]} budgets, ${counts[3]} credit accts, ${counts[4]} treasury agents, ${counts[5]} webhooks`);
+}
+
+// ── Periodic: Agent Heartbeats (every 30s) ────────────────────────────────
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+async function publishHeartbeats(): Promise<void> {
+  for (const ag of SYSTEM_AGENTS) {
+    const acct = ledger.getAccountByAgent(ag.id);
+    await prisma.agentHeartbeat.create({
+      data: {
+        agentId: ag.id, healthy: true,
+        activeTaskCount: randInt(0, 5),
+        balanceRemaining: acct?.balances.OPERATING ?? "0",
+        cpuPercent: Math.random() * 30 + 5,
+        memoryMb: Math.random() * 500 + 100,
+        requestsPerMin: Math.random() * 50,
+        errorRate: Math.random() * 0.02,
+      },
+    }).catch(() => {});
+  }
+  // Update last heartbeat on agent records
+  await prisma.agent.updateMany({ where: { id: { in: SYSTEM_AGENTS.map(a => a.id) } }, data: { lastHeartbeat: new Date() } }).catch(() => {});
+}
+
+function startHeartbeatPublisher(): void {
+  if (heartbeatTimer) return;
+  server.log.info("[SYS] Heartbeat publisher started — 30s interval");
+  heartbeatTimer = setInterval(async () => {
+    try { await publishHeartbeats(); } catch (e) { server.log.error(`[SYS] Heartbeat error: ${e}`); }
+  }, 30000);
+}
+
+// ── Periodic: Receipt Batch Builder (every 60s) ──────────────────────────
+let batchTimer: ReturnType<typeof setInterval> | null = null;
+
+async function buildReceiptBatch(): Promise<void> {
+  const unbatched = await prisma.settlementReceipt.findMany({
+    where: { batchId: null }, take: 20, orderBy: { signedAt: "asc" },
+  });
+  if (unbatched.length < 3) return; // need at least 3 receipts for a batch
+
+  const batchId = randomUUID();
+  const hashes = unbatched.map(r => sha256(`${r.id}:${r.amount}:${r.signedAt.toISOString()}`));
+  const root = merkleOf(hashes);
+  const totalValue = unbatched.reduce((s, r) => s + BigInt(r.amount), 0n);
+
+  await prisma.receiptBatch.create({
+    data: { id: batchId, merkleRoot: root, receiptCount: unbatched.length, totalValue: totalValue.toString() },
+  });
+
+  // Link receipts to batch + set merkle indices
+  for (let i = 0; i < unbatched.length; i++) {
+    await prisma.settlementReceipt.update({
+      where: { id: unbatched[i].id },
+      data: { batchId, merkleIndex: i, merkleProofHash: hashes[i], status: "batched" },
+    }).catch(() => {});
+  }
+
+  // Anchor to legacy receipt_roots for backward compat
+  await prisma.receiptRoot.upsert({
+    where: { batchId },
+    create: { batchId, merkleRoot: root, itemCount: unbatched.length, anchorTxHash: sha256(`anchor-batch:${batchId}`), anchoredAt: new Date() },
+    update: {},
+  }).catch(() => {});
+
+  server.log.info(`[BATCH] Receipt batch ${batchId.slice(0,8)} — ${unbatched.length} receipts, root=${root.slice(0,16)}, value=${totalValue}`);
+}
+
+function startBatchBuilder(): void {
+  if (batchTimer) return;
+  server.log.info("[SYS] Receipt batch builder started — 60s interval");
+  batchTimer = setInterval(async () => {
+    try { await buildReceiptBatch(); } catch (e) { server.log.error(`[SYS] Batch error: ${e}`); }
+  }, 60000);
+}
+
+// ── API Sync Publisher — pushes state to CF Worker ────────────────────────
+const SYNC_URL = process.env.SYNC_URL ?? "";
+const SYNC_SECRET = process.env.FTH_SERVICE_SECRET ?? "";
+let syncTimer: ReturnType<typeof setInterval> | null = null;
+
+async function publishSync(): Promise<void> {
+  if (!SYNC_URL) return;
+  try {
+    // Collect all RPC data
+    const [status, latestBlocks, nodes, infra, econ, integrity, systemState] = await Promise.all([
+      rpcMethods.chain_status([]),
+      rpcMethods.chain_getBlocks([Math.max(1, (blocks.length > 0 ? blocks[blocks.length - 1].height : 0) - 19), 20]),
+      rpcMethods.chain_getNodes([]),
+      rpcMethods.chain_getInfrastructure([]),
+      rpcMethods.chain_getEconomicState([]),
+      rpcMethods.chain_verifyIntegrity([]),
+      rpcMethods.chain_getSystemState([]),
+    ]);
+
+    const latestBlock = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+
+    // Collect REST data
+    const [ledgerData, treasuryData] = await Promise.all([
+      prisma.ledgerEntry.findMany({ take: 50, orderBy: { sequence: "desc" } }),
+      (async () => {
+        const state = ledger.getTreasuryState();
+        const dbAgg = await prisma.genesisAccount.aggregate({ _sum: { totalDeposited: true, totalWithdrawn: true, operatingBalance: true, escrowBalance: true, reservedBalance: true, stakedBalance: true, proofReceiptBalance: true } });
+        return { engine: state, database: { totalDeposited: dbAgg._sum.totalDeposited?.toString() ?? "0", totalWithdrawn: dbAgg._sum.totalWithdrawn?.toString() ?? "0", operatingBalance: dbAgg._sum.operatingBalance?.toString() ?? "0" }, updatedAt: new Date().toISOString() };
+      })(),
+    ]);
+
+    const payload = {
+      // RPC data
+      "rpc:chain_status": status,
+      "rpc:chain_getBlocks": latestBlocks,
+      "rpc:chain_getNodes": nodes,
+      "rpc:chain_getInfrastructure": infra,
+      "rpc:chain_getEconomicState": econ,
+      "rpc:chain_verifyIntegrity": integrity,
+      "rpc:chain_getSystemState": systemState,
+      "rpc:chain_getLatestBlock": latestBlock ? { height: latestBlock.height, hash: latestBlock.hash, timestamp: latestBlock.timestamp, chain_id: CHAIN_ID } : null,
+      // REST data
+      "rest:health": { service: SERVICE, status: "healthy", database: "connected", entries: ledger.entryCount(), uptime: process.uptime() },
+      "rest:status": { chainId: CHAIN_ID, blockHeight: latestBlock?.height ?? 0, blockHash: latestBlock?.hash ?? "", synced: true, nodeId: NODE_ID },
+      "rest:ledger": { entries: ledgerData, total: ledgerData.length, limit: 50, offset: 0 },
+      "rest:treasury": treasuryData,
+    };
+
+    const res = await fetch(SYNC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Sync-Secret": SYNC_SECRET },
+      body: JSON.stringify(payload, (_k, v) => typeof v === "bigint" ? v.toString() : v),
+    });
+
+    if (!res.ok) server.log.warn(`[SYNC] Push failed: ${res.status}`);
+  } catch (e: any) {
+    server.log.warn(`[SYNC] Error: ${e.message || e}`);
+  }
+}
+
+function startSyncPublisher(): void {
+  if (syncTimer || !SYNC_URL) return;
+  server.log.info(`[SYNC] State publisher started — syncing to ${SYNC_URL} every 15s`);
+  syncTimer = setInterval(async () => {
+    try { await publishSync(); } catch (e) { server.log.error(`[SYNC] Publish error: ${e}`); }
+  }, 15000);
+  // Initial sync after 5s
+  setTimeout(() => publishSync().catch(() => {}), 5000);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1396,10 +1894,63 @@ const rpcMethods: Record<string, RpcHandler> = {
         totalSettled: treasury.totalSettled,
         supplyIntegrity: treasury.integrityCheck,
       },
-      flowTypes: 12,
+      flowTypes: 19,
       systemAgents: SYSTEM_AGENTS.length,
       timestamp: new Date().toISOString(),
     };
+  },
+
+  // ── Extended RPC: Table state for explorer ────────────────────────────
+
+  async chain_getSystemState() {
+    // Sequential to avoid connection pool exhaustion
+    const counts: Record<string, number> = {};
+    const models: [string, any][] = [
+      ["agent_tasks", prisma.agentTask], ["a2a_messages", prisma.a2AMessage],
+      ["settlement_receipts", prisma.settlementReceipt], ["proof_artifacts", prisma.proofArtifact],
+      ["escrows", prisma.escrow], ["policy_decisions", prisma.policyDecision],
+      ["policy_approvals", prisma.policyApproval], ["audit_entries", prisma.auditEntry],
+      ["agent_budgets", prisma.agentBudget], ["agent_heartbeats", prisma.agentHeartbeat],
+      ["credit_accounts", prisma.creditAccount], ["credit_transactions", prisma.creditTransaction],
+      ["treasury_agents", prisma.treasuryAgent], ["treasury_refills", prisma.treasuryRefill],
+      ["treasury_halts", prisma.treasuryHalt], ["webhook_subscriptions", prisma.webhookSubscription],
+      ["webhook_deliveries", prisma.webhookDelivery], ["mcp_servers", prisma.mcpServer],
+      ["emergency_pauses", prisma.emergencyPause], ["streaming_balances", prisma.streamingBalance],
+      ["receipt_batches", prisma.receiptBatch], ["receipt_roots", prisma.receiptRoot],
+      ["guardian_revenue", prisma.guardianRevenue], ["guardian_security_events", prisma.guardianSecurityEvent],
+      ["guardian_upgrades", prisma.guardianUpgrade], ["rate_limit_log", prisma.rateLimitLog],
+    ];
+    for (const [name, model] of models) {
+      try { counts[name] = await model.count(); } catch { counts[name] = -1; }
+    }
+    const populated = Object.values(counts).filter(c => c > 0).length;
+    return { tables: counts, totalPopulated: populated, totalTables: models.length, timestamp: new Date().toISOString() };
+  },
+
+  async chain_getRecentTasks(params) {
+    const limit = Math.min(Number(params[0] ?? 20), 100);
+    const tasks = await prisma.agentTask.findMany({
+      take: limit, orderBy: { requestedAt: "desc" },
+      select: { id: true, requesterAgentId: true, performerAgentId: true, capability: true, status: true, quotedCost: true, maxBudget: true, priority: true, requestedAt: true, settledAt: true },
+    });
+    return tasks.map(t => ({ ...t, quotedCost: t.quotedCost?.toString(), maxBudget: t.maxBudget?.toString() }));
+  },
+
+  async chain_getRecentPolicies(params) {
+    const limit = Math.min(Number(params[0] ?? 20), 100);
+    return prisma.policyDecision.findMany({
+      take: limit, orderBy: { evaluatedAt: "desc" },
+      select: { id: true, action: true, agentId: true, result: true, reason: true, evaluatedAt: true },
+    });
+  },
+
+  async chain_getRecentSettlements(params) {
+    const limit = Math.min(Number(params[0] ?? 20), 100);
+    const receipts = await prisma.settlementReceipt.findMany({
+      take: limit, orderBy: { signedAt: "desc" },
+      select: { id: true, taskId: true, fromAgentId: true, toAgentId: true, amount: true, status: true, batchId: true, signedAt: true },
+    });
+    return receipts.map(r => ({ ...r, amount: r.amount?.toString() }));
   },
 };
 
@@ -1578,6 +2129,9 @@ const start = async () => {
     // ── Bootstrap economy — system agents + treasury allocations ──
     await bootstrapEconomy();
 
+    // ── Bootstrap system data — policy rules, MCP servers, budgets, etc. ──
+    await bootstrapSystemData();
+
     // ── Produce genesis block and start block production ──
     await produceBlock(); // seal everything up to now
     startBlockProduction();
@@ -1585,6 +2139,11 @@ const start = async () => {
 
     // ── Start economic daemon — self-settling AI economy ──
     startEconomicDaemon();
+
+    // ── Start periodic tasks — heartbeats + receipt batching + sync ──
+    startHeartbeatPublisher();
+    startBatchBuilder();
+    startSyncPublisher();
 
     await server.listen({ port: PORT, host: "0.0.0.0" });
     server.log.info(`${SERVICE} listening on port ${PORT}`);

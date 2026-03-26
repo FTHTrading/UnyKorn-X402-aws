@@ -1,0 +1,18 @@
+name = "unykorn-api"
+main = "src/worker.ts"
+compatibility_date = "2026-03-01"
+
+routes = [
+  { pattern = "api.unykorn.org/*", zone_name = "unykorn.org" }
+]
+
+[vars]
+ALLOWED_ORIGINS = "https://ex.unykorn.org,http://localhost:5173,http://localhost:4173"
+
+# Set the sync secret with:  npx wrangler secret put SYNC_SECRET
+# Set it to match the FTH_SERVICE_SECRET from .env
+
+[[kv_namespaces]]
+binding = "STATE"
+id = "c8ca8e8d8be74d3cbab03f064d493603"
+preview_id = "c8ca8e8d8be74d3cbab03f064d493603"

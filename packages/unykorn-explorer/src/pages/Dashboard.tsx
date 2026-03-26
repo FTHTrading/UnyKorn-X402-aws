@@ -15,6 +15,10 @@ import {
   getNodeStatus,
   getInfrastructureOverview,
   getEconomicState,
+  getSystemState,
+  getRecentTasks,
+  getRecentPolicies,
+  getRecentSettlements,
   CHAIN,
   PREMIUM_ROUTES,
   GATEWAY_URL,
@@ -32,6 +36,10 @@ import {
   type NodeInfo,
   type InfrastructureOverview,
   type EconomicState,
+  type SystemState,
+  type AgentTask,
+  type PolicyDecision,
+  type SettlementReceipt,
 } from "../api";
 
 export default function Dashboard() {
@@ -49,6 +57,10 @@ export default function Dashboard() {
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [infra, setInfra] = useState<InfrastructureOverview | null>(null);
   const [econ, setEcon] = useState<EconomicState | null>(null);
+  const [sysState, setSysState] = useState<SystemState | null>(null);
+  const [tasks, setTasks] = useState<AgentTask[]>([]);
+  const [policies, setPolicies] = useState<PolicyDecision[]>([]);
+  const [settlements, setSettlements] = useState<SettlementReceipt[]>([]);
   const [blockPulse, setBlockPulse] = useState(false);
   const prevHeight = useRef(0);
 
@@ -68,6 +80,10 @@ export default function Dashboard() {
     getNodeStatus().then(setNodes).catch(() => {});
     getInfrastructureOverview().then(setInfra).catch(() => {});
     getEconomicState().then(setEcon).catch(() => {});
+    getSystemState().then(setSysState).catch(() => {});
+    getRecentTasks(10).then(setTasks).catch(() => {});
+    getRecentPolicies(10).then(setPolicies).catch(() => {});
+    getRecentSettlements(10).then(setSettlements).catch(() => {});
 
     const t = setInterval(() => {
       getChainStatus().then((c) => {
@@ -88,6 +104,10 @@ export default function Dashboard() {
       getNodeStatus().then(setNodes).catch(() => {});
       getInfrastructureOverview().then(setInfra).catch(() => {});
       getEconomicState().then(setEcon).catch(() => {});
+      getSystemState().then(setSysState).catch(() => {});
+      getRecentTasks(10).then(setTasks).catch(() => {});
+      getRecentPolicies(10).then(setPolicies).catch(() => {});
+      getRecentSettlements(10).then(setSettlements).catch(() => {});
     }, 3000);
     return () => clearInterval(t);
   }, []);
@@ -266,6 +286,137 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+        </>
+      )}
+
+      {/* ── System Health ── */}
+      {sysState && (
+        <>
+          <div className="section-header">
+            <h2 className="section-title">System <span className="accent">Health</span></h2>
+            <span className="section-badge">{sysState.populatedTables}/{sysState.totalTables} tables · {sysState.totalRecords.toLocaleString()} records</span>
+          </div>
+          <div className="stat-grid" style={{ marginBottom: "var(--sov-space-lg)" }}>
+            <div className="stat-card glass">
+              <div className="stat-label">Populated Tables</div>
+              <div className="stat-value" style={{ color: "#22c55e" }}>{sysState.populatedTables} / {sysState.totalTables}</div>
+              <div className="stat-sub">{Math.round(sysState.populatedTables / sysState.totalTables * 100)}% coverage</div>
+            </div>
+            <div className="stat-card glass">
+              <div className="stat-label">Total Records</div>
+              <div className="stat-value">{sysState.totalRecords.toLocaleString()}</div>
+              <div className="stat-sub">Across all database models</div>
+            </div>
+            <div className="stat-card glass">
+              <div className="stat-label">Agent Heartbeats</div>
+              <div className="stat-value">{(sysState.tables?.agent_heartbeats ?? 0).toLocaleString()}</div>
+              <div className="stat-sub">30s pulse from all agents</div>
+            </div>
+            <div className="stat-card glass">
+              <div className="stat-label">Receipt Batches</div>
+              <div className="stat-value">{sysState.tables?.receipt_batches ?? 0}</div>
+              <div className="stat-sub">Merkle root anchoring</div>
+            </div>
+          </div>
+
+          {/* Table Population Grid */}
+          <div className="glass" style={{ padding: "var(--sov-space-lg)", marginBottom: "var(--sov-space-xl)" }}>
+            <h4 style={{ margin: "0 0 var(--sov-space-md)", color: "var(--sov-accent-1)" }}>Database Table Population</h4>
+            <div style={{ display: "flex", gap: "var(--sov-space-xs)", flexWrap: "wrap" }}>
+              {Object.entries(sysState.tables).sort((a, b) => b[1] - a[1]).map(([table, count]) => (
+                <span key={table} className={`pill ${count > 0 ? "pill-success" : "pill-warning"}`} style={{ fontSize: "0.75rem" }}>
+                  {table.replace(/_/g, " ")}: {count}
+                </span>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Agent Activity ── */}
+      {(tasks.length > 0 || settlements.length > 0 || policies.length > 0) && (
+        <>
+          <div className="section-header">
+            <h2 className="section-title">Agent <span className="accent">Activity</span></h2>
+            <span className="section-badge">{tasks.length} tasks · {settlements.length} settlements · {policies.length} policies</span>
+          </div>
+          <div className="two-col" style={{ marginBottom: "var(--sov-space-xl)" }}>
+            {/* Recent Tasks */}
+            <div className="glass">
+              <div style={{ padding: "var(--sov-space-md) var(--sov-space-lg)", borderBottom: "1px solid var(--sov-border)" }}>
+                <h3 className="section-title" style={{ fontSize: "var(--sov-text-md)", margin: 0 }}>
+                  Agent <span className="accent">Tasks</span>
+                </h3>
+              </div>
+              <table className="data-table">
+                <thead>
+                  <tr><th>Agent</th><th>Type</th><th>Status</th><th>Priority</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                  {tasks.slice(0, 8).map((t) => (
+                    <tr key={t.id}>
+                      <td className="mono" style={{ fontSize: "0.8rem" }}>{t.agentId.replace("agent:", "")}</td>
+                      <td><span className="pill pill-info" style={{ fontSize: "0.75rem" }}>{t.taskType}</span></td>
+                      <td><span className={`pill ${t.status === "completed" ? "pill-success" : t.status === "running" ? "pill-warning" : "pill-info"}`} style={{ fontSize: "0.75rem" }}>{t.status}</span></td>
+                      <td style={{ fontWeight: 600 }}>{t.priority}</td>
+                      <td className="mono" style={{ fontSize: "0.8rem" }}>{timeAgo(t.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Recent Settlements */}
+            <div className="glass">
+              <div style={{ padding: "var(--sov-space-md) var(--sov-space-lg)", borderBottom: "1px solid var(--sov-border)" }}>
+                <h3 className="section-title" style={{ fontSize: "var(--sov-text-md)", margin: 0 }}>
+                  Settlement <span className="accent">Receipts</span>
+                </h3>
+              </div>
+              <table className="data-table">
+                <thead>
+                  <tr><th>Agent</th><th>Amount (UNY)</th><th>Proof Hash</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                  {settlements.slice(0, 8).map((s) => (
+                    <tr key={s.id}>
+                      <td className="mono" style={{ fontSize: "0.8rem" }}>{s.agentId.replace("agent:", "")}</td>
+                      <td style={{ fontWeight: 600 }}>{Number(s.amount).toLocaleString()}</td>
+                      <td className="mono" style={{ fontSize: "0.8rem", color: "var(--sov-accent-1)" }}>{s.proofHash ? truncHash(s.proofHash, 6) : "—"}</td>
+                      <td className="mono" style={{ fontSize: "0.8rem" }}>{timeAgo(s.settledAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Policy Decisions */}
+          {policies.length > 0 && (
+            <div className="glass" style={{ marginBottom: "var(--sov-space-xl)" }}>
+              <div style={{ padding: "var(--sov-space-md) var(--sov-space-lg)", borderBottom: "1px solid var(--sov-border)" }}>
+                <h3 className="section-title" style={{ fontSize: "var(--sov-text-md)", margin: 0 }}>
+                  Policy <span className="accent">Decisions</span>
+                </h3>
+              </div>
+              <table className="data-table">
+                <thead>
+                  <tr><th>Agent</th><th>Action</th><th>Decision</th><th>Reason</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                  {policies.slice(0, 6).map((p) => (
+                    <tr key={p.id}>
+                      <td className="mono" style={{ fontSize: "0.8rem" }}>{p.agentId.replace("agent:", "")}</td>
+                      <td><span className="pill pill-info" style={{ fontSize: "0.75rem" }}>{p.action}</span></td>
+                      <td><span className={`pill ${p.decision === "approved" ? "pill-success" : p.decision === "denied" ? "pill-warning" : "pill-info"}`} style={{ fontSize: "0.75rem" }}>{p.decision}</span></td>
+                      <td style={{ fontSize: "0.8rem", maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.reason}</td>
+                      <td className="mono" style={{ fontSize: "0.8rem" }}>{timeAgo(p.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
 
