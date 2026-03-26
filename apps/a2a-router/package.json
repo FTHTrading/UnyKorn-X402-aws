@@ -1,0 +1,21 @@
+{
+  "name": "@unykorn/a2a-router",
+  "version": "0.1.0",
+  "description": "Routes A2A messages between agents. Handles discovery, message routing, and protocol enforcement.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.0",
+    "@unykorn/shared-types": "*",
+    "@unykorn/a2a-sdk": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

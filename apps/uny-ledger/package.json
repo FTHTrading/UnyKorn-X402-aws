@@ -1,0 +1,21 @@
+{
+  "name": "@unykorn/uny-ledger",
+  "version": "0.1.0",
+  "description": "Genesis Ledger API — the machine settlement backbone.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.0",
+    "@unykorn/shared-types": "*",
+    "@unykorn/genesis-ledger": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

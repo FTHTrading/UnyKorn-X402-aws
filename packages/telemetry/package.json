@@ -1,0 +1,13 @@
+{
+  "name": "@unykorn/telemetry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": { "build": "tsc -b", "clean": "rm -rf dist" },
+  "dependencies": {
+    "nanoid": "^5.1.0"
+  },
+  "devDependencies": { "typescript": "~5.9.3" }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@unykorn/ops-console",
+  "version": "0.1.0",
+  "description": "Internal operations dashboard API — agent status, budgets, queued tasks, health.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.0",
+    "@unykorn/shared-types": "*",
+    "@unykorn/agent-core": "*",
+    "@unykorn/genesis-ledger": "*",
+    "@unykorn/telemetry": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

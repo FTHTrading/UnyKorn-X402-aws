@@ -1,0 +1,23 @@
+{
+  "name": "@unykorn/agent-gateway",
+  "version": "0.1.0",
+  "description": "Central entry point for all agent requests. Routes tasks to agents, enforces policy, manages sessions.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.0",
+    "@unykorn/shared-types": "*",
+    "@unykorn/agent-core": "*",
+    "@unykorn/policy-engine": "*",
+    "@unykorn/a2a-sdk": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

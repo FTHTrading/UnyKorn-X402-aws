@@ -4,7 +4,8 @@
   "private": true,
   "description": "UnyKorn protocol monorepo — TLD registry, smart contracts, wallet UI",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "inventory":    "node scripts/inventory.mjs",

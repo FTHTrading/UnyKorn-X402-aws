@@ -2,35 +2,54 @@
 
 **UnyKorn Token (UNY) — Chain 7331**
 
-*The native gas and utility token powering the x402 AI payment protocol*
+*The native gas and utility token powering the x402 AI payment protocol + UNY Genesis machine economy*
 
 ---
 
-**Version**: 1.0  
+**Version**: 1.1 — Truth-Layered Edition  
 **Date**: March 2026  
 **Authors**: FTH Trading / UnyKorn Protocol Team
 
 ---
 
+> ### Reading Guide — Status Markers
+>
+> | Marker | Meaning |
+> |--------|---------|
+> | **[LIVE]** | Running in production or on controlled devnet right now |
+> | **[BUILT]** | Code-complete, tested, not yet publicly active |
+> | **[PLANNED]** | Designed, not yet implemented |
+> | **[KNOWN GAP]** | Acknowledged issue or unresolved conflict |
+
+---
+
 ## 1. Token Fundamentals
 
-| Property | Value |
-|----------|-------|
-| **Name** | UnyKorn Token |
-| **Symbol** | UNY |
-| **Blockchain** | UnyKorn L1 (Chain ID 7331) |
-| **Token Type** | Native gas + utility |
-| **Standard** | ERC-20 compatible |
-| **Decimals** | 18 |
-| **Total Supply** | 1,000,000,000 (1 billion) |
-| **Max Supply** | 1,000,000,000 (hard-capped — no mint function exists) |
-| **Inflation Rate** | 0% (no new tokens can ever be created) |
-| **Deflationary** | Yes — protocol burn mechanism reduces supply permanently |
-| **Mintable** | No |
-| **Pausable** | No |
-| **Blacklistable** | No |
-| **Upgradeable** | No |
-| **Contract** | Immutable — OpenZeppelin ERC20 + ERC20Burnable |
+| Property | Value | Status |
+|----------|-------|--------|
+| **Name** | UnyKorn Token | [LIVE] |
+| **Symbol** | UNY | [LIVE] |
+| **Blockchain** | UnyKorn L1 (Chain ID 7331) | [BUILT — controlled devnet] |
+| **Token Type** | Native gas + utility | [BUILT] |
+| **Native L1 Representation** | UNY is the native gas token on UnyKorn L1 — not an ERC-20 deployed on another chain | [BUILT] |
+| **ERC-20 Wrapped Representation** | A wrapped ERC-20 version (wUNY) is planned for cross-chain bridges and CEX compatibility | [PLANNED] |
+| **Bridge Rules** | Native ↔ Wrapped parity maintained by a lock/mint bridge contract | [PLANNED] |
+| **Decimals** | 18 | [LIVE] |
+| **Total Supply** | 1,000,000,000 (1 billion) | [LIVE] |
+| **Max Supply** | 1,000,000,000 (hard-capped — no mint function exists) | [LIVE] |
+| **Inflation Rate** | 0% (no new tokens can ever be created) | [LIVE] |
+| **Deflationary** | Yes — protocol burn mechanism reduces supply permanently | [PLANNED — burn contract not yet deployed] |
+| **Mintable** | No | [LIVE] |
+| **Pausable** | No | [LIVE] |
+| **Blacklistable** | No | [LIVE] |
+| **Upgradeable** | No | [LIVE] |
+| **Core Contract** | Immutable — OpenZeppelin ERC20 + ERC20Burnable (genesis deploy) | [BUILT] |
+
+> **Architecture Note**: UNY exists in two forms:
+> 1. **Native L1 UNY** — the gas token on UnyKorn L1 (Chain 7331). Used for gas, staking, namespace fees, and all on-chain operations.
+> 2. **Wrapped UNY (wUNY)** — [PLANNED] an ERC-20 contract that can be deployed on Ethereum, Base, or other EVM chains for CEX listings and cross-chain interoperability. Wrapped ↔ Native conversion will be governed by a bridge contract with 1:1 parity.
+>
+> The core token contract (OpenZeppelin ERC20) was used for the genesis mint. It has no admin functions. Governance controls **separate treasury and policy contracts**, not the core token contract itself.
 
 ---
 
@@ -38,21 +57,27 @@
 
 ### 2.1 Allocation Table
 
-| Category | % | Tokens | Vesting | Purpose |
-|----------|---|--------|---------|---------|
-| **Infrastructure & Validators** | 40% | 400,000,000 | Gradual release over 48 months | Validator rewards, L1 node operations, network security incentives |
-| **AI Compute Subsidies** | 15% | 150,000,000 | Released on-demand as agents onboard | Reduce AI agent compute costs, subsidize x402 adoption |
-| **Protocol Treasury** | 20% | 200,000,000 | Multi-sig, 6-month timelock | Protocol development, emergency reserves, governance-directed spending |
-| **Ecosystem Grants** | 15% | 150,000,000 | Per-grant vesting (6-24 months) | Partnerships, integrations, developer grants, community programs |
-| **Team & Advisors** | 10% | 100,000,000 | 12-month cliff + 36-month linear | Founding team compensation, aligned long-term incentives |
+> **[KNOWN GAP — RESOLVED]**: Previous v1.0 allocated 100% across 5 categories with no explicit ICO source.
+> The ICO (200M / 20%) is now carved from Infrastructure (−5%) and Ecosystem (−5%), with Treasury reduced (−5%) and ICO added explicitly. New allocation sums to exactly 100%.
+
+| Category | % | Tokens | Vesting | Purpose | Status |
+|----------|---|--------|---------|---------|--------|
+| **ICO / Public Sale** | 20% | 200,000,000 | Seed: 6-month cliff + 12-month linear; Private: 3-month cliff + 12-month; Public: 25% at TGE + 9-month | Fundraising for infrastructure, engineering, audits, marketing | [BUILT — ICO site live at ico.unykorn.org] |
+| **Infrastructure & Validators** | 35% | 350,000,000 | Gradual release over 48 months | Validator rewards, L1 node operations, network security incentives | [PLANNED — validator staking not yet live] |
+| **AI Compute Subsidies** | 10% | 100,000,000 | Released on-demand as agents onboard | Reduce AI agent compute costs, subsidize x402 adoption, Genesis machine economy | [PLANNED] |
+| **Protocol Treasury** | 15% | 150,000,000 | Multi-sig, 6-month timelock | Protocol development, emergency reserves, governance-directed spending | [KNOWN GAP — currently single-key, multi-sig planned] |
+| **Ecosystem Grants** | 10% | 100,000,000 | Per-grant vesting (6-24 months) | Partnerships, integrations, developer grants, community programs | [PLANNED] |
+| **Team & Advisors** | 10% | 100,000,000 | 12-month cliff + 36-month linear | Founding team compensation, aligned long-term incentives | [BUILT — vesting schedule set, not contract-enforced] |
+| **TOTAL** | **100%** | **1,000,000,000** | | | |
 
 ### 2.2 Distribution Visualization
 
 ```
-█████████████████████████████████████████░░░░░░░░░░  40% Infrastructure
-████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  15% AI Compute
-████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  20% Treasury
-████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  15% Ecosystem
+████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  20% ICO / Public Sale
+█████████████████████████████████████░░░░░░░░░░░░░░  35% Infrastructure
+██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  10% AI Compute
+████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  15% Treasury
+██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  10% Ecosystem
 ██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  10% Team
 ```
 
@@ -69,20 +94,21 @@ Month 48:     ██████████████████████
 
 - **No tokens** accessible for the first 12 months
 - After cliff: equal monthly releases over 36 months
-- Enforced on-chain via UnyKorn L1 Staking Vault contract
+- **[KNOWN GAP]**: Vesting is tracked off-chain. On-chain Staking Vault enforcement is planned but not yet deployed.
 
-#### Infrastructure (400M UNY)
+#### Infrastructure (350M UNY)
 
 - Released proportionally to network activity and validator participation
-- Maximum 8.33M UNY per month (2.08% of allocation)
+- Maximum 7.29M UNY per month (2.08% of allocation)
 - Unused allocation rolls forward — never expires, never accelerates
+- **[PLANNED]**: Validator staking contracts not yet deployed
 
-#### Treasury (200M UNY)
+#### Treasury (150M UNY)
 
-- Multi-signature control (minimum 3-of-5)
-- 6-month timelock on all disbursements
-- Community governance vote required for allocations > 5M UNY
-- Constitutional invariant: reserves must never fall below 20% of original allocation (40M UNY)
+- **[KNOWN GAP]**: Currently single-key control. Multi-signature (3-of-5) planned.
+- 6-month timelock on all disbursements [PLANNED]
+- Community governance vote required for allocations > 5M UNY [PLANNED]
+- Constitutional invariant: reserves must never fall below 20% of original allocation (30M UNY)
 
 ---
 
@@ -268,10 +294,12 @@ With 10M UNY seed liquidity at $0.01, buying UNY creates price impact:
 
 | Pair | Type | Status |
 |------|------|--------|
-| UNY/USDT | Primary | Active |
-| UNY/USDC | Secondary | Active |
-| UNY/BTC | Exchange | Active |
-| UNY/ETH | Exchange | Active |
+| UNY/USDT | Primary | [PLANNED] |
+| UNY/USDC | Secondary | [PLANNED] |
+| UNY/BTC | Exchange | [PLANNED] |
+| UNY/ETH | Exchange | [PLANNED] |
+
+> **[KNOWN GAP]**: No trading pairs are live. AMM seed liquidity has not been deployed. All pairs are planned for post-exchange-listing.
 
 ---
 
@@ -395,7 +423,7 @@ Hard-coded economic rules that cannot be changed:
 | **Low adoption** | x402 protocol has real utility — AI agent market growing exponentially |
 | **Regulatory** | Utility token — required for infrastructure access, not speculative investment |
 | **Concentration** | Treasury locked with timelock + multi-sig; team vested over 48 months |
-| **Smart contract** | OpenZeppelin base, immutable, no admin functions; external audit in progress |
+| **Smart contract** | OpenZeppelin base, immutable, no admin functions; **[KNOWN GAP]** no independent audit completed yet — planned pre-listing |
 | **Competition** | First-mover in HTTP 402 payment standard; 29K+ lines of production code |
 | **Liquidity** | Protocol-owned liquidity from flywheel; 30% of revenue deepens AMM |
 
@@ -418,5 +446,65 @@ No hidden mints. No admin backdoors. No inflation. Just real revenue from real i
 
 ---
 
+---
+
+## 13. UNY Genesis — Machine Economy Layer
+
+> **[PLANNED]** — Architecture defined, implementation in progress.
+
+UNY Genesis is the internal machine settlement and operating ledger for agents. It is **not a second token** — it is a controlled accounting layer derived from UNY Core deposits.
+
+### 13.1 Dual-Asset Architecture
+
+```
+UNY Core
+  ├─ public token
+  ├─ gas + staking + liquidity + exchange asset
+  └─ treasury / ecosystem / validator economics
+
+UNY Genesis
+  ├─ internal machine settlement unit
+  ├─ agent budgets and escrow
+  ├─ proof-backed receipts
+  ├─ policy-gated execution rights
+  └─ 24/7 agent operating balances
+```
+
+### 13.2 Genesis Balance Classes
+
+| Class | Code | Purpose |
+|-------|------|---------|
+| Operating Balance | UNY-O | Agent day-to-day spending |
+| Escrowed Balance | UNY-E | Locked pending task completion |
+| Reserved Budget | UNY-R | Pre-allocated for approved work |
+| Staked Reliability | UNY-S | Bonded for SLA guarantees |
+| Proof Receipt | UNY-P | Settled, receipt-linked, immutable |
+| Compliance-Cleared | UNY-C | Policy-verified for external settlement |
+
+### 13.3 Genesis Flow
+
+1. UNY Core is deposited into the Genesis system
+2. Genesis mints internal operating credits 1:1 (or by policy)
+3. Agents spend Genesis balances, not raw treasury balances
+4. Receipts settle back into UNY Core or remain internal
+5. Policy engine decides who can spend, reserve, refund, or escrow
+
+### 13.4 Agent Settlement Primitives
+
+| Primitive | Description |
+|-----------|-------------|
+| Prepaid Credits | Deposit UNY Core → Genesis operating balance |
+| Escrow | Lock funds pending task delivery |
+| Milestone Release | Partial release on verified progress |
+| Streaming Spend | Continuous drip for long-running agents |
+| Refund Path | Return escrowed funds on task failure |
+| Dispute State | Hold funds during dispute resolution |
+| Policy Hold | Freeze pending compliance review |
+| Treasury Refill | Auto-replenish agent budgets from treasury |
+| Signed Receipts | Every settlement emits a signed, verifiable receipt |
+
+---
+
 *© 2025–2026 FTH Trading · UnyKorn Protocol*  
-*This document describes the tokenomics of UNY. It is not financial advice. Cryptocurrency investments carry risk. DYOR.*
+*This document describes the tokenomics of UNY and the UNY Genesis machine economy. It is not financial advice. Cryptocurrency investments carry risk. DYOR.*
+*Version 1.1 — Truth-layered. All status markers reflect actual system state as of March 2026.*

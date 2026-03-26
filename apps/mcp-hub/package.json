@@ -1,0 +1,21 @@
+{
+  "name": "@unykorn/mcp-hub",
+  "version": "0.1.0",
+  "description": "Central registry and proxy for all MCP servers. Health monitoring, tool discovery.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.0",
+    "@unykorn/shared-types": "*",
+    "@unykorn/mcp-servers": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

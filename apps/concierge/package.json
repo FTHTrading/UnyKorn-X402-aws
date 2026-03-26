@@ -1,0 +1,21 @@
+{
+  "name": "@unykorn/concierge",
+  "version": "0.1.0",
+  "description": "Customer-facing interface service — routes customer requests to appropriate agents.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.0",
+    "@unykorn/shared-types": "*",
+    "@unykorn/a2a-sdk": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

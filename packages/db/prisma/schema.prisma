@@ -1,0 +1,613 @@
+// ═══════════════════════════════════════════════════════════
+// UnyKorn Genesis — Complete Prisma Schema
+// ═══════════════════════════════════════════════════════════
+// This schema defines the entire data model for:
+// - Agent identity and wallets
+// - Genesis ledger and balance classes
+// - A2A messaging and routing
+// - Policy engine and audit
+// - Settlement receipts and proofs
+// - MCP server registry
+// - Treasury management
+// ═══════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Organizations ────────────────────────────────────────
+
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  legalEntity     String
+  jurisdiction    String
+  treasuryWalletId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  agents          Agent[]
+  genesisAccounts GenesisAccount[]
+
+  @@map("organizations")
+}
+
+// ─── Agent Identity ───────────────────────────────────────
+
+enum AgentStatus {
+  active
+  paused
+  revoked
+  draining
+}
+
+enum AgentTier {
+  control
+  execution
+  intelligence
+  interface_tier
+}
+
+model Agent {
+  id                String      @id @default(cuid())
+  name              String
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id])
+  role              String
+  tier              AgentTier
+  publicKey         String      @unique
+  status            AgentStatus @default(active)
+  trustScore        Float       @default(50)
+  allowedTools      String[]    @default([])
+  allowedDataScopes String[]    @default([])
+  spendLimitDaily   Decimal     @db.Decimal(78, 0)
+  spendLimitPerTask Decimal     @db.Decimal(78, 0)
+  approvalThreshold Decimal     @db.Decimal(78, 0)
+  killSwitch        Boolean     @default(false)
+  lastHeartbeat     DateTime?
+  description       String?
+  version           String      @default("1.0.0")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  wallet            AgentWallet?
+  budgets           AgentBudget[]
+  heartbeats        AgentHeartbeat[]
+  genesisAccounts   GenesisAccount[]
+  tasksRequested    AgentTask[]      @relation("TaskRequester")
+  tasksPerformed    AgentTask[]      @relation("TaskPerformer")
+  sentMessages      A2AMessage[]     @relation("MessageSender")
+  receivedMessages  A2AMessage[]     @relation("MessageReceiver")
+  policyDecisions   PolicyDecision[]
+  auditEntries      AuditEntry[]
+  receiptsFrom      SettlementReceipt[] @relation("ReceiptFrom")
+  receiptsTo        SettlementReceipt[] @relation("ReceiptTo")
+  proofs            ProofArtifact[]
+  escrowsDeposited  Escrow[]         @relation("EscrowDepositor")
+  escrowsBeneficiary Escrow[]        @relation("EscrowBeneficiary")
+
+  @@index([orgId])
+  @@index([role])
+  @@index([status])
+  @@map("agents")
+}
+
+// ─── Agent Wallet ─────────────────────────────────────────
+
+model AgentWallet {
+  id                     String   @id @default(cuid())
+  agentId                String   @unique
+  agent                  Agent    @relation(fields: [agentId], references: [id])
+  operatingBalance       Decimal  @default(0) @db.Decimal(78, 0)
+  escrowBalance          Decimal  @default(0) @db.Decimal(78, 0)
+  reservedBalance        Decimal  @default(0) @db.Decimal(78, 0)
+  stakedBalance          Decimal  @default(0) @db.Decimal(78, 0)
+  complianceClearedBalance Decimal @default(0) @db.Decimal(78, 0)
+  lastSettledAt          DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("agent_wallets")
+}
+
+// ─── Agent Budget ─────────────────────────────────────────
+
+enum BudgetPeriod {
+  daily
+  weekly
+  monthly
+  per_task
+  unlimited
+}
+
+model AgentBudget {
+  id              String        @id @default(cuid())
+  agentId         String
+  agent           Agent         @relation(fields: [agentId], references: [id])
+  period          BudgetPeriod
+  budgetLimit     Decimal       @db.Decimal(78, 0)
+  spent           Decimal       @default(0) @db.Decimal(78, 0)
+  reserved        Decimal       @default(0) @db.Decimal(78, 0)
+  periodStart     DateTime
+  periodEnd       DateTime?
+  autoRefill      Boolean       @default(false)
+  refillAmount    Decimal?      @db.Decimal(78, 0)
+  refillThreshold Decimal?      @db.Decimal(78, 0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([agentId])
+  @@map("agent_budgets")
+}
+
+// ─── Agent Heartbeat ──────────────────────────────────────
+
+model AgentHeartbeat {
+  id               String   @id @default(cuid())
+  agentId          String
+  agent            Agent    @relation(fields: [agentId], references: [id])
+  healthy          Boolean
+  activeTaskCount  Int      @default(0)
+  balanceRemaining Decimal  @db.Decimal(78, 0)
+  cpuPercent       Float?
+  memoryMb         Float?
+  requestsPerMin   Float?
+  errorRate        Float?
+  timestamp        DateTime @default(now())
+
+  @@index([agentId, timestamp])
+  @@map("agent_heartbeats")
+}
+
+// ─── Genesis Ledger ───────────────────────────────────────
+
+enum GenesisBalanceClass {
+  OPERATING
+  ESCROW
+  RESERVED
+  STAKED_RELIABILITY
+  PROOF_RECEIPT
+  COMPLIANCE_CLEARED
+}
+
+enum LedgerEntryType {
+  deposit
+  withdrawal
+  transfer
+  escrow_lock
+  escrow_release
+  escrow_refund
+  reserve
+  unreserve
+  stake
+  unstake
+  settle
+  compliance_clear
+  burn
+  treasury_refill
+  dispute_hold
+  dispute_release
+}
+
+model GenesisAccount {
+  id                String   @id @default(cuid())
+  agentId           String
+  agent             Agent    @relation(fields: [agentId], references: [id])
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id])
+  operatingBalance  Decimal  @default(0) @db.Decimal(78, 0)
+  escrowBalance     Decimal  @default(0) @db.Decimal(78, 0)
+  reservedBalance   Decimal  @default(0) @db.Decimal(78, 0)
+  stakedBalance     Decimal  @default(0) @db.Decimal(78, 0)
+  proofReceiptBalance Decimal @default(0) @db.Decimal(78, 0)
+  complianceClearedBalance Decimal @default(0) @db.Decimal(78, 0)
+  isSubAccount      Boolean  @default(false)
+  parentAccountId   String?
+  status            String   @default("active")
+  totalDeposited    Decimal  @default(0) @db.Decimal(78, 0)
+  totalWithdrawn    Decimal  @default(0) @db.Decimal(78, 0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  ledgerEntries     LedgerEntry[]
+
+  @@index([agentId])
+  @@index([orgId])
+  @@map("genesis_accounts")
+}
+
+model LedgerEntry {
+  id               String             @id @default(cuid())
+  sequence         BigInt             @unique @default(autoincrement())
+  type             LedgerEntryType
+  fromAgentId      String?
+  toAgentId        String?
+  amount           Decimal            @db.Decimal(78, 0)
+  fromClass        GenesisBalanceClass?
+  toClass          GenesisBalanceClass?
+  accountId        String?
+  account          GenesisAccount?    @relation(fields: [accountId], references: [id])
+  taskId           String?
+  task             AgentTask?         @relation(fields: [taskId], references: [id])
+  policyDecisionId String?
+  memo             String             @default("")
+  entryHash        String
+  previousHash     String
+  idempotencyKey   String             @unique
+  timestamp        DateTime           @default(now())
+
+  @@index([fromAgentId])
+  @@index([toAgentId])
+  @@index([taskId])
+  @@index([timestamp])
+  @@map("ledger_entries")
+}
+
+// ─── Escrow ───────────────────────────────────────────────
+
+enum EscrowStatus {
+  locked
+  partially_released
+  fully_released
+  refunded
+  disputed
+  expired
+}
+
+model Escrow {
+  id                 String       @id @default(cuid())
+  taskId             String
+  task               AgentTask    @relation(fields: [taskId], references: [id])
+  depositorAgentId   String
+  depositor          Agent        @relation("EscrowDepositor", fields: [depositorAgentId], references: [id])
+  beneficiaryAgentId String
+  beneficiary        Agent        @relation("EscrowBeneficiary", fields: [beneficiaryAgentId], references: [id])
+  amount             Decimal      @db.Decimal(78, 0)
+  releasedAmount     Decimal      @default(0) @db.Decimal(78, 0)
+  refundedAmount     Decimal      @default(0) @db.Decimal(78, 0)
+  status             EscrowStatus @default(locked)
+  expiresAt          DateTime
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  conditions         EscrowCondition[]
+
+  @@index([taskId])
+  @@index([depositorAgentId])
+  @@index([beneficiaryAgentId])
+  @@map("escrows")
+}
+
+model EscrowCondition {
+  id            String  @id @default(cuid())
+  escrowId      String
+  escrow        Escrow  @relation(fields: [escrowId], references: [id])
+  type          String  // task_delivery, milestone, approval, time_based, policy_check
+  met           Boolean @default(false)
+  releaseAmount Decimal @db.Decimal(78, 0)
+  description   String
+
+  @@map("escrow_conditions")
+}
+
+// ─── Agent Tasks ──────────────────────────────────────────
+
+enum TaskStatus {
+  requested
+  quoted
+  approved
+  budget_reserved
+  executing
+  delivered
+  settled
+  disputed
+  failed
+  cancelled
+  escalated
+}
+
+enum TaskPriority {
+  critical
+  high
+  normal
+  low
+}
+
+model AgentTask {
+  id                  String       @id @default(cuid())
+  requesterAgentId    String
+  requester           Agent        @relation("TaskRequester", fields: [requesterAgentId], references: [id])
+  performerAgentId    String?
+  performer           Agent?       @relation("TaskPerformer", fields: [performerAgentId], references: [id])
+  capability          String
+  description         String
+  quotedCost          Decimal?     @db.Decimal(78, 0)
+  maxBudget           Decimal      @db.Decimal(78, 0)
+  status              TaskStatus   @default(requested)
+  priority            TaskPriority @default(normal)
+  proofRefs           String[]     @default([])
+  artifactHash        String?
+  policyDecisionId    String?
+  errorMessage        String?
+  idempotencyKey      String       @unique
+  requestedAt         DateTime     @default(now())
+  quotedAt            DateTime?
+  approvedAt          DateTime?
+  executionStartedAt  DateTime?
+  deliveredAt         DateTime?
+  settledAt           DateTime?
+  expiresAt           DateTime?
+
+  ledgerEntries       LedgerEntry[]
+  receipts            SettlementReceipt[]
+  escrows             Escrow[]
+  a2aMessages         A2AMessage[]
+
+  @@index([requesterAgentId])
+  @@index([performerAgentId])
+  @@index([status])
+  @@index([capability])
+  @@map("agent_tasks")
+}
+
+// ─── A2A Messages ─────────────────────────────────────────
+
+model A2AMessage {
+  id              String    @id @default(cuid())
+  type            String
+  fromAgentId     String
+  fromAgent       Agent     @relation("MessageSender", fields: [fromAgentId], references: [id])
+  toAgentId       String
+  toAgent         Agent     @relation("MessageReceiver", fields: [toAgentId], references: [id])
+  correlationId   String
+  taskId          String?
+  task            AgentTask? @relation(fields: [taskId], references: [id])
+  payload         Json
+  signature       String
+  protocolVersion String    @default("1.0")
+  expiresAt       DateTime?
+  timestamp       DateTime  @default(now())
+
+  @@index([fromAgentId])
+  @@index([toAgentId])
+  @@index([correlationId])
+  @@index([taskId])
+  @@index([type])
+  @@map("a2a_messages")
+}
+
+// ─── Policy Rules ─────────────────────────────────────────
+
+enum PolicyEffect {
+  allow
+  deny
+  require_approval
+  rate_limit
+  audit_only
+}
+
+model PolicyRule {
+  id                      String       @id @default(cuid())
+  name                    String
+  description             String
+  effect                  PolicyEffect
+  scope                   String       // global, org, role, agent, task
+  priority                Int
+  conditions              Json         @default("[]")
+  actions                 String[]     @default([])
+  targetRoles             String[]     @default([])
+  maxSpend                Decimal?     @db.Decimal(78, 0)
+  restrictedJurisdictions String[]     @default([])
+  active                  Boolean      @default(true)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  decisions               PolicyDecision[]
+
+  @@index([active])
+  @@map("policy_rules")
+}
+
+model PolicyDecision {
+  id                String   @id @default(cuid())
+  action            String
+  agentId           String
+  agent             Agent    @relation(fields: [agentId], references: [id])
+  agentRole         String
+  taskId            String?
+  amount            Decimal? @db.Decimal(78, 0)
+  result            String   // allowed, denied, pending_approval, rate_limited
+  matchedRuleIds    String[] @default([])
+  decidingRuleId    String
+  decidingRule      PolicyRule @relation(fields: [decidingRuleId], references: [id])
+  reason            String
+  requiredApprover  String?
+  overridden        Boolean  @default(false)
+  overrideBy        String?
+  overrideReason    String?
+  overrideAt        DateTime?
+  evaluatedAt       DateTime @default(now())
+
+  approvals         PolicyApproval[]
+
+  @@index([agentId])
+  @@index([action])
+  @@map("policy_decisions")
+}
+
+model PolicyApproval {
+  id          String   @id @default(cuid())
+  decisionId  String
+  decision    PolicyDecision @relation(fields: [decisionId], references: [id])
+  approverId  String
+  status      String   @default("pending") // pending, approved, denied, expired, escalated
+  reason      String?
+  requestedAt DateTime @default(now())
+  respondedAt DateTime?
+  expiresAt   DateTime
+
+  @@index([decisionId])
+  @@index([approverId])
+  @@map("policy_approvals")
+}
+
+// ─── Audit Log ────────────────────────────────────────────
+
+model AuditEntry {
+  id               String   @id @default(cuid())
+  sequence         BigInt   @unique @default(autoincrement())
+  action           String
+  agentId          String
+  agent            Agent    @relation(fields: [agentId], references: [id])
+  targetId         String?
+  targetType       String?
+  amount           Decimal? @db.Decimal(78, 0)
+  policyDecisionId String?
+  result           String   // success, failure, partial
+  details          Json     @default("{}")
+  source           String
+  entryHash        String
+  previousHash     String
+  timestamp        DateTime @default(now())
+
+  @@index([agentId])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_entries")
+}
+
+// ─── Settlement Receipts ──────────────────────────────────
+
+model SettlementReceipt {
+  id                  String    @id @default(cuid())
+  taskId              String
+  task                AgentTask @relation(fields: [taskId], references: [id])
+  fromAgentId         String
+  fromAgent           Agent     @relation("ReceiptFrom", fields: [fromAgentId], references: [id])
+  toAgentId           String
+  toAgent             Agent     @relation("ReceiptTo", fields: [toAgentId], references: [id])
+  amount              Decimal   @db.Decimal(78, 0)
+  assetClass          String
+  policyDecisionId    String
+  releasedByPolicy    Boolean   @default(false)
+  artifactHash        String?
+  executionLogRef     String?
+  policyApprovalLogRef String?
+  merkleProofHash     String?
+  merkleIndex         Int?
+  batchId             String?
+  batch               ReceiptBatch? @relation(fields: [batchId], references: [id])
+  status              String    @default("pending")
+  signature           String
+  signerPublicKey     String
+  anchorTxHash        String?
+  signedAt            DateTime  @default(now())
+  anchoredAt          DateTime?
+
+  @@index([taskId])
+  @@index([fromAgentId])
+  @@index([toAgentId])
+  @@index([batchId])
+  @@map("settlement_receipts")
+}
+
+model ReceiptBatch {
+  id          String   @id @default(cuid())
+  merkleRoot  String
+  receiptCount Int
+  totalValue  Decimal  @db.Decimal(78, 0)
+  anchorTxHash String?
+  createdAt   DateTime @default(now())
+  anchoredAt  DateTime?
+
+  receipts    SettlementReceipt[]
+
+  @@map("receipt_batches")
+}
+
+// ─── Proof Artifacts ──────────────────────────────────────
+
+model ProofArtifact {
+  id              String   @id @default(cuid())
+  type            String
+  generatedBy     String
+  generator       Agent    @relation(fields: [generatedBy], references: [id])
+  referenceId     String
+  referenceType   String
+  contentHash     String
+  content         Json
+  signature       String
+  signerPublicKey String
+  merkleProofHash String?
+  anchored        Boolean  @default(false)
+  anchorTxHash    String?
+  generatedAt     DateTime @default(now())
+
+  @@index([generatedBy])
+  @@index([referenceId])
+  @@index([type])
+  @@map("proof_artifacts")
+}
+
+// ─── MCP Server Registry ─────────────────────────────────
+
+model McpServer {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String
+  endpoint        String
+  protocolVersion String   @default("1.0")
+  status          String   @default("stopped")
+  tools           Json     @default("[]")
+  resources       Json     @default("[]")
+  prompts         Json     @default("[]")
+  allowedRoles    String[] @default([])
+  writeScope      String   @default("none")
+  healthEndpoint  String
+  lastHealthCheck DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("mcp_servers")
+}
+
+// ─── Emergency Controls ──────────────────────────────────
+
+model EmergencyPause {
+  id          String    @id @default(cuid())
+  scope       String    // global, agent, role, mcp_server, a2a_route
+  targetId    String
+  initiatedBy String
+  reason      String
+  active      Boolean   @default(true)
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+
+  @@index([active])
+  @@map("emergency_pauses")
+}
+
+// ─── Streaming Balances ──────────────────────────────────
+
+model StreamingBalance {
+  id              String    @id @default(cuid())
+  fromAgentId     String
+  toAgentId       String
+  totalBudget     Decimal   @db.Decimal(78, 0)
+  ratePerSecond   Decimal   @db.Decimal(78, 0)
+  streamedAmount  Decimal   @default(0) @db.Decimal(78, 0)
+  status          String    @default("active")
+  taskId          String?
+  startedAt       DateTime  @default(now())
+  pausedAt        DateTime?
+  endsAt          DateTime
+
+  @@index([fromAgentId])
+  @@index([toAgentId])
+  @@map("streaming_balances")
+}
