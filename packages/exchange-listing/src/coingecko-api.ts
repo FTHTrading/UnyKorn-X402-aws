@@ -136,19 +136,6 @@ export class CoinGeckoAPI {
       lastUpdate: now,
     });
 
-    // UNY/USDF — Native stablecoin pair
-    this.markets.set("UNY_USDF", {
-      price: 0.01,
-      volume24hBase: 0,
-      volume24hQuote: 0,
-      high24h: 0.01,
-      low24h: 0.01,
-      bid: 0.0099,
-      ask: 0.0101,
-      trades: [],
-      lastUpdate: now,
-    });
-
     // UNY/BTC — Required by Binance, Bybit, OKX
     this.markets.set("UNY_BTC", {
       price: 0.00000015,
@@ -171,19 +158,6 @@ export class CoinGeckoAPI {
       low24h: 0.0000056,
       bid: 0.0000055,
       ask: 0.0000057,
-      trades: [],
-      lastUpdate: now,
-    });
-
-    // UNY/AVAX — Native chain pair (Avalanche)
-    this.markets.set("UNY_AVAX", {
-      price: 0.00045,
-      volume24hBase: 0,
-      volume24hQuote: 0,
-      high24h: 0.00045,
-      low24h: 0.00045,
-      bid: 0.00044,
-      ask: 0.00046,
       trades: [],
       lastUpdate: now,
     });
@@ -396,16 +370,6 @@ export class CoinGeckoAPI {
         can_deposit: true,
         min_withdraw: "0.001",
         max_withdraw: "5000",
-        maker_fee: "0.001",
-        taker_fee: "0.003",
-      },
-      AVAX: {
-        name: "Avalanche",
-        unified_cryptoasset_id: 5805,
-        can_withdraw: true,
-        can_deposit: true,
-        min_withdraw: "0.1",
-        max_withdraw: "1000000",
         maker_fee: "0.001",
         taker_fee: "0.003",
       },

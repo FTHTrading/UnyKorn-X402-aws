@@ -39,9 +39,7 @@ const ICO = {
   startDate: new Date("2026-04-15T00:00:00Z"),
   endDate: new Date("2026-06-15T00:00:00Z"),
   chains: [
-    { name: "Avalanche C-Chain", color: "#e84142", contract: "0xc09003213b34c7bec8d2eddfad4b43e51d007d66" },
-    { name: "UnyKorn L1", color: "#3b82f6", contract: "Chain 7331 · Native" },
-    { name: "Polygon PoS", color: "#8247e5", contract: "0x14E64b91B96f11D12ef6bDaDc21e2f25a2f45a99" },
+    { name: "UnyKorn L1", color: "#3b82f6", contract: "Chain 7331 · Native Token" },
   ],
   tiers: [
     { name: "Seed", price: "$0.005", bonus: "+60% Bonus", min: "$100", max: "$25,000", alloc: "50,000,000 UNY", status: "SOLD OUT", featured: false },
@@ -58,11 +56,11 @@ const ICO = {
     { label: "Marketing & Partnerships", pct: 5, color: "#ec4899" },
   ],
   roadmap: [
-    { date: "Q3 2025", title: "Genesis & Foundation", desc: "UNY token deployed on Avalanche. Smart contracts audited. FTH Trading entity formed. x402 protocol research begins.", active: true },
-    { date: "Q4 2025", title: "Infrastructure Build", desc: "UnyKorn L1 consensus (Trinity) launched. Polygon bridge deployed. USDF stablecoin live on 5 chains. A2A agent framework.", active: true },
+    { date: "Q3 2025", title: "Genesis & Foundation", desc: "UNY token created at genesis for AI-to-AI x402 protocol. FTH Trading entity formed. Smart contract architecture designed. x402 protocol research begins.", active: true },
+    { date: "Q4 2025", title: "Infrastructure Build", desc: "UnyKorn L1 consensus (Trinity) launched. Chain 7331 live with native UNY gas. A2A agent framework with 12 autonomous agents across 3 operational planes.", active: true },
     { date: "Q1 2026", title: "x402 Protocol Launch", desc: "Payment facilitator, treasury, guardian services live. Cloudflare gateway. 9 premium API routes monetized. Economics engine.", active: true },
     { date: "Q2 2026", title: "ICO & Exchange Listings", desc: "Token sale at ico.unykorn.org. CoinGecko & CMC API integration. Listing applications for Binance, Coinbase, Kraken, OKX, and 9 more.", active: false },
-    { date: "Q3 2026", title: "DEX Launch & DeFi", desc: "TraderJoe V2.1 LB pools. Cross-chain AMM. Staking vault with real yield. LP rewards program. 100+ A2A agents.", active: false },
+    { date: "Q3 2026", title: "DEX Launch & DeFi", desc: "UnyKorn DEX with native AMM pools. Staking vault with real yield from x402 revenue. LP rewards program. 100+ A2A agents.", active: false },
     { date: "Q4 2026", title: "Enterprise & Scale", desc: "CEX listings go live. Enterprise trade finance API. 1M+ x402 transactions/month. UnyKorn L1 mainnet upgrade.", active: false },
   ],
 };
@@ -107,7 +105,7 @@ function Hero() {
       </h1>
 
       <p className="hero-sub">
-        The AI infrastructure payment protocol. x402 settlements, multi-chain bridges,
+        The AI infrastructure payment protocol. x402 settlements, sub-second finality,
         A2A agent commerce — all powered by <strong>UNY</strong>.
       </p>
 
@@ -163,7 +161,7 @@ function Stats() {
   const stats = [
     { value: "1B", label: "Total Supply" },
     { value: "$0.008", label: "Current Price" },
-    { value: "3", label: "Chains Live" },
+    { value: "1", label: "Native Chain" },
     { value: "88%", label: "Listing Ready" },
     { value: "30", label: "Compliance Checks" },
     { value: "13", label: "Exchange Targets" },
@@ -213,7 +211,7 @@ function WhatWeBuilt() {
     { icon: "⚡", title: "x402 Payment Protocol", desc: "HTTP 402 standard for machine-to-machine payments. Sub-second settlement. 9 premium API routes monetized and live.", bg: "rgba(59,130,246,0.1)" },
     { icon: "🏗️", title: "UnyKorn L1 Blockchain", desc: "Chain ID 7331. Trinity Consensus with ~1s finality. Native UNY gas. Purpose-built for AI infrastructure transactions.", bg: "rgba(168,85,247,0.1)" },
     { icon: "🤖", title: "A2A Agent Framework", desc: "12 AI agents across 3 operational planes. Google A2A protocol support. Agent-to-agent commerce with x402 payments.", bg: "rgba(34,211,238,0.1)" },
-    { icon: "🏦", title: "USDF Stablecoin", desc: "1.6B supply across XRPL, Stellar, Polygon, Avalanche, and UnyKorn L1. Real-world trade finance settlement.", bg: "rgba(245,166,35,0.1)" },
+    { icon: "🏦", title: "Treasury & Settlement", desc: "Auto-refill treasury service, multi-tier balance management, and real-time invoice settlement for x402 payments.", bg: "rgba(245,166,35,0.1)" },
     { icon: "📊", title: "Economics Engine", desc: "On-chain AMM pricing. Genesis provenance tracking. Revenue flywheel. Credibility scoring system. All transparent.", bg: "rgba(34,197,94,0.1)" },
     { icon: "🏛️", title: "Exchange Listing Ready", desc: "CoinGecko & CMC standard APIs. Proof of Reserves with Merkle tree. 30-point compliance engine. Applications for 9 exchanges.", bg: "rgba(236,72,153,0.1)" },
   ];
@@ -318,7 +316,7 @@ function Tiers() {
                 <li>Minimum: {tier.min}</li>
                 <li>Maximum: {tier.max}</li>
                 <li>Status: {tier.status}</li>
-                <li>Multi-chain settlement</li>
+                <li>UnyKorn L1 settlement</li>
                 <li>Immediate token delivery</li>
               </ul>
               <button
@@ -338,7 +336,7 @@ function Tiers() {
             Accepted Payments
           </div>
           <div className="chain-row">
-            {["USDT", "USDC", "USDF", "ETH", "BTC", "AVAX"].map((c) => (
+            {["USDT", "USDC", "ETH", "BTC"].map((c) => (
               <div className="glass chain-badge" key={c} style={{ fontSize: 13 }}>
                 {c}
               </div>
@@ -413,9 +411,8 @@ function Contracts() {
         <div style={{ marginTop: 32, textAlign: "center" }}>
           <div className="chain-row">
             {[
-              { label: "Snowtrace", url: "https://snowtrace.io/address/0xc09003213b34c7bec8d2eddfad4b43e51d007d66" },
-              { label: "PolygonScan", url: "https://polygonscan.com/address/0x14E64b91B96f11D12ef6bDaDc21e2f25a2f45a99" },
-              { label: "Explorer", url: "https://main.unykorn-explorer.pages.dev" },
+              { label: "UnyKorn Explorer", url: "https://main.unykorn-explorer.pages.dev" },
+              { label: "GitHub", url: "https://github.com/FTHTrading/UnyKorn-X402-aws" },
             ].map((v) => (
               <a href={v.url} target="_blank" rel="noreferrer" className="glass chain-badge" key={v.label}
                 style={{ fontSize: 13, color: "var(--blue)" }}>

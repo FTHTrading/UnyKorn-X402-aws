@@ -11,7 +11,7 @@
  *   2. Links to the Genesis Sentience Protocol's deterministic genesis compiler
  *   3. Creates a verifiable provenance chain anyone can audit
  *   4. Anchors infrastructure deployments with timestamps and hashes
- *   5. Cross-references Polygon mainnet contracts (Genesis World)
+ *   5. Tracks genesis origin (pre-L1 ERC-20 deployment) and current L1 native status
  *
  * This is what separates a legitimate infrastructure token from a random meme coin.
  */
@@ -29,7 +29,7 @@ export interface GenesisProof {
   chainName: string;
   /** Genesis block timestamp */
   genesisTime: string;
-  /** UNY token contract address on Avalanche C-Chain */
+  /** UNY token genesis contract address (historical — now native on L1) */
   tokenContract: string;
   /** Deployer/treasury address */
   treasuryAddress: string;
@@ -102,7 +102,7 @@ const UNY_PURPOSE = [
   "  (2) The fee token for API gateway route access,",
   "  (3) The staking asset for validator collateral,",
   "  (4) The governance token for protocol parameter votes,",
-  "  (5) The LP base token for UNY/USDF automated market making.",
+  "  (5) The LP base token for UNY automated market making.",
   "UNY was designed at genesis to be inseparable from the x402 infrastructure.",
   "Without UNY, the payment protocol cannot function.",
   "Without the x402 infrastructure, UNY has no purpose.",
@@ -134,7 +134,7 @@ export class GenesisProvenance {
       "decimals: 18",
       "initial_supply: 1000000000",
       "consensus: trinity (tendermint+babe/grandpa+snowman++)",
-      "rails: [unykorn-l1, stellar, xrpl, base]",
+      "rails: [unykorn-l1]",
       "realms: [aureum, lexicon, nova, mercator, ludos]",
       "constitutional_invariants: [max_inflation_15pct, min_reserve_20pct, agent_weight_cap_5pct]",
       `purpose_hash: ${purposeHash}`,
@@ -153,7 +153,7 @@ export class GenesisProvenance {
       tokenContract: "0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
       treasuryAddress: "uny1_755098bacf6f6d9ef9d0f391a8e7c467e7db7190",
       initialSupply: "1,000,000,000 UNY",
-      standard: "ERC-20 (Avalanche C-Chain) + Native (UnyKorn L1)",
+      standard: "Native (UnyKorn L1) — genesis ERC-20 on Avalanche C-Chain (historical)",
       purposeHash,
       purpose,
       constitutionalInvariants: [
@@ -166,84 +166,22 @@ export class GenesisProvenance {
       ],
       verificationLinks: [
         {
+          chain: "UnyKorn L1",
+          chainId: 7331,
+          type: "token",
+          address: "native",
+          label: "UNY Native Token (Current)",
+          explorerUrl:
+            "https://main.unykorn-explorer.pages.dev",
+        },
+        {
           chain: "Avalanche C-Chain",
           chainId: 43114,
           type: "token",
           address: "0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
-          label: "UNY Token (ERC-20)",
+          label: "UNY Genesis ERC-20 (Historical Origin — Unverified)",
           explorerUrl:
             "https://snowtrace.io/token/0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
-        },
-        {
-          chain: "Polygon Mainnet",
-          chainId: 137,
-          type: "contract",
-          address: "0xe25d0C100a98D2004e3CC81b081492Bb3D102a91",
-          label: "x402 Adapter Contract",
-          explorerUrl:
-            "https://polygonscan.com/address/0xe25d0C100a98D2004e3CC81b081492Bb3D102a91",
-        },
-        {
-          chain: "Polygon Mainnet",
-          chainId: 137,
-          type: "nft",
-          address: "0x2c65336d3d1F245FE75909B186f9431644314e93",
-          label: "Agent Identity NFT (GSPAI)",
-          explorerUrl:
-            "https://polygonscan.com/address/0x2c65336d3d1F245FE75909B186f9431644314e93",
-        },
-        {
-          chain: "Polygon Mainnet",
-          chainId: 137,
-          type: "token",
-          address: "0x14E64b91B96f11D12ef6bDaDc21e2f25a2f45a99",
-          label: "Genesis Token",
-          explorerUrl:
-            "https://polygonscan.com/address/0x14E64b91B96f11D12ef6bDaDc21e2f25a2f45a99",
-        },
-        {
-          chain: "Polygon Mainnet",
-          chainId: 137,
-          type: "contract",
-          address: "0x4AA794ee9B5C7Bf3C683b7bb5dd7528852950399",
-          label: "Staking Vault",
-          explorerUrl:
-            "https://polygonscan.com/address/0x4AA794ee9B5C7Bf3C683b7bb5dd7528852950399",
-        },
-        {
-          chain: "Polygon Mainnet",
-          chainId: 137,
-          type: "contract",
-          address: "0x17A2d219A1C5b7aF2890aFAf6E7045669Dc96952",
-          label: "Treasury",
-          explorerUrl:
-            "https://polygonscan.com/address/0x17A2d219A1C5b7aF2890aFAf6E7045669Dc96952",
-        },
-        {
-          chain: "Polygon Mainnet",
-          chainId: 137,
-          type: "contract",
-          address: "0x5408ea01207b375bC5AA99161451b6F4b3789fb3",
-          label: "GSP Core Protocol",
-          explorerUrl:
-            "https://polygonscan.com/address/0x5408ea01207b375bC5AA99161451b6F4b3789fb3",
-        },
-        {
-          chain: "XRPL Mainnet",
-          chainId: 0,
-          type: "token",
-          address: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
-          label: "USDF Issuer (XRPL)",
-          explorerUrl:
-            "https://livenet.xrpl.org/accounts/rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
-        },
-        {
-          chain: "Stellar Mainnet",
-          chainId: 0,
-          type: "token",
-          address: "USDF:STELLAR",
-          label: "USDF on Stellar (1.6B supply)",
-          explorerUrl: "https://stellar.expert/explorer/public",
         },
       ],
     };
@@ -340,43 +278,33 @@ export class GenesisProvenance {
     );
 
     this.registerComponent(
-      "UNY Token (Avalanche)",
+      "UNY Token (Genesis ERC-20)",
       "contract",
-      "Avalanche C-Chain (43114)",
+      "Avalanche C-Chain (Historical)",
       "0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
       sha256("UNYToken.sol"),
       "both",
-      "ERC-20 token — 1B supply, burnable, deployed on Avalanche"
+      "Genesis ERC-20 token — 1B supply, burnable. Now native on UnyKorn L1 (Chain 7331)"
     );
 
     this.registerComponent(
-      "UnyKorn LP Manager",
-      "amm",
-      "Avalanche C-Chain (43114)",
-      "TraderJoe LB V2.1",
-      sha256("UnyKornLPManager.sol"),
-      "both",
-      "Manages UNY/USDC and UNY/WAVAX liquidity positions on TraderJoe"
-    );
-
-    this.registerComponent(
-      "Vault Registry",
+      "UNY Native (UnyKorn L1)",
       "contract",
-      "Avalanche C-Chain (43114)",
-      "VaultRegistry.sol",
-      sha256("VaultRegistry.sol"),
-      "infrastructure",
-      "On-chain registry for all UnyKorn contracts — provenance anchor"
+      "UnyKorn L1 (7331)",
+      "native",
+      sha256("UNY-L1-Native"),
+      "both",
+      "Native gas + utility token on UnyKorn L1 — powers all x402 payments"
     );
 
     this.registerComponent(
-      "UNY/USDF AMM Pool",
+      "UNY AMM Pool",
       "amm",
       "UnyKorn L1 / Internal",
       "uny-economics/amm",
       sha256("uny-economics-amm@1.0.0"),
       "both",
-      "Constant-product AMM for UNY/USDF price discovery — x402 revenue feeds liquidity"
+      "Constant-product AMM for UNY price discovery — x402 revenue feeds liquidity"
     );
 
     this.registerComponent(
@@ -389,35 +317,15 @@ export class GenesisProvenance {
       "19 tables: invoices, receipts, receipt_roots, namespace_records, treasury_agents, etc."
     );
 
-    // Cross-ecosystem links
-    this.registerComponent(
-      "USDF Stablecoin (Ethereum)",
-      "contract",
-      "Ethereum + XRPL + Stellar",
-      "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-      sha256("USDFToken.sol"),
-      "infrastructure",
-      "USDF stablecoin — counterpart to UNY in AMM pool, 5-chain settlement"
-    );
-
+    // Cross-ecosystem links (historical genesis origins)
     this.registerComponent(
       "Genesis Sentience Protocol",
       "contract",
-      "Polygon Mainnet (137)",
-      "0x5408ea01207b375bC5AA99161451b6F4b3789fb3",
+      "Historical Origin",
+      "genesis-world/kernel",
       sha256("genesis-world/kernel"),
       "infrastructure",
-      "Trinity consensus kernel — the genesis origin of the entire UnyKorn ecosystem"
-    );
-
-    this.registerComponent(
-      "Meridian Settlement Engine",
-      "service",
-      "Rust / Axum",
-      "usdf.unykorn.org:8001",
-      sha256("meridian-settlement@1.0.0"),
-      "infrastructure",
-      "5-chain settlement engine (XRPL, Stellar, ETH, SOL, TRON) for USDF"
+      "Trinity consensus kernel — the genesis origin of the UnyKorn ecosystem"
     );
   }
 

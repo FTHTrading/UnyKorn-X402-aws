@@ -97,19 +97,19 @@ export class ProofOfReservesEngine {
     const now = new Date().toISOString();
 
     this.reserves = [
-      // UNY Token Holdings
+      // UNY Treasury — UnyKorn L1 native holdings
       {
         asset: "UNY",
-        chain: "Avalanche C-Chain (43114)",
-        address: "0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
+        chain: "UnyKorn L1 (7331)",
+        address: "native",
         balance: "400000000000000000000000000", // 400M in treasury
         balanceUSD: "4000000",
         lastVerified: now,
-        explorerUrl: "https://snowtrace.io/token/0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
+        explorerUrl: "https://main.unykorn-explorer.pages.dev",
       },
-      // UNY on UnyKorn L1
+      // UNY Liquidity Pool — protocol-owned AMM
       {
-        asset: "UNY",
+        asset: "UNY (LP)",
         chain: "UnyKorn L1 (7331)",
         address: "native",
         balance: "100000000000000000000000000", // 100M liquidity pool
@@ -117,55 +117,25 @@ export class ProofOfReservesEngine {
         lastVerified: now,
         explorerUrl: "https://main.unykorn-explorer.pages.dev",
       },
-      // USDF Stablecoin Reserves
-      {
-        asset: "USDF",
-        chain: "Stellar",
-        address: "USDF:issuer-stellar",
-        balance: "5000000000000", // 5M USDF (6 decimals)
-        balanceUSD: "5000000",
-        lastVerified: now,
-        explorerUrl: "https://stellar.expert/explorer/public",
-      },
-      // USDF on XRPL
-      {
-        asset: "USDF",
-        chain: "XRPL",
-        address: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
-        balance: "2000000000000", // 2M USDF
-        balanceUSD: "2000000",
-        lastVerified: now,
-        explorerUrl: "https://xrpscan.com/account/rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
-      },
-      // Polygon Ecosystem (GSP contracts)
-      {
-        asset: "MATIC/POL",
-        chain: "Polygon Mainnet (137)",
-        address: "0x17A2d219A1C5b7aF2890aFAf6E7045669Dc96952",
-        balance: "50000000000000000000000", // 50K MATIC for gas
-        balanceUSD: "25000",
-        lastVerified: now,
-        explorerUrl: "https://polygonscan.com/address/0x17A2d219A1C5b7aF2890aFAf6E7045669Dc96952",
-      },
-      // Staking Vault
+      // UNY Staking Vault
       {
         asset: "UNY (Staked)",
-        chain: "Polygon Mainnet (137)",
-        address: "0x4AA794ee9B5C7Bf3C683b7bb5dd7528852950399",
+        chain: "UnyKorn L1 (7331)",
+        address: "native",
         balance: "50000000000000000000000000", // 50M staked
         balanceUSD: "500000",
         lastVerified: now,
-        explorerUrl: "https://polygonscan.com/address/0x4AA794ee9B5C7Bf3C683b7bb5dd7528852950399",
+        explorerUrl: "https://main.unykorn-explorer.pages.dev",
       },
-      // LP Positions (TraderJoe)
+      // x402 Settlement Pool — active invoice payments
       {
-        asset: "UNY-LP",
-        chain: "Avalanche C-Chain (43114)",
-        address: "UnyKornLPManager.sol",
-        balance: "10000000000000000000000000", // 10M UNY in LP
-        balanceUSD: "200000",
+        asset: "UNY (x402 Pool)",
+        chain: "UnyKorn L1 (7331)",
+        address: "native",
+        balance: "10000000000000000000000000", // 10M in settlement pool
+        balanceUSD: "100000",
         lastVerified: now,
-        explorerUrl: "https://traderjoexyz.com/avalanche/pool/v21",
+        explorerUrl: "https://main.unykorn-explorer.pages.dev",
       },
     ];
   }
@@ -198,7 +168,7 @@ export class ProofOfReservesEngine {
       },
       {
         category: "Bridge Escrow",
-        description: "UNY locked in cross-chain bridge contracts",
+        description: "Reserved for future cross-chain bridge deployments",
         amountUNY: "0",
         amountUSD: "0",
       },
@@ -317,11 +287,7 @@ export class ProofOfReservesEngine {
       liabilities: this.liabilities,
       merkleRoot: root,
       blockHeights: {
-        "avalanche-43114": 0, // Populated from on-chain query
-        "polygon-137": 0,
-        "unykorn-7331": 0,
-        "stellar": 0,
-        "xrpl": 0,
+        "unykorn-7331": 0, // Populated from on-chain query
       },
       auditor: {
         name: "UnyKorn Protocol — Self-Attested (Phase 1)",

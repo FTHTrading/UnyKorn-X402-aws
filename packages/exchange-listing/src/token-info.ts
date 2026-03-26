@@ -105,11 +105,11 @@ export function getTokenInfo(burnedAmount?: string): TokenInfo {
     sourceCode: "https://github.com/FTHTrading/UnyKorn-X402-aws",
     explorer: "https://main.unykorn-explorer.pages.dev",
     description:
-      "UNY is the native utility and payment token for the UnyKorn x402 infrastructure — " +
-      "a protocol-level HTTP payment standard that enables AI agents and services to transact " +
-      "in real-time with sub-second finality. Built at genesis for trade-finance and AI " +
-      "infrastructure, UNY powers invoice settlement, agent-to-agent payments, namespace " +
-      "resolution, and multi-rail settlement across Avalanche, Polygon, XRPL, and Stellar.",
+      "UNY is the native utility and payment token for the UnyKorn L1 blockchain (Chain 7331) — " +
+      "a purpose-built Layer 1 for AI infrastructure with sub-second Trinity Consensus finality. " +
+      "UNY powers the x402 protocol, an HTTP 402 payment standard enabling AI agents and services " +
+      "to transact in real-time. Built at genesis for AI-to-AI commerce, UNY powers invoice " +
+      "settlement, agent-to-agent payments, namespace resolution, and protocol-level micropayments.",
     category: "Infrastructure",
     tags: [
       "payment-protocol",
@@ -119,22 +119,11 @@ export function getTokenInfo(burnedAmount?: string): TokenInfo {
       "defi",
       "utility-token",
       "deflationary",
-      "multi-chain",
+      "layer-1",
     ],
     launchDate: "2025-01-15T00:00:00Z",
     genesisBlock: "UnyKorn L1 Block #0 — Chain 7331",
     contracts: [
-      {
-        chain: "Avalanche C-Chain",
-        chainId: 43114,
-        address: "0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
-        standard: "ERC-20",
-        decimals: 18,
-        verified: true,
-        auditStatus: "audited",
-        explorerUrl: "https://snowtrace.io/token/0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
-        bridgeType: "native",
-      },
       {
         chain: "UnyKorn L1",
         chainId: 7331,
@@ -145,17 +134,6 @@ export function getTokenInfo(burnedAmount?: string): TokenInfo {
         auditStatus: "audited",
         explorerUrl: "https://main.unykorn-explorer.pages.dev",
         bridgeType: "native",
-      },
-      {
-        chain: "Polygon Mainnet",
-        chainId: 137,
-        address: "0x14E64b91B96f11D12ef6bDaDc21e2f25a2f45a99",
-        standard: "ERC-20",
-        decimals: 18,
-        verified: true,
-        auditStatus: "audited",
-        explorerUrl: "https://polygonscan.com/token/0x14E64b91B96f11D12ef6bDaDc21e2f25a2f45a99",
-        bridgeType: "canonical",
       },
     ],
     community: {

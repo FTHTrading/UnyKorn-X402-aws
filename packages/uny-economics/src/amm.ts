@@ -1,16 +1,15 @@
 /**
  * UNY Automated Market Maker — Constant-Product (x·y = k)
  *
- * Implements an on-chain-ready AMM for UNY/USDF trading pair.
- * This is the price discovery mechanism that connects x402 revenue
- * to real UNY valuation.
+ * Implements an on-chain-ready AMM for UNY price discovery.
+ * This is the mechanism that connects x402 revenue to real UNY valuation.
  *
  * Architecture:
- *   - Internal constant-product pool (UNY/USDF)
+ *   - Constant-product pool on UnyKorn L1
  *   - 0.3% swap fee → split: 50% to LPs, 50% to protocol treasury
- *   - Price oracle from reserve ratio: price = reserveUSDf / reserveUNY
+ *   - Price oracle from reserve ratio
  *   - LP tokens (UNY-LP) track proportional ownership
- *   - Integrates with TraderJoe LB on Avalanche for external liquidity
+ *   - Protocol-owned liquidity on UnyKorn L1
  *
  * The AMM creates a real market for UNY:
  *   1. x402 payments generate UNY demand (users need UNY to pay invoices)
