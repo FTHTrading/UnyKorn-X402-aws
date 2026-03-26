@@ -14,7 +14,9 @@
     "@unykorn/shared-types": "*",
     "@unykorn/agent-core": "*",
     "@unykorn/policy-engine": "*",
-    "@unykorn/a2a-sdk": "*"
+    "@unykorn/identity-engine": "*",
+    "@unykorn/a2a-sdk": "*",
+    "@prisma/client": "^6.19.2"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
