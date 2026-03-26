@@ -1,0 +1,22 @@
+{
+  "name": "fth-x402-a2a",
+  "version": "0.1.0",
+  "description": "FTH x402 — A2A agent framework: types, task lifecycle, JSON-RPC transport, agent registry, routing, and all agent implementations",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "fth-x402-core": "*"
+  },
+  "devDependencies": {
+    "typescript": "~5.4.0",
+    "rimraf": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "license": "MIT"
+}

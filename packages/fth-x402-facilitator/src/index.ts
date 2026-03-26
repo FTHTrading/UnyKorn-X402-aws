@@ -23,6 +23,7 @@ import l1Routes from "./routes/l1";
 import webhookRoutes from "./routes/webhooks";
 import operatorRoutes from "./routes/operator";
 import a2aRoutes from "./routes/a2a";
+import a2aJsonRpcRoutes from "./routes/a2a-rpc";
 
 // Auth
 import { registerAuthMiddleware } from "./middleware/auth";
@@ -139,6 +140,7 @@ async function main() {
   await app.register(webhookRoutes);
   await app.register(operatorRoutes);
   await app.register(a2aRoutes);
+  await app.register(a2aJsonRpcRoutes);
 
   // Start receipt batcher
   startBatcher();
