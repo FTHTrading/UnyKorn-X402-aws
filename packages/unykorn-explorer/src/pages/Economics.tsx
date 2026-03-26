@@ -144,11 +144,11 @@ export default function Economics() {
         <div className="stat-card glass glass-glow">
           <div className="stat-label">UNY Price</div>
           <div className="stat-value">${amm ? fmt(amm.priceUNY, 6) : "—"}</div>
-          <div className="stat-sub">From AMM (UNY/USDF)</div>
+          <div className="stat-sub">From AMM pool</div>
         </div>
         <div className="stat-card glass glass-glow">
           <div className="stat-label">Pool Liquidity</div>
-          <div className="stat-value">${amm ? fmtBig(amm.reserveUSDf) : "—"} USDF</div>
+          <div className="stat-value">{amm ? fmtBig(amm.reserveUSDf) : "—"} USD</div>
           <div className="stat-sub">{amm ? fmtBig(amm.reserveUNY) : "—"} UNY</div>
         </div>
         <div className="stat-card glass glass-glow">
@@ -177,7 +177,7 @@ export default function Economics() {
       {ammData && (
         <section className="glass" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
           <h2 style={{ margin: "0 0 1rem" }}>
-            <span className="gradient">AMM Pool</span> — UNY/USDF
+            <span className="gradient">AMM Pool</span> — UNY/USD
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
             <div>
@@ -185,8 +185,8 @@ export default function Economics() {
                 <tbody>
                   <tr><td>Fee Rate</td><td>{ammData.pool?.feeRate ?? "0.30%"}</td></tr>
                   <tr><td>Fee Split</td><td>{ammData.pool?.feeSplit ?? "50/50 LP/Protocol"}</td></tr>
-                  <tr><td>Cumulative Volume</td><td>{fmtBig(amm?.cumulativeVolumeUSDf)} USDF</td></tr>
-                  <tr><td>Cumulative Fees</td><td>{fmtBig(amm?.cumulativeFeesUSDf)} USDF</td></tr>
+                  <tr><td>Cumulative Volume</td><td>{fmtBig(amm?.cumulativeVolumeUSDf)} USD</td></tr>
+                  <tr><td>Cumulative Fees</td><td>{fmtBig(amm?.cumulativeFeesUSDf)} USD</td></tr>
                   <tr><td>Protocol Fees (pending burn)</td><td>{ammData.protocolFees ? fmtBig(ammData.protocolFees) : "—"}</td></tr>
                   <tr><td>LP Token Supply</td><td>{amm?.totalLPShares ? fmtBig(amm.totalLPShares) : "—"}</td></tr>
                 </tbody>
@@ -270,11 +270,11 @@ export default function Economics() {
             </div>
             <div className="stat-card glass">
               <div className="stat-label">Market Cap</div>
-              <div className="stat-value">${fund.marketCapUSDf}</div>
+              <div className="stat-value">${fund.marketCapUSDf ?? fund.marketCapUSD}</div>
             </div>
             <div className="stat-card glass">
               <div className="stat-label">FDV</div>
-              <div className="stat-value">${fund.fdvUSDf}</div>
+              <div className="stat-value">${fund.fdvUSDf ?? fund.fdvUSD}</div>
             </div>
             <div className="stat-card glass">
               <div className="stat-label">Burn Rate</div>

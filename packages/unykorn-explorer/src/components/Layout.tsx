@@ -36,6 +36,7 @@ export default function Layout() {
           <NavLink to="/namespaces">Namespaces</NavLink>
           <NavLink to="/economics">Economics</NavLink>
           <NavLink to="/listing">Listing</NavLink>
+          <NavLink to="/genesis">Genesis</NavLink>
         </nav>
       </header>
 

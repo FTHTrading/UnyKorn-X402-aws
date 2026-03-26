@@ -160,12 +160,12 @@ export const CHAIN = {
   rpc: "https://rpc.l1.unykorn.org",
   explorer: "https://ex.unykorn.org",
   treasury: "uny1_755098bacf6f6d9ef9d0f391a8e7c467e7db7190",
-  rails: ["unykorn-l1", "stellar", "xrpl", "base"] as const,
-  proofs: ["prepaid_credit", "channel_spend", "signed_auth", "tx_hash", "xrpl_payment"] as const,
-  assets: ["UNY", "USDF", "sUSDF", "xUSDF", "USDC", "wXAU", "wUSTB", "wBOND", "wINV"] as const,
+  rails: ["unykorn-l1"] as const,
+  proofs: ["prepaid_credit", "channel_spend", "signed_auth", "tx_hash"] as const,
+  assets: ["UNY", "USDC", "USDT", "wXAU", "wUSTB", "wBOND", "wINV"] as const,
   contracts: {
-    uny_token: "0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
-    vault_registry: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    uny_native: "native",
+    genesis_erc20: "0xc09003213b34c7bec8d2eddfad4b43e51d007d66",
   },
 };
 

@@ -316,10 +316,7 @@ export default function X402() {
 /* ── helpers ── */
 function railDesc(r: string) {
   const m: Record<string, string> = {
-    "unykorn-l1": "Native UnyKorn chain settlement",
-    stellar: "Stellar network (USDC, custom assets)",
-    xrpl: "XRP Ledger payments",
-    base: "Base L2 (Coinbase) EVM settlement",
+    "unykorn-l1": "Native UnyKorn L1 settlement (~1s finality)",
   };
   return m[r] || r;
 }
@@ -330,7 +327,6 @@ function proofDesc(p: string) {
     channel_spend: "Payment channel spend proof",
     signed_auth: "Signed authorization token",
     tx_hash: "On-chain transaction hash",
-    xrpl_payment: "XRPL payment verification",
   };
   return m[p] || p;
 }
@@ -338,6 +334,5 @@ function proofDesc(p: string) {
 function assetCategory(a: string) {
   if (a === "UNY") return "Native";
   if (a.startsWith("w")) return "Wrapped";
-  if (a.startsWith("s") || a.startsWith("x")) return "Synthetic";
   return "Stablecoin";
 }

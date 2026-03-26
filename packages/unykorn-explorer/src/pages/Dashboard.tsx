@@ -79,10 +79,10 @@ export default function Dashboard() {
             <span className="proto-dot" style={{ background: "#22c55e" }} /> Merkle Receipt Anchoring
           </span>
           <span className="proto-badge">
-            <span className="proto-dot" style={{ background: "#f5a623" }} /> Multi-Rail Settlement
+            <span className="proto-dot" style={{ background: "#f5a623" }} /> Native L1 Settlement
           </span>
           <span className="proto-badge">
-            <span className="proto-dot" style={{ background: "#60a5fa" }} /> 9 Supported Assets
+            <span className="proto-dot" style={{ background: "#60a5fa" }} /> 7 Supported Assets
           </span>
         </div>
       </div>
