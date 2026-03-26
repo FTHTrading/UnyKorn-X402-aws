@@ -1,0 +1,51 @@
+name: Deploy Cloudflare Pages
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/unykorn-explorer/**'
+      - 'packages/unykorn-ico/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-explorer:
+    runs-on: ubuntu-latest
+    name: Deploy Explorer
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(join(github.event.commits.*.modified, ','), 'packages/unykorn-explorer/')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build
+        working-directory: packages/unykorn-explorer
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy packages/unykorn-explorer/dist --project-name unykorn-explorer --branch main
+
+  deploy-ico:
+    runs-on: ubuntu-latest
+    name: Deploy ICO
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(join(github.event.commits.*.modified, ','), 'packages/unykorn-ico/')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build
+        working-directory: packages/unykorn-ico
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy packages/unykorn-ico/dist --project-name unykorn-ico --branch main

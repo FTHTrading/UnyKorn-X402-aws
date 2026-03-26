@@ -18,8 +18,8 @@ import pool from "../db";
 // Configuration
 // ---------------------------------------------------------------------------
 
-const L1_RPC_URL = process.env.UNYKORN_RPC_URL ?? process.env.L1_RPC_URL ?? "https://rpc.l1.unykorn.org";
-const L1_RPC_FALLBACK_URL = process.env.UNYKORN_RPC_FALLBACK_URL ?? process.env.L1_RPC_FALLBACK_URL ?? "";
+const L1_RPC_URL = process.env.UNYKORN_RPC_URL ?? process.env.L1_RPC_URL ?? "http://localhost:4030/rpc";
+const L1_RPC_FALLBACK_URL = process.env.UNYKORN_RPC_FALLBACK_URL ?? process.env.L1_RPC_FALLBACK_URL ?? "https://rpc.l1.unykorn.org";
 const L1_CHAIN_ID = Number(process.env.UNYKORN_CHAIN_ID ?? process.env.L1_CHAIN_ID ?? 7331);
 const L1_ANCHOR_WALLET = process.env.UNYKORN_TREASURY_ADDRESS ?? process.env.L1_ANCHOR_WALLET ?? "uny1_DEMO_TREASURY";
 const L1_MODULE = process.env.L1_MODULE ?? "trade-finance";

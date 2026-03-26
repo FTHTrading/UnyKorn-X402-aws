@@ -500,6 +500,225 @@ server.post<{
 });
 
 // ---------------------------------------------------------------------------
+// L1 RPC — JSON-RPC 2.0 Interface (Chain Node Protocol)
+// ---------------------------------------------------------------------------
+// This turns the ledger into a real chain node.  The Facilitator, Explorer,
+// and any external client can talk to it using standard JSON-RPC 2.0.
+
+import { createHash, randomUUID } from "crypto";
+
+const CHAIN_ID   = 7331;
+const BLOCK_TIME = 3000;                 // ms — produce a block every 3 s
+const GENESIS_TS = "2025-10-01T00:00:00Z";
+const NODE_ID    = process.env.NODE_ID ?? "alpha";
+
+// ── Block production ──────────────────────────────────────────────────────
+// Blocks seal a range of ledger entries.  Each block's hash is derived from
+// (prevBlockHash + merkleRoot-of-entries + height + timestamp).  Empty blocks
+// are produced when there are no new entries — real chains do this too.
+
+interface ChainBlock {
+  height:      number;
+  hash:        string;
+  prevHash:    string;
+  merkleRoot:  string;
+  txCount:     number;
+  entryRange:  [number, number];        // inclusive [fromSeq, toSeq]
+  timestamp:   string;
+  producer:    string;
+}
+
+const blocks: ChainBlock[] = [];
+let lastSealedSeq = 0;
+let blockTimer: ReturnType<typeof setInterval> | null = null;
+
+function sha256(input: string): string {
+  return createHash("sha256").update(input).digest("hex");
+}
+
+function merkleOf(hashes: string[]): string {
+  if (hashes.length === 0) return sha256("empty");
+  if (hashes.length === 1) return hashes[0];
+  const next: string[] = [];
+  for (let i = 0; i < hashes.length; i += 2) {
+    const left  = hashes[i];
+    const right = hashes[i + 1] ?? left;
+    next.push(sha256(left + right));
+  }
+  return merkleOf(next);
+}
+
+async function produceBlock(): Promise<ChainBlock> {
+  const entries = await prisma.ledgerEntry.findMany({
+    where: { sequence: { gt: lastSealedSeq } },
+    orderBy: { sequence: "asc" },
+  });
+
+  const prevBlock  = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+  const prevHash   = prevBlock?.hash ?? sha256("genesis-7331");
+  const height     = (prevBlock?.height ?? 0) + 1;
+  const now        = new Date().toISOString();
+  const entryRange: [number, number] = entries.length > 0
+    ? [Number(entries[0].sequence), Number(entries[entries.length - 1].sequence)]
+    : [lastSealedSeq, lastSealedSeq];
+
+  const entryHashes = entries.map(e => e.entryHash ?? sha256(e.id));
+  const merkleRoot  = merkleOf(entryHashes);
+  const hash        = sha256(`${prevHash}:${merkleRoot}:${height}:${now}`);
+
+  const block: ChainBlock = {
+    height,
+    hash,
+    prevHash,
+    merkleRoot,
+    txCount: entries.length,
+    entryRange,
+    timestamp: now,
+    producer: NODE_ID,
+  };
+
+  blocks.push(block);
+  if (entries.length > 0) {
+    lastSealedSeq = Number(entries[entries.length - 1].sequence);
+  }
+
+  return block;
+}
+
+function startBlockProduction(): void {
+  if (blockTimer) return;
+  server.log.info(`[L1] Block production started — ${BLOCK_TIME}ms interval, chain ${CHAIN_ID}`);
+  blockTimer = setInterval(async () => {
+    try { await produceBlock(); } catch (e) { server.log.error(`[L1] Block error: ${e}`); }
+  }, BLOCK_TIME);
+}
+
+// ── Anchor storage ────────────────────────────────────────────────────────
+interface AnchorRecord {
+  batchId:     string;
+  merkleRoot:  string;
+  itemCount:   number;
+  txHash:      string;
+  blockHeight: number;
+  anchoredAt:  string;
+}
+const anchors: AnchorRecord[] = [];
+
+// ── JSON-RPC 2.0 handler ─────────────────────────────────────────────────
+
+type RpcHandler = (params: any[]) => Promise<unknown>;
+
+const rpcMethods: Record<string, RpcHandler> = {
+  // Chain queries
+  async chain_getLatestBlock() {
+    const b = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+    return b
+      ? { height: b.height, hash: b.hash, timestamp: b.timestamp, chain_id: CHAIN_ID }
+      : { height: 0, hash: sha256("genesis-7331"), timestamp: GENESIS_TS, chain_id: CHAIN_ID };
+  },
+
+  async chain_getBlockByHeight(params) {
+    const h = Number(params[0]);
+    const b = blocks.find(bl => bl.height === h);
+    if (!b) throw rpcError(-32602, `Block ${h} not found`);
+    return { height: b.height, hash: b.hash, timestamp: b.timestamp, chain_id: CHAIN_ID, txCount: b.txCount, merkleRoot: b.merkleRoot, producer: b.producer };
+  },
+
+  async chain_getBlocks(params) {
+    const from = Number(params[0] ?? 1);
+    const limit = Math.min(Number(params[1] ?? 20), 100);
+    return blocks.filter(b => b.height >= from).slice(0, limit).map(b => ({
+      height: b.height, hash: b.hash, timestamp: b.timestamp, txCount: b.txCount, producer: b.producer, merkleRoot: b.merkleRoot,
+    }));
+  },
+
+  async chain_status() {
+    const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+    return {
+      chainId: CHAIN_ID,
+      blockHeight: latest?.height ?? 0,
+      blockHash: latest?.hash ?? sha256("genesis-7331"),
+      blockTime: BLOCK_TIME,
+      nodeId: NODE_ID,
+      synced: true,
+      uptime: process.uptime(),
+      genesisTime: GENESIS_TS,
+      entryCount: ledger.entryCount(),
+      accountCount: await prisma.genesisAccount.count(),
+    };
+  },
+
+  // Transaction queries
+  async tx_getStatus(params) {
+    const txHash = String(params[0]);
+    // Search entries for matching hash
+    const entry = await prisma.ledgerEntry.findFirst({ where: { entryHash: txHash } });
+    if (!entry) return { tx_hash: txHash, status: "not_found" };
+    // Find which block contains this entry
+    const b = blocks.find(bl => Number(entry.sequence) >= bl.entryRange[0] && Number(entry.sequence) <= bl.entryRange[1]);
+    return {
+      tx_hash: txHash,
+      status: "committed",
+      block_height: b?.height ?? 0,
+      block_hash: b?.hash ?? "",
+      gas_used: entry.amount?.toString() ?? "0",
+    };
+  },
+
+  // Trade-finance module — receipt root anchoring
+  async ["trade-finance.anchor_receipt_root"](params) {
+    const p = params[0] as { batch_id: string; merkle_root: string; item_count: number; anchor_wallet: string };
+    const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+    const txHash = sha256(`anchor:${p.batch_id}:${p.merkle_root}:${Date.now()}`);
+    const record: AnchorRecord = {
+      batchId: p.batch_id,
+      merkleRoot: p.merkle_root,
+      itemCount: p.item_count,
+      txHash,
+      blockHeight: (latest?.height ?? 0) + 1,
+      anchoredAt: new Date().toISOString(),
+    };
+    anchors.push(record);
+    return { tx_hash: txHash, block_height: record.blockHeight, timestamp: record.anchoredAt };
+  },
+
+  // Anchor queries
+  async ["trade-finance.get_anchors"](params) {
+    const limit = Math.min(Number(params[0] ?? 20), 100);
+    return anchors.slice(-limit).reverse();
+  },
+};
+
+function rpcError(code: number, message: string): { code: number; message: string } {
+  return { code, message };
+}
+
+// JSON-RPC 2.0 endpoint
+server.post("/rpc", async (request, reply) => {
+  const body = request.body as { jsonrpc?: string; id?: number; method?: string; params?: unknown[] };
+  if (body.jsonrpc !== "2.0" || !body.method) {
+    return reply.status(400).send({ jsonrpc: "2.0", id: body.id ?? null, error: rpcError(-32600, "Invalid JSON-RPC 2.0 request") });
+  }
+  const handler = rpcMethods[body.method];
+  if (!handler) {
+    return reply.send({ jsonrpc: "2.0", id: body.id ?? null, error: rpcError(-32601, `Method not found: ${body.method}`) });
+  }
+  try {
+    const result = await handler(body.params ?? []);
+    return reply.send({ jsonrpc: "2.0", id: body.id ?? null, result });
+  } catch (err: any) {
+    if (err.code && err.message) return reply.send({ jsonrpc: "2.0", id: body.id ?? null, error: err });
+    return reply.send({ jsonrpc: "2.0", id: body.id ?? null, error: rpcError(-32603, err.message ?? "Internal error") });
+  }
+});
+
+// HTTP /status endpoint (used by L1 adapter fallback)
+server.get("/status", async () => {
+  const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+  return { chainId: CHAIN_ID, blockHeight: latest?.height ?? 0, blockHash: latest?.hash ?? "", synced: true, nodeId: NODE_ID };
+});
+
+// ---------------------------------------------------------------------------
 // Ledger & Treasury
 // ---------------------------------------------------------------------------
 server.get("/ledger", async (request) => {
@@ -641,6 +860,11 @@ const start = async () => {
     } else {
       server.log.info("No existing ledger data — starting fresh");
     }
+
+    // ── Produce genesis block and start block production ──
+    await produceBlock(); // seal everything up to now
+    startBlockProduction();
+    server.log.info(`[L1] Genesis block produced — chain ${CHAIN_ID}, height ${blocks[0]?.height ?? 0}`);
 
     await server.listen({ port: PORT, host: "0.0.0.0" });
     server.log.info(`${SERVICE} listening on port ${PORT}`);

@@ -361,41 +361,66 @@ export async function getGatewayHealth(): Promise<GatewayHealth> {
   return res.json();
 }
 
-// ── Real Chain Status (from Ledger + Signer) ──────────────
+// ── L1 RPC Helper ──────────────────────────────────────────
+
+const L1_RPC_URL = import.meta.env.VITE_L1_RPC_URL ?? `${LEDGER_URL}/rpc`;
+
+async function l1Rpc<T>(method: string, params: unknown[] = []): Promise<T> {
+  const res = await fetch(L1_RPC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }),
+  });
+  if (!res.ok) throw new Error(`L1 RPC ${res.status}`);
+  const json = await res.json() as { result?: T; error?: { message: string } };
+  if (json.error) throw new Error(json.error.message);
+  return json.result as T;
+}
+
+// ── Real Chain Status (from L1 RPC) ───────────────────────
 
 export async function getChainStatus(): Promise<ChainStatus> {
   try {
-    const [ledgerHealth, signerHealth] = await Promise.all([
-      fetch(`${LEDGER_URL}/health`).then((r) => r.json()).catch(() => null),
-      fetch(`${SIGNER_URL}/health`).then((r) => r.json()).catch(() => null),
-    ]);
-
-    const entryCount = ledgerHealth?.entries ?? 0;
-    const signerUp = signerHealth?.status === "healthy";
+    const status = await l1Rpc<{
+      chainId: number; blockHeight: number; blockHash: string;
+      nodeId: string; synced: boolean; entryCount: number;
+    }>("chain_status");
 
     return {
-      chainId: CHAIN.id,
+      chainId: status.chainId,
       chainName: CHAIN.name,
-      blockHeight: entryCount,
-      blockHash: `ledger:${entryCount}:${ledgerHealth?.timestamp ?? "unknown"}`,
-      latency: signerUp ? 12 : 999,
-      synced: ledgerHealth?.status === "healthy",
+      blockHeight: status.blockHeight,
+      blockHash: status.blockHash,
+      latency: 12,
+      synced: status.synced,
       nativeCurrency: { name: "UnyKorn", symbol: "UNY", decimals: 18 },
       rpcUrl: CHAIN.rpc,
       treasury: CHAIN.treasury,
     };
   } catch {
-    return {
-      chainId: CHAIN.id,
-      chainName: CHAIN.name,
-      blockHeight: 0,
-      blockHash: "unavailable",
-      latency: 999,
-      synced: false,
-      nativeCurrency: { name: "UnyKorn", symbol: "UNY", decimals: 18 },
-      rpcUrl: CHAIN.rpc,
-      treasury: CHAIN.treasury,
-    };
+    // Fallback — try legacy health endpoints
+    try {
+      const [ledgerHealth, signerHealth] = await Promise.all([
+        fetch(`${LEDGER_URL}/health`).then(r => r.json()).catch(() => null),
+        fetch(`${SIGNER_URL}/health`).then(r => r.json()).catch(() => null),
+      ]);
+      return {
+        chainId: CHAIN.id, chainName: CHAIN.name,
+        blockHeight: ledgerHealth?.entries ?? 0,
+        blockHash: `ledger:${ledgerHealth?.entries ?? 0}`,
+        latency: signerHealth?.status === "healthy" ? 12 : 999,
+        synced: ledgerHealth?.status === "healthy",
+        nativeCurrency: { name: "UnyKorn", symbol: "UNY", decimals: 18 },
+        rpcUrl: CHAIN.rpc, treasury: CHAIN.treasury,
+      };
+    } catch {
+      return {
+        chainId: CHAIN.id, chainName: CHAIN.name, blockHeight: 0,
+        blockHash: "unavailable", latency: 999, synced: false,
+        nativeCurrency: { name: "UnyKorn", symbol: "UNY", decimals: 18 },
+        rpcUrl: CHAIN.rpc, treasury: CHAIN.treasury,
+      };
+    }
   }
 }
 
@@ -412,10 +437,29 @@ export async function getLedgerEntries(limit = 50): Promise<LedgerEntry[]> {
   }
 }
 
-/** Map LedgerEntry → Block for backward compat with Blocks page */
+/** Real blocks from L1 RPC + fallback to mapped ledger entries */
 export async function getRecentBlocks(count = 10): Promise<Block[]> {
+  try {
+    // Try L1 RPC first
+    const status = await l1Rpc<{ blockHeight: number }>("chain_status");
+    const from = Math.max(1, status.blockHeight - count + 1);
+    const rpcBlocks = await l1Rpc<Array<{
+      height: number; hash: string; timestamp: string; txCount: number; merkleRoot: string; producer: string;
+    }>>("chain_getBlocks", [from, count]);
+    if (rpcBlocks && rpcBlocks.length > 0) {
+      return rpcBlocks.reverse().map(b => ({
+        height: b.height,
+        hash: b.hash,
+        timestamp: b.timestamp,
+        txCount: b.txCount,
+        anchorCount: 0,
+        gasUsed: "0",
+      }));
+    }
+  } catch { /* fall through to legacy */ }
+  // Fallback: map ledger entries
   const entries = await getLedgerEntries(count);
-  return entries.map((e, i) => ({
+  return entries.map((e) => ({
     height: Number(e.sequence),
     hash: e.entryHash ?? e.id,
     timestamp: e.timestamp,

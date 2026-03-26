@@ -42,8 +42,8 @@ const ICO = {
     { name: "UnyKorn L1", color: "#3b82f6", contract: "Chain 7331 · Native Token" },
   ],
   tiers: [
-    { name: "Seed", price: "$0.005", bonus: "+60% Bonus", min: "$100", max: "$25,000", alloc: "50,000,000 UNY", status: "COMING SOON", featured: false },
-    { name: "Private Sale", price: "$0.008", bonus: "+30% Bonus", min: "$500", max: "$100,000", alloc: "80,000,000 UNY", status: "COMING SOON", featured: true },
+    { name: "Seed", price: "$0.005", bonus: "+60% Bonus", min: "$100", max: "$25,000", alloc: "50,000,000 UNY", status: "LIVE NOW", featured: true },
+    { name: "Private Sale", price: "$0.008", bonus: "+30% Bonus", min: "$500", max: "$100,000", alloc: "80,000,000 UNY", status: "COMING SOON", featured: false },
     { name: "Public Sale", price: "$0.012", bonus: "+10% Bonus", min: "$50", max: "$50,000", alloc: "70,000,000 UNY", status: "UPCOMING", featured: false },
   ],
   tokenomics: [
@@ -99,7 +99,7 @@ function Hero() {
     <section className="hero" id="top">
       <div className="hero-badge">
         <span className="dot" />
-        Private Sale — Live Now
+        Seed Round — Live Now
       </div>
 
       <h1>
@@ -496,7 +496,7 @@ function Contracts() {
         <div style={{ marginTop: 32, textAlign: "center" }}>
           <div className="chain-row">
             {[
-              { label: "UnyKorn Explorer", url: "https://main.unykorn-explorer.pages.dev" },
+              { label: "UnyKorn Explorer", url: "https://ex.unykorn.org" },
               { label: "GitHub", url: "https://github.com/FTHTrading/UnyKorn-X402-aws" },
             ].map((v) => (
               <a href={v.url} target="_blank" rel="noreferrer" className="glass chain-badge" key={v.label}
@@ -571,8 +571,8 @@ function Footer() {
   return (
     <footer className="footer">
       <div className="footer-links">
-        <a href="https://main.unykorn-explorer.pages.dev" target="_blank" rel="noreferrer">Explorer</a>
-        <a href="https://main.unykorn-explorer.pages.dev/security" target="_blank" rel="noreferrer">Security</a>
+        <a href="https://ex.unykorn.org" target="_blank" rel="noreferrer">Explorer</a>
+        <a href="https://ex.unykorn.org/security" target="_blank" rel="noreferrer">Security</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws" target="_blank" rel="noreferrer">GitHub</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/TOKENOMICS.md" target="_blank" rel="noreferrer">Tokenomics</a>
