@@ -26,6 +26,7 @@ import a2aRoutes from "./routes/a2a";
 import a2aJsonRpcRoutes from "./routes/a2a-rpc";
 import explorerRoutes from "./routes/explorer";
 import { createEconomicsRoutes } from "../../uny-economics/src/routes";
+import { createListingRoutes } from "../../exchange-listing/src/routes";
 
 // Auth
 import { registerAuthMiddleware } from "./middleware/auth";
@@ -118,6 +119,20 @@ async function main() {
         "/economics/fundamentals",
         "/economics/reserves",
         "/economics/infrastructure",
+        "/listing/v1/overview",
+        "/listing/v1/pairs",
+        "/listing/v1/tickers",
+        "/listing/v1/orderbook",
+        "/listing/v1/historical_trades",
+        "/listing/v1/summary",
+        "/listing/v1/assets",
+        "/listing/v1/asset-info",
+        "/listing/v1/contracts",
+        "/listing/v1/proof-of-reserves",
+        "/listing/v1/readiness",
+        "/listing/v1/readiness/:exchange",
+        "/listing/v1/application/:exchange",
+        "/listing/v1/applications",
       ],
     });
   });
@@ -172,6 +187,10 @@ async function main() {
   // Economics engine (AMM, flywheel, genesis provenance, credibility)
   createEconomicsRoutes(app);
   app.log.info("Economics engine mounted at /economics/*");
+
+  // Exchange listing readiness (CoinGecko API, PoR, compliance, applications)
+  createListingRoutes(app);
+  app.log.info("Exchange listing API mounted at /listing/*");
 
   // Start receipt batcher
   startBatcher();

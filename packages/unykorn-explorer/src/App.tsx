@@ -7,6 +7,7 @@ import X402 from "./pages/X402";
 import Agents from "./pages/Agents";
 import Namespaces from "./pages/Namespaces";
 import Economics from "./pages/Economics";
+import Listing from "./pages/Listing";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="agents" element={<Agents />} />
         <Route path="namespaces" element={<Namespaces />} />
         <Route path="economics" element={<Economics />} />
+        <Route path="listing" element={<Listing />} />
       </Route>
     </Routes>
   );

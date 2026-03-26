@@ -523,3 +523,65 @@ export async function getInfrastructure(): Promise<any> {
     return null;
   }
 }
+
+// ── Exchange Listing Readiness ────────────────────────────
+
+export async function getListingOverview(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/listing/v1/overview`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getListingReadiness(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/listing/v1/readiness`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getListingTickers(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/listing/v1/tickers`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getProofOfReserves(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/listing/v1/proof-of-reserves`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getTokenAssetInfo(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/listing/v1/asset-info`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getListingContracts(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/listing/v1/contracts`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}

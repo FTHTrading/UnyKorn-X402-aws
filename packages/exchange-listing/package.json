@@ -1,0 +1,20 @@
+{
+  "name": "@unykorn/exchange-listing",
+  "version": "1.0.0",
+  "description": "Exchange listing readiness package — CoinGecko/CMC APIs, proof-of-reserves, compliance, market data, order book",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx watch src/server.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.3.3",
+    "@fastify/cors": "^11.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "tsx": "^4.19.4",
+    "@types/node": "^22.15.3"
+  }
+}

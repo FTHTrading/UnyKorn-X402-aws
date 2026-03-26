@@ -35,6 +35,7 @@ export default function Layout() {
           <NavLink to="/agents">A2A Agents</NavLink>
           <NavLink to="/namespaces">Namespaces</NavLink>
           <NavLink to="/economics">Economics</NavLink>
+          <NavLink to="/listing">Listing</NavLink>
         </nav>
       </header>
 

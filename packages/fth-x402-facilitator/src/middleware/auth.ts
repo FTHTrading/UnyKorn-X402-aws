@@ -33,6 +33,7 @@ const PUBLIC_ROUTES = new Set([
 const PUBLIC_PREFIXES: string[] = [
   "/explorer/",      // Explorer public data endpoints
   "/economics/",     // Economics engine — transparency by design
+  "/listing/",       // Exchange listing readiness — full transparency
   "/.well-known/",   // A2A discovery
 ];
 
