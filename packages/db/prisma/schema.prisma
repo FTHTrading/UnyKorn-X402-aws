@@ -611,3 +611,297 @@ model StreamingBalance {
   @@index([toAgentId])
   @@map("streaming_balances")
 }
+
+// ═══════════════════════════════════════════════════════════
+// Legacy Tables — @@map preserves existing DB tables
+// These models MUST stay to prevent prisma db push from
+// dropping tables with live data (44K+ rows total).
+// Schemas derived from `prisma db pull` introspection.
+// ═══════════════════════════════════════════════════════════
+
+model CreditAccount {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletAddress String   @unique @map("wallet_address")
+  rail          String   @default("unykorn-l1")
+  namespace     String?
+  asset         String   @default("UNY")
+  balance       Decimal  @default(0)
+  frozen        Boolean  @default(false)
+  kycLevel      String   @default("basic") @map("kyc_level")
+  pubkey        String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("credit_accounts")
+}
+
+model CreditTransaction {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId    String   @map("account_id") @db.Uuid
+  type         String
+  amount       Decimal
+  balanceAfter Decimal  @map("balance_after")
+  reference    String?
+  rail         String?
+  txHash       String?  @map("tx_hash")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("credit_transactions")
+}
+
+model GuardianAuditLog {
+  id        BigInt    @id @default(autoincrement())
+  eventType String    @map("event_type")
+  source    String
+  severity  String?   @default("info")
+  message   String?
+  details   Json?     @default("{}")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("guardian_audit_log")
+}
+
+model GuardianDaemonState {
+  daemonName   String    @id @map("daemon_name")
+  status       String?   @default("stopped")
+  lastRunAt    DateTime? @map("last_run_at") @db.Timestamptz(6)
+  nextRunAt    DateTime? @map("next_run_at") @db.Timestamptz(6)
+  errorCount   Int?      @default(0) @map("error_count")
+  successCount Int?      @default(0) @map("success_count")
+  config       Json?     @default("{}")
+  metadata     Json?     @default("{}")
+  updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("guardian_daemon_state")
+}
+
+model GuardianMetric {
+  id          BigInt    @id @default(autoincrement())
+  metricName  String    @map("metric_name")
+  metricValue Float     @map("metric_value")
+  labels      Json?     @default("{}")
+  recordedAt  DateTime? @default(now()) @map("recorded_at") @db.Timestamptz(6)
+
+  @@map("guardian_metrics")
+}
+
+model GuardianRevenue {
+  id          BigInt    @id @default(autoincrement())
+  source      String
+  amountUny   String    @default("0") @map("amount_uny")
+  amountAlt   String    @default("0") @map("amount_alt")
+  txHash      String?   @map("tx_hash")
+  blockHeight BigInt?   @map("block_height")
+  category    String?   @default("fee")
+  details     Json?     @default("{}")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("guardian_revenue")
+}
+
+model GuardianSecurityEvent {
+  id          BigInt    @id @default(autoincrement())
+  eventType   String    @map("event_type")
+  sourceIp    String?   @map("source_ip")
+  target      String?
+  severity    String?   @default("medium")
+  actionTaken String?   @map("action_taken")
+  blocked     Boolean?  @default(false)
+  details     Json?     @default("{}")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("guardian_security_events")
+}
+
+model GuardianUpgrade {
+  id          BigInt    @id @default(autoincrement())
+  component   String
+  fromVersion String?   @map("from_version")
+  toVersion   String    @map("to_version")
+  upgradeStatus String? @default("pending") @map("status")
+  initiatedBy String?   @default("auto") @map("initiated_by")
+  startedAt   DateTime? @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  rollbackAt  DateTime? @map("rollback_at") @db.Timestamptz(6)
+  details     Json?     @default("{}")
+
+  @@map("guardian_upgrades")
+}
+
+model LegacyInvoice {
+  invoiceId     String    @id @map("invoice_id")
+  nonce         String
+  resource      String?
+  namespace     String    @default("default")
+  asset         String    @default("UNY")
+  amount        String
+  receiver      String?
+  rail          String    @default("unykorn-l1")
+  invoiceStatus String    @default("pending") @map("status")
+  policyVersion String?   @map("policy_version")
+  payer         String?
+  proofType     String?   @map("proof_type")
+  proofData     Json?     @map("proof_data")
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(6)
+  paidAt        DateTime? @map("paid_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("invoices")
+}
+
+model NamespaceRecord {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fqn             String   @unique
+  owner           String
+  resolveType     String   @map("resolve_type")
+  resolveNetwork  String?  @map("resolve_network")
+  resolveValue    String   @map("resolve_value")
+  visibility      String   @default("public")
+  acl             String[] @default([])
+  paymentRequired Boolean? @default(false) @map("payment_required")
+  paymentConfig   Json?    @map("payment_config")
+  onchainAnchor   Json?    @map("onchain_anchor")
+  metadataHash    String?  @map("metadata_hash")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("namespace_records")
+}
+
+model PaymentChannel {
+  id              Int      @default(autoincrement())
+  channelId       String   @id @map("channel_id")
+  walletAddress   String   @map("wallet_address")
+  namespace       String?
+  rail            String   @default("unykorn-l1")
+  asset           String   @default("UNY")
+  depositedAmount Decimal  @default(0) @map("deposited_amount")
+  availableAmount Decimal  @default(0) @map("available_amount")
+  spentAmount     Decimal  @default(0) @map("spent_amount")
+  sequence        Int      @default(0)
+  channelStatus   String   @default("open") @map("status")
+  openedTxHash    String?  @map("opened_tx_hash")
+  closedTxHash    String?  @map("closed_tx_hash")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("payment_channels")
+}
+
+model RateLimitLog {
+  id            Int      @id @default(autoincrement())
+  walletAddress String   @map("wallet_address")
+  namespace     String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("rate_limit_log")
+}
+
+model ReceiptRoot {
+  id           Int       @default(autoincrement())
+  batchId      String    @id @map("batch_id")
+  merkleRoot   String    @map("merkle_root")
+  rail         String    @default("unykorn-l1")
+  anchorTxHash String?   @map("anchor_tx_hash")
+  itemCount    Int       @default(0) @map("item_count")
+  anchoredAt   DateTime? @map("anchored_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("receipt_roots")
+}
+
+model LegacyReceipt {
+  id             Int      @default(autoincrement())
+  receiptId      String   @id @map("receipt_id")
+  invoiceId      String?  @map("invoice_id")
+  channelId      String?  @map("channel_id")
+  payer          String?
+  amount         String?
+  asset          String?
+  rail           String?
+  proofType      String?  @map("proof_type")
+  batchId        String?  @map("batch_id")
+  merkleIndex    Int?     @map("merkle_index")
+  facilitatorSig String?  @map("facilitator_sig")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("receipts")
+}
+
+model TreasuryAgent {
+  agentId         String    @id @default(dbgenerated("gen_random_uuid()")) @map("agent_id") @db.Uuid
+  walletAddress   String    @unique @map("wallet_address")
+  namespace       String?
+  asset           String    @default("UNY")
+  treasuryStatus  String    @default("active") @map("status")
+  targetBalance   Decimal   @map("target_balance") @db.Decimal
+  minBalance      Decimal   @map("min_balance") @db.Decimal
+  maxSingleRefill Decimal   @map("max_single_refill") @db.Decimal
+  maxDailyRefill  Decimal   @map("max_daily_refill") @db.Decimal
+  lastRefillAt    DateTime? @map("last_refill_at") @db.Timestamptz(6)
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("treasury_agents")
+}
+
+model TreasuryHalt {
+  haltId    String    @id @default(dbgenerated("gen_random_uuid()")) @map("halt_id") @db.Uuid
+  scopeType String    @map("scope_type")
+  scopeKey  String?   @map("scope_key")
+  active    Boolean   @default(true)
+  reason    String?
+  metadata  Json?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  clearedAt DateTime? @map("cleared_at") @db.Timestamptz(6)
+
+  @@map("treasury_halts")
+}
+
+model TreasuryRefill {
+  refillId      String    @id @default(dbgenerated("gen_random_uuid()")) @map("refill_id") @db.Uuid
+  agentId       String?   @map("agent_id") @db.Uuid
+  accountId     String?   @map("account_id") @db.Uuid
+  walletAddress String?   @map("wallet_address")
+  asset         String    @default("UNY")
+  amount        Decimal?  @db.Decimal
+  fundingMode   String?   @map("funding_mode")
+  reference     String?
+  anchorTxHash  String?   @map("anchor_tx_hash")
+  refillStatus  String    @default("pending") @map("status")
+  metadata      Json?
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz(6)
+
+  @@map("treasury_refills")
+}
+
+model WebhookDelivery {
+  id             String    @id
+  subscriptionId String    @map("subscription_id")
+  eventType      String    @map("event_type")
+  payload        Json
+  deliveryStatus String    @default("pending") @map("status")
+  attempts       Int       @default(0)
+  responseCode   Int?      @map("response_code")
+  responseBody   String?   @map("response_body")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastAttemptAt  DateTime? @map("last_attempt_at") @db.Timestamptz(6)
+
+  @@map("webhook_deliveries")
+}
+
+model WebhookSubscription {
+  id            String   @id
+  walletAddress String   @map("wallet_address")
+  url           String
+  secret        String?
+  events        String[] @default([])
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("webhook_subscriptions")
+}
