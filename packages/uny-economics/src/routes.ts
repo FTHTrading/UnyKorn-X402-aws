@@ -145,6 +145,87 @@ export function createEconomicsRoutes(app: FastifyInstance): void {
     });
   });
 
+  // ── AMM Swap (Execute) ─────────────────────────────────────
+
+  app.post("/economics/amm/swap", async (req) => {
+    const body = req.body as { amount?: string; direction?: string; trader?: string };
+    if (!body.amount || !body.direction) {
+      return { error: "Missing amount or direction" };
+    }
+
+    const amount = BigInt(body.amount);
+    const direction = body.direction as "UNY_TO_USDF" | "USDF_TO_UNY";
+
+    let result;
+    if (direction === "UNY_TO_USDF") {
+      result = amm.swapUNYforUSDf(amount);
+    } else {
+      result = amm.swapUSDfForUNY(amount);
+    }
+
+    // Update credibility after trade
+    credibility.setAMMState(amm.getState());
+
+    return serializeState({
+      executed: true,
+      trader: body.trader ?? "anonymous",
+      direction: result.direction,
+      amountIn: result.amountIn,
+      amountOut: result.amountOut,
+      fee: result.fee,
+      priceImpact: `${result.priceImpact.toFixed(4)}%`,
+      newPrice: result.newPrice,
+      timestamp: result.timestamp,
+    });
+  });
+
+  // ── Flywheel Revenue Collection ────────────────────────────
+
+  app.post("/economics/flywheel/collect", async (req) => {
+    const body = req.body as { amountUNY?: string; invoiceId?: string };
+    if (!body.amountUNY) {
+      return { error: "Missing amountUNY" };
+    }
+
+    const amount = BigInt(body.amountUNY);
+    flywheel.collectRevenue(amount, body.invoiceId);
+
+    return serializeState({
+      collected: true,
+      amountUNY: amount,
+      pendingRevenue: flywheel.getState().pendingRevenueUNY,
+      totalRevenue: flywheel.getState().totalRevenueUNY,
+    });
+  });
+
+  // ── Flywheel Cycle Execution ───────────────────────────────
+
+  app.post("/economics/flywheel/execute", async () => {
+    const result = flywheel.executeCycle();
+    if (!result) {
+      return serializeState({
+        executed: false,
+        reason: "Pending revenue below threshold",
+        pendingRevenue: flywheel.getState().pendingRevenueUNY,
+        threshold: flywheel.getConfig().minCycleThresholdUNY,
+      });
+    }
+
+    // Update credibility after cycle
+    credibility.setFlywheelState(flywheel.getState());
+    credibility.setAMMState(amm.getState());
+
+    return serializeState({
+      executed: true,
+      cycle: flywheel.getState().cyclesExecuted,
+      burned: result.burned,
+      lpProvided: result.lpProvided,
+      treasuryDeposited: result.treasuryDeposited,
+      stakingDistributed: result.stakingDistributed,
+      burnRecord: result.burnRecord,
+    });
+  });
+
   // ── Flywheel State ─────────────────────────────────────────
 
   app.get("/economics/flywheel", async () => {

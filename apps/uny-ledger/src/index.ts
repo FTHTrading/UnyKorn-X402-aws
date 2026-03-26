@@ -506,6 +506,9 @@ server.post<{
 // and any external client can talk to it using standard JSON-RPC 2.0.
 
 import { createHash, randomUUID } from "crypto";
+import nacl from "tweetnacl";
+import tweetnaclUtil from "tweetnacl-util";
+const { encodeBase64, decodeUTF8 } = tweetnaclUtil;
 
 const CHAIN_ID   = 7331;
 const BLOCK_TIME = 3000;                 // ms — produce a block every 3 s
@@ -720,6 +723,48 @@ async function persistReserve(entry: any, agentId: string) {
 // ── Transaction Generators ──────────────────────────────────────────────
 
 let econCycle = 0;
+
+// ── x402 Payment Simulator Wallet ───────────────────────────────────────
+const SIM_WALLET_ADDR = "sim:x402-payment-engine";
+// Deterministic keypair derived from a fixed seed so the pubkey survives restarts
+const SIM_SEED = createHash("sha256").update("uny-sim-payment-engine-v1").digest().subarray(0, 32);
+const simWallet = nacl.sign.keyPair.fromSeed(SIM_SEED);
+let simWalletReady = false;
+let simPaymentCount = 0;
+const SIM_ADMIN_TOKEN = process.env.ADMIN_API_TOKEN ?? "";
+const SIM_AUTH_HEADERS: Record<string, string> = {
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${SIM_ADMIN_TOKEN}`,
+};
+
+async function ensureSimulatorWallet(): Promise<void> {
+  if (simWalletReady) return;
+  const pubkeyB64 = encodeBase64(simWallet.publicKey);
+  const FACILITATOR = "http://localhost:3100";
+
+  try {
+    // Register wallet with pubkey
+    await fetch(`${FACILITATOR}/credits/register`, {
+      method: "POST",
+      headers: SIM_AUTH_HEADERS,
+      body: JSON.stringify({ wallet_address: SIM_WALLET_ADDR, pubkey: pubkeyB64, rail: "unykorn-l1" }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    // Deposit initial credits (large enough for many payments)
+    await fetch(`${FACILITATOR}/credits/deposit`, {
+      method: "POST",
+      headers: SIM_AUTH_HEADERS,
+      body: JSON.stringify({ wallet_address: SIM_WALLET_ADDR, amount: "10000000", reference: "sim:bootstrap" }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    simWalletReady = true;
+    server.log.info(`[SIM] Wallet ${SIM_WALLET_ADDR} registered with ${pubkeyB64.slice(0, 16)}… pubkey, 10M UNY deposited`);
+  } catch (e: any) {
+    server.log.warn(`[SIM] Wallet setup deferred: ${e.message || e}`);
+  }
+}
 
 const ECON_FLOWS: Array<() => Promise<void>> = [
   // 1. AI Compute Payment — agents pay Bedrock for inference
@@ -1156,6 +1201,157 @@ const ECON_FLOWS: Array<() => Promise<void>> = [
         },
       });
     } catch (e: any) { server.log.error(`[ECON] Flow19 webhook: ${e.message || e}`); }
+  },
+
+  // 20. x402 Payment Simulator — real invoice→verify→receipt pipeline through facilitator
+  //     Fills: receipts, payment_channels, rate_limit_log tables
+  //     Drives: flywheel revenue, AMM volume, credibility score
+  async () => {
+    try {
+      await ensureSimulatorWallet();
+      const FACILITATOR = "http://localhost:3100";
+
+      // Pick a random namespace and resource
+      const namespaces = [
+        "fth.x402.route.genesis-repro", "fth.x402.route.ai-compute",
+        "fth.x402.route.oracle-feed", "fth.x402.route.signing",
+        "fth.x402.route.settlement", "fth.x402.route.validation",
+      ];
+      const resources = [
+        "/api/v1/compute/inference", "/api/v1/oracle/price",
+        "/api/v1/sign/ed25519", "/api/v1/settle/batch",
+        "/api/v1/validate/proof", "/api/v1/namespace/resolve",
+      ];
+      const ns = pick(namespaces);
+      const resource = pick(resources);
+      const amount = String(randInt(50, 2000));
+
+      // Step 1: Create invoice
+      const invRes = await fetch(`${FACILITATOR}/invoices`, {
+        method: "POST",
+        headers: SIM_AUTH_HEADERS,
+        body: JSON.stringify({
+          resource, namespace: ns, asset: "UNY", amount,
+          receiver: "protocol-treasury",
+          memo: `sim:x402:cycle-${econCycle}`,
+          policy: { kyc_required: false, min_pass_level: "basic", rate_limit: "1000/hour" },
+          rail: "unykorn-l1", ttl_seconds: 300,
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!invRes.ok) return;
+
+      const inv = await invRes.json() as { invoice_id: string; nonce: string };
+
+      // Step 2: Sign the proof
+      const message = `${inv.invoice_id}|${inv.nonce}`;
+      const signature = nacl.sign.detached(
+        decodeUTF8(message),
+        simWallet.secretKey,
+      );
+      const sigB64 = encodeBase64(signature);
+
+      // Step 3: Verify / pay the invoice
+      const verRes = await fetch(`${FACILITATOR}/verify`, {
+        method: "POST",
+        headers: SIM_AUTH_HEADERS,
+        body: JSON.stringify({
+          invoice_id: inv.invoice_id,
+          nonce: inv.nonce,
+          proof: {
+            proof_type: "prepaid_credit",
+            credit_id: SIM_WALLET_ADDR,
+            payer: SIM_WALLET_ADDR,
+            signature: sigB64,
+            invoice_id: inv.invoice_id,
+            nonce: inv.nonce,
+          },
+          resource, namespace: ns,
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!verRes.ok) {
+        const errBody = await verRes.text().catch(() => "");
+        server.log.warn(`[SIM] Verify failed ${verRes.status}: ${errBody}`);
+        return;
+      }
+
+      const verResult = await verRes.json() as { verified: boolean; receipt_id?: string };
+      if (verResult.verified) {
+        simPaymentCount++;
+        server.log.info(`[SIM] Payment #${simPaymentCount}: ${amount} UNY → receipt ${verResult.receipt_id}`);
+      }
+
+      // Step 4: Occasionally open a payment channel (30% chance)
+      if (Math.random() < 0.3 && simPaymentCount % 3 === 0) {
+        const chanRes = await fetch(`${FACILITATOR}/channels/open`, {
+          method: "POST",
+          headers: SIM_AUTH_HEADERS,
+          body: JSON.stringify({
+            wallet_address: SIM_WALLET_ADDR,
+            deposited_amount: String(randInt(5000, 50000)),
+            opened_tx_hash: sha256(`channel:${SIM_WALLET_ADDR}:${Date.now()}`),
+            namespace: ns,
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (chanRes.ok) {
+          server.log.info(`[SIM] Opened payment channel for ${SIM_WALLET_ADDR}`);
+        }
+      }
+    } catch (e: any) { server.log.error(`[ECON] Flow20 x402-sim: ${e.message || e}`); }
+  },
+
+  // 21. AMM Trade Simulator — execute real swaps against the UNY/USDf pool
+  async () => {
+    try {
+      const FACILITATOR = "http://localhost:3100";
+      const directions: Array<"UNY_TO_USDF" | "USDF_TO_UNY"> = ["UNY_TO_USDF", "USDF_TO_UNY"];
+      const direction = pick(directions);
+      // Small trades to avoid massive price impact
+      const amount = direction === "USDF_TO_UNY"
+        ? String(randInt(100, 5000) * 1_000_000)         // 100-5000 USDF (6 decimals)
+        : String(BigInt(randInt(100, 5000)) * 10n ** 18n); // 100-5000 UNY (18 decimals)
+
+      const swapRes = await fetch(`${FACILITATOR}/economics/amm/swap`, {
+        method: "POST",
+        headers: SIM_AUTH_HEADERS,
+        body: JSON.stringify({ amount, direction, trader: `sim:${SIM_WALLET_ADDR}` }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (swapRes.ok) {
+        const result = await swapRes.json() as { amountOut: string };
+        server.log.info(`[SIM] AMM swap ${direction}: in=${amount} → out=${result.amountOut}`);
+      }
+    } catch (e: any) { server.log.error(`[ECON] Flow21 amm-trade: ${e.message || e}`); }
+  },
+
+  // 22. Flywheel Revenue + Cycle Trigger
+  async () => {
+    try {
+      const FACILITATOR = "http://localhost:3100";
+      // Collect revenue from recent payments
+      const revenueUNY = String(BigInt(randInt(50, 500)) * 10n ** 18n);
+      await fetch(`${FACILITATOR}/economics/flywheel/collect`, {
+        method: "POST",
+        headers: SIM_AUTH_HEADERS,
+        body: JSON.stringify({ amountUNY: revenueUNY, invoiceId: `sim:revenue:cycle-${econCycle}` }),
+        signal: AbortSignal.timeout(5000),
+      });
+      // Try to execute a flywheel cycle
+      const cycleRes = await fetch(`${FACILITATOR}/economics/flywheel/execute`, {
+        method: "POST",
+        headers: SIM_AUTH_HEADERS,
+        body: JSON.stringify({}),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (cycleRes.ok) {
+        const result = await cycleRes.json() as any;
+        if (result.executed) {
+          server.log.info(`[SIM] Flywheel cycle executed: burned=${result.burned}, LP=${result.lpProvided}`);
+        }
+      }
+    } catch (e: any) { server.log.error(`[ECON] Flow22 flywheel: ${e.message || e}`); }
   },
 ];
 
