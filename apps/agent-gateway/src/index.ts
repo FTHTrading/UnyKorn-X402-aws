@@ -6,6 +6,7 @@
  */
 
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import { PrismaClient } from "@prisma/client";
 import { AgentRegistry, TaskManager, BudgetManager } from "@unykorn/agent-core";
 import { PolicyEngine } from "@unykorn/policy-engine";
@@ -27,6 +28,7 @@ const PORT = Number(process.env.AGENT_GATEWAY_PORT ?? 4000);
 const SERVICE = "@unykorn/agent-gateway";
 
 const server = Fastify({ logger: true });
+server.register(cors, { origin: true });
 const prisma = new PrismaClient();
 
 // Signing client — all key operations go through rust-signer

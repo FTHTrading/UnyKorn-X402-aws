@@ -6,6 +6,7 @@
  */
 
 import Fastify from "fastify";
+import cors from "@fastify/cors";
 import { PrismaClient } from "@prisma/client";
 import { GenesisLedger } from "@unykorn/genesis-ledger";
 
@@ -13,6 +14,7 @@ const PORT = Number(process.env.UNY_LEDGER_PORT ?? 4030);
 const SERVICE = "@unykorn/uny-ledger";
 
 const server = Fastify({ logger: true });
+server.register(cors, { origin: true });
 const prisma = new PrismaClient();
 const ledger = new GenesisLedger();
 
