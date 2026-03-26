@@ -1322,6 +1322,21 @@ const ECON_FLOWS: Array<() => Promise<void>> = [
       if (swapRes.ok) {
         const result = await swapRes.json() as { amountOut: string };
         server.log.info(`[SIM] AMM swap ${direction}: in=${amount} → out=${result.amountOut}`);
+
+        // Record trade in CoinGecko API for volume tracking
+        try {
+          const tradePrice = 0.01; // UNY base price (updated by AMM)
+          const tradeAmount = direction === "UNY_TO_USDF"
+            ? Number(BigInt(amount) / 10n ** 18n)
+            : Number(BigInt(result.amountOut) / 10n ** 18n);
+          const tradeSide = direction === "USDF_TO_UNY" ? "buy" : "sell";
+          await fetch(`${FACILITATOR}/listing/v1/trade`, {
+            method: "POST",
+            headers: SIM_AUTH_HEADERS,
+            body: JSON.stringify({ pair: "UNY_USDT", price: tradePrice, amount: tradeAmount, side: tradeSide }),
+            signal: AbortSignal.timeout(3000),
+          });
+        } catch { /* non-critical */ }
       }
     } catch (e: any) { server.log.error(`[ECON] Flow21 amm-trade: ${e.message || e}`); }
   },
@@ -1634,6 +1649,8 @@ async function publishSync(): Promise<void> {
     };
 
     const [facHealth, facStats, facInvoices, facReceipts, facRoots, facNamespaces, facRevenue, facEcon,
+           facCredibility, facListingOverview, facListingReadiness, facListingPairs, facListingTickers,
+           facListingSummary, facListingAssets, facListingAssetInfo, facListingContracts, facListingPor,
            gwHealth, gwAgents, gwOrgs,
            sigHealth, sigKeys, sigAudit] = await Promise.all([
       safeFetch("http://localhost:3100/health"),
@@ -1644,6 +1661,16 @@ async function publishSync(): Promise<void> {
       safeFetch("http://localhost:3100/explorer/namespaces"),
       safeFetch("http://localhost:3100/explorer/revenue?limit=20"),
       safeFetch("http://localhost:3100/economics/overview"),
+      safeFetch("http://localhost:3100/economics/credibility"),
+      safeFetch("http://localhost:3100/listing/v1/overview"),
+      safeFetch("http://localhost:3100/listing/v1/readiness"),
+      safeFetch("http://localhost:3100/listing/v1/pairs"),
+      safeFetch("http://localhost:3100/listing/v1/tickers"),
+      safeFetch("http://localhost:3100/listing/v1/summary"),
+      safeFetch("http://localhost:3100/listing/v1/assets"),
+      safeFetch("http://localhost:3100/listing/v1/asset-info"),
+      safeFetch("http://localhost:3100/listing/v1/contracts"),
+      safeFetch("http://localhost:3100/listing/v1/proof-of-reserves"),
       safeFetch("http://localhost:4010/health"),
       safeFetch("http://localhost:4010/agents"),
       safeFetch("http://localhost:4010/organizations"),
@@ -1681,6 +1708,18 @@ async function publishSync(): Promise<void> {
     if (facNamespaces) payload["rest:facilitator:namespaces"] = facNamespaces;
     if (facRevenue) payload["rest:facilitator:revenue"] = facRevenue;
     if (facEcon) payload["rest:facilitator:economics"] = facEcon;
+    if (facCredibility) payload["rest:facilitator:credibility"] = facCredibility;
+
+    // Listing data (if available)
+    if (facListingOverview) payload["rest:facilitator:listing:overview"] = facListingOverview;
+    if (facListingReadiness) payload["rest:facilitator:listing:readiness"] = facListingReadiness;
+    if (facListingPairs) payload["rest:facilitator:listing:pairs"] = facListingPairs;
+    if (facListingTickers) payload["rest:facilitator:listing:tickers"] = facListingTickers;
+    if (facListingSummary) payload["rest:facilitator:listing:summary"] = facListingSummary;
+    if (facListingAssets) payload["rest:facilitator:listing:assets"] = facListingAssets;
+    if (facListingAssetInfo) payload["rest:facilitator:listing:asset-info"] = facListingAssetInfo;
+    if (facListingContracts) payload["rest:facilitator:listing:contracts"] = facListingContracts;
+    if (facListingPor) payload["rest:facilitator:listing:por"] = facListingPor;
 
     // Gateway data (if available)
     if (gwHealth) payload["rest:gateway:health"] = gwHealth;

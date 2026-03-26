@@ -80,6 +80,20 @@ export function createListingRoutes(app: FastifyInstance): void {
     return geckoAPI.getHistoricalTrades(ticker_id, limit ? parseInt(limit) : 200);
   });
 
+  // ── Trade Recording (called by settlement / AMM simulator) ──
+
+  app.post("/listing/v1/trade", async (req, reply) => {
+    const { pair, price, amount, side } = req.body as {
+      pair?: string; price?: number; amount?: number; side?: "buy" | "sell";
+    };
+    if (!pair || !price || !amount || !side) {
+      reply.status(400);
+      return { error: "Required: pair, price, amount, side" };
+    }
+    geckoAPI.recordTrade(pair, price, amount, side);
+    return { ok: true, pair, price, amount, side, timestamp: Date.now() };
+  });
+
   // ── CoinMarketCap Standard ─────────────────────────────────
 
   app.get("/listing/v1/summary", async () => geckoAPI.getSummary());

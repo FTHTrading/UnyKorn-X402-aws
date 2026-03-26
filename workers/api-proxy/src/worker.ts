@@ -49,9 +49,9 @@ async function handleSync(request: Request, env: Env, origin: string): Promise<R
 
     // Store each key separately for granular reads
     for (const key of keys) {
-      await env.STATE.put(key, JSON.stringify(body[key]), { expirationTtl: 120 }); // 2min TTL
+      await env.STATE.put(key, JSON.stringify(body[key]), { expirationTtl: 86400 }); // 24h TTL
     }
-    await env.STATE.put("_lastSync", new Date().toISOString(), { expirationTtl: 120 });
+    await env.STATE.put("_lastSync", new Date().toISOString(), { expirationTtl: 86400 });
 
     return jsonResponse({ ok: true, keys: keys.length, timestamp: new Date().toISOString() }, 200, origin, env);
   } catch (e: any) {
@@ -126,6 +126,17 @@ async function handleRest(path: string, env: Env, origin: string): Promise<Respo
     "/explorer/namespaces": "rest:facilitator:namespaces",
     "/explorer/revenue": "rest:facilitator:revenue",
     "/economics/overview": "rest:facilitator:economics",
+    "/economics/credibility": "rest:facilitator:credibility",
+    // Listing / CoinGecko / CMC
+    "/listing/v1/overview": "rest:facilitator:listing:overview",
+    "/listing/v1/readiness": "rest:facilitator:listing:readiness",
+    "/listing/v1/pairs": "rest:facilitator:listing:pairs",
+    "/listing/v1/tickers": "rest:facilitator:listing:tickers",
+    "/listing/v1/summary": "rest:facilitator:listing:summary",
+    "/listing/v1/assets": "rest:facilitator:listing:assets",
+    "/listing/v1/asset-info": "rest:facilitator:listing:asset-info",
+    "/listing/v1/contracts": "rest:facilitator:listing:contracts",
+    "/listing/v1/proof-of-reserves": "rest:facilitator:listing:por",
     // Gateway
     "/agents": "rest:gateway:agents",
     "/agents/active": "rest:gateway:agents",

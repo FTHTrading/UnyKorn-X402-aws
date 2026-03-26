@@ -7,7 +7,7 @@ routes = [
 ]
 
 [vars]
-ALLOWED_ORIGINS = "https://ex.unykorn.org,http://localhost:5173,http://localhost:4173"
+ALLOWED_ORIGINS = "https://ex.unykorn.org,https://unykorn.org,http://localhost:5173,http://localhost:4173"
 
 # Set the sync secret with:  npx wrangler secret put SYNC_SECRET
 # Set it to match the FTH_SERVICE_SECRET from .env
