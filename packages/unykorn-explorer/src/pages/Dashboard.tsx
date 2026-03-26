@@ -84,6 +84,12 @@ export default function Dashboard() {
           <span className="proto-badge">
             <span className="proto-dot" style={{ background: "#60a5fa" }} /> 7 Supported Assets
           </span>
+          <span className="proto-badge">
+            <span className="proto-dot" style={{ background: "#ef4444" }} /> Rust Signer (Ed25519)
+          </span>
+          <span className="proto-badge">
+            <span className="proto-dot" style={{ background: "#22d3ee" }} /> 34+ Packages · 75K+ LOC
+          </span>
         </div>
       </div>
 
@@ -97,12 +103,12 @@ export default function Dashboard() {
         <div className="stat-card glass glass-glow">
           <div className="stat-label">Services</div>
           <div className="stat-value">
-            {fHealth ? "4" : "..."} / 4
+            {fHealth ? "6" : "..."} / 6
           </div>
           <div className="stat-sub">
             Facilitator {fHealth?.db === "connected" ? "✓" : "?"} ·
             Gateway {gHealth ? "✓" : "?"} ·
-            Treasury ✓ · Guardian ✓
+            Signer ✓ · Ledger ✓ · Treasury ✓ · Guardian ✓
           </div>
         </div>
         <div className="stat-card glass glass-glow">
@@ -134,14 +140,15 @@ export default function Dashboard() {
       {/* ── Architecture ── */}
       <div className="section-header">
         <h2 className="section-title">System <span className="accent">Architecture</span></h2>
-        <span className="section-badge">5-Layer Stack</span>
+        <span className="section-badge">6-Layer Stack</span>
       </div>
       <div className="glass arch-diagram" style={{ marginBottom: "var(--sov-space-xl)" }}>
         {[
-          { id: "L5", label: "Ecosystem", desc: "API, partners, AI agents, XR", bg: "rgba(168, 85, 247, 0.08)", border: "rgba(168, 85, 247, 0.2)" },
-          { id: "L4", label: "Work Plane", desc: "Delivery, Search, Settlement, Outreach", bg: "rgba(96, 165, 250, 0.08)", border: "rgba(96, 165, 250, 0.2)" },
-          { id: "L3", label: "Commerce Plane", desc: "Quote, Payment, Treasury, Receipt", bg: "rgba(59, 130, 246, 0.08)", border: "rgba(59, 130, 246, 0.2)" },
-          { id: "L2", label: "Control Plane", desc: "Orchestrator, Guardian, Compliance, Budget", bg: "rgba(34, 197, 94, 0.08)", border: "rgba(34, 197, 94, 0.2)" },
+          { id: "L6", label: "Ecosystem", desc: "API, partners, AI agents, XR", bg: "rgba(168, 85, 247, 0.08)", border: "rgba(168, 85, 247, 0.2)" },
+          { id: "L5", label: "Work Plane", desc: "Delivery, Search, Settlement, Outreach", bg: "rgba(96, 165, 250, 0.08)", border: "rgba(96, 165, 250, 0.2)" },
+          { id: "L4", label: "Commerce Plane", desc: "Quote, Payment, Treasury, Receipt", bg: "rgba(59, 130, 246, 0.08)", border: "rgba(59, 130, 246, 0.2)" },
+          { id: "L3", label: "Control Plane", desc: "Orchestrator, Guardian, Compliance, Budget", bg: "rgba(34, 197, 94, 0.08)", border: "rgba(34, 197, 94, 0.2)" },
+          { id: "L2", label: "Security Layer", desc: "Rust Signer · Ed25519 · 10 Wallet Domains · Policy Enforcement", bg: "rgba(239, 68, 68, 0.08)", border: "rgba(239, 68, 68, 0.2)" },
           { id: "L1", label: "UnyKorn Chain", desc: `Chain ${CHAIN.id} · Merkle anchors · trade-finance module`, bg: "rgba(245, 166, 35, 0.08)", border: "rgba(245, 166, 35, 0.2)" },
         ].map((layer) => (
           <div

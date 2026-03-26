@@ -10,6 +10,7 @@ import Economics from "./pages/Economics";
 import Listing from "./pages/Listing";
 import Genesis from "./pages/Genesis";
 import ProofCenter from "./pages/ProofCenter";
+import Security from "./pages/Security";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="economics" element={<Economics />} />
         <Route path="listing" element={<Listing />} />
         <Route path="proof" element={<ProofCenter />} />
+        <Route path="security" element={<Security />} />
         <Route path="genesis" element={<Genesis />} />
       </Route>
     </Routes>

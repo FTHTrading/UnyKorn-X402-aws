@@ -73,6 +73,18 @@ const TIMELINE = [
     status: "historical" as const,
   },
   {
+    date: "2026-02",
+    label: "Rust Signer + Security Architecture",
+    desc: "Custody-grade Rust signer service with Ed25519 keys, 10 wallet domains, per-tx policy enforcement, SQLite audit trail. No app generates keys directly — hard security rule enforced across the entire stack.",
+    status: "historical" as const,
+  },
+  {
+    date: "2026-03",
+    label: "E2E Integration Proof",
+    desc: "Full end-to-end pipeline verified: Agent Gateway → Rust Signer → Key Generation → Task Signing → Verification → Policy Denial. Dockerized stack with health-check dependencies. UNY Ledger hydration from PostgreSQL.",
+    status: "historical" as const,
+  },
+  {
     date: "2026-Q2",
     label: "L1 Devnet Public RPC",
     desc: "Public RPC endpoint at rpc.l1.unykorn.org — anyone can query blocks, submit transactions, and verify receipts.",
@@ -95,10 +107,19 @@ const INFRA_PACKAGES = [
   { name: "fth-x402-financial-core", lines: "~3,500", desc: "Rust: 5 engines (treasury, compliance, settlement, matching, risk)" },
   { name: "uny-economics", lines: "~2,500", desc: "AMM, genesis provenance, revenue flywheel, credibility scoring" },
   { name: "exchange-listing", lines: "~1,900", desc: "CoinGecko/CMC APIs, proof of reserves, compliance, applications" },
-  { name: "unykorn-explorer", lines: "~2,000", desc: "This Explorer — React/TypeScript, 9 pages, Sovereign Design System" },
-  { name: "unykorn-ico", lines: "~550", desc: "ICO token sale site — 3 tiers, live countdown, wallet integration" },
+  { name: "rust-signer", lines: "~1,200", desc: "Rust: Ed25519 key custody, policy-enforced signing, SQLite audit" },
+  { name: "signing-client", lines: "~350", desc: "TypeScript HTTP client for signer — all apps use this" },
+  { name: "wallet-policy", lines: "~450", desc: "10 wallet domains, per-tx limits, canExecute() guard" },
+  { name: "security-config", lines: "~300", desc: "Secret provider, per-env config, TLS enforcement" },
+  { name: "audit-events", lines: "~280", desc: "Structured append-only audit trail, AuditSink interface" },
+  { name: "genesis-ledger", lines: "~800", desc: "In-memory ledger engine with DB hydration, hash-chain integrity" },
+  { name: "agent-gateway", lines: "~600", desc: "Agent registration, signer-enforced key management, Prisma DB" },
+  { name: "uny-ledger", lines: "~500", desc: "UNY Ledger service with PostgreSQL persistence and hydration" },
+  { name: "unykorn-explorer", lines: "~3,200", desc: "This Explorer — React/TypeScript, 11 pages, Sovereign Design System" },
+  { name: "unykorn-ico", lines: "~650", desc: "ICO token sale site — 3 tiers, live countdown, wallet integration" },
   { name: "genesis-world/*", lines: "~4,200", desc: "Trinity consensus kernel, sentience protocol, tokenomics engine" },
   { name: "terraform/*", lines: "~1,800", desc: "9 modules — VPC, EC2, RDS, ALB, IAM, CloudWatch, secrets" },
+  { name: "docker-compose", lines: "~120", desc: "Full stack orchestration — signer, ledger, gateway, DB, migrations" },
 ];
 
 const PERFORMANCE = [
@@ -138,7 +159,7 @@ const WHY_IT_WAS_BUILT = [
   {
     title: "The Infrastructure",
     icon: "🏗️",
-    text: "This isn't a whitepaper project. There are 17 packages, ~29,000 lines of TypeScript + Rust + Solidity, 5 AWS EC2 instances, a Cloudflare Workers gateway, 15+ database tables, and 12 autonomous A2A agents. The Facilitator processes real invoices. The AMM calculates real prices.",
+    text: "This isn't a whitepaper project. There are 34+ packages, ~75,000 lines of TypeScript + Rust + Solidity, 5 AWS EC2 instances, a Cloudflare Workers gateway, 40+ database tables, 12 autonomous A2A agents, and a Rust signer with custody-grade key management. The Facilitator processes real invoices. The AMM calculates real prices. The Signer enforces real spending limits.",
   },
   {
     title: "The Proof",

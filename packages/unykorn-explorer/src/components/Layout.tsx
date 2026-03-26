@@ -37,6 +37,7 @@ export default function Layout() {
           <NavLink to="/economics">Economics</NavLink>
           <NavLink to="/listing">Listing</NavLink>
           <NavLink to="/proof">Proof Center</NavLink>
+          <NavLink to="/security">Security</NavLink>
           <NavLink to="/genesis">Genesis</NavLink>
         </nav>
       </header>
@@ -47,10 +48,12 @@ export default function Layout() {
 
       <footer className="ex-footer">
         <span>UnyKorn L1 Explorer · ex.unykorn.org · </span>
-        <a href="https://407.unykorn.org" target="_blank" rel="noreferrer">Protocol Docs</a>
+        <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
         <span> · </span>
-        <a href="https://fth-x402-gateway-staging.kevanbtc.workers.dev/health" target="_blank" rel="noreferrer">Gateway Status</a>
-        <span> · Sovereign Design System v1.1</span>
+        <a href="https://ico.unykorn.org" target="_blank" rel="noreferrer">Token Sale</a>
+        <span> · </span>
+        <a href="https://github.com/FTHTrading/UnyKorn-X402-aws" target="_blank" rel="noreferrer">GitHub</a>
+        <span> · L1 Devnet RPC coming Q2 2026 · Sovereign Design System v1.2</span>
       </footer>
     </div>
   );

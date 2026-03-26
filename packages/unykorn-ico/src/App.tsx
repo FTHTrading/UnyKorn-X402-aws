@@ -57,8 +57,9 @@ const ICO = {
   roadmap: [
     { date: "Q3 2025", title: "Genesis & Foundation", desc: "UNY token created at genesis for AI-to-AI x402 protocol. FTH Trading entity formed. Smart contract architecture designed. x402 protocol research begins.", active: true },
     { date: "Q4 2025", title: "Infrastructure Build", desc: "UnyKorn L1 consensus (Trinity) launched. Chain 7331 live with native UNY gas. A2A agent framework with 12 autonomous agents across 3 operational planes.", active: true },
-    { date: "Q1 2026", title: "x402 Protocol Launch", desc: "Payment facilitator, treasury, guardian services live. Cloudflare gateway. 9 premium API routes monetized. Economics engine.", active: true },
-    { date: "Q2 2026", title: "ICO & Exchange Listings", desc: "Token sale at ico.unykorn.org. CoinGecko & CMC API integration. Listing applications for Binance, Coinbase, Kraken, OKX, and 9 more.", active: false },
+    { date: "Q1 2026", title: "x402 Protocol Launch", desc: "Payment facilitator, treasury, guardian services live. Cloudflare gateway. 9 premium API routes monetized. Economics engine with AMM pricing.", active: true },
+    { date: "Q1 2026", title: "Security Architecture", desc: "Rust signer with Ed25519 custody. 10 wallet domains with per-tx policy enforcement. Signing client for all services. Append-only audit trail. E2E integration proven.", active: true },
+    { date: "Q2 2026", title: "ICO & Exchange Listings", desc: "Token sale at ico.unykorn.org. CoinGecko & CMC API integration. Listing applications for KuCoin, MEXC, Bitget, OKX, and 9 more exchanges.", active: false },
     { date: "Q3 2026", title: "DEX Launch & DeFi", desc: "UnyKorn DEX with native AMM pools. Staking vault with real yield from x402 revenue. LP rewards program. 100+ A2A agents.", active: false },
     { date: "Q4 2026", title: "Enterprise & Scale", desc: "CEX listings go live. Enterprise trade finance API. 1M+ x402 transactions/month. UnyKorn L1 mainnet upgrade.", active: false },
   ],
@@ -82,6 +83,7 @@ function Nav() {
         <a href="#exchanges">Exchanges</a>
         <a href="#roadmap">Roadmap</a>
         <a href="https://main.unykorn-explorer.pages.dev" target="_blank" rel="noreferrer">Explorer</a>
+        <a href="https://main.unykorn-explorer.pages.dev/security" target="_blank" rel="noreferrer">Security</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
       </div>
       <a href="#sale" className="nav-cta">Join Sale</a>
@@ -107,7 +109,8 @@ function Hero() {
 
       <p className="hero-sub">
         The AI infrastructure payment protocol. x402 settlements, sub-second finality,
-        A2A agent commerce — all powered by <strong>UNY</strong>.
+        A2A agent commerce, custody-grade security — all powered by <strong>UNY</strong>.
+        34+ packages. 75,000+ lines. Shipped, not promised.
       </p>
 
       <div className="hero-actions">
@@ -163,8 +166,8 @@ function Stats() {
     { value: "1B", label: "Total Supply" },
     { value: "$0.008", label: "Current Price" },
     { value: "1", label: "Native Chain" },
-    { value: "88%", label: "Listing Ready" },
-    { value: "30", label: "Compliance Checks" },
+    { value: "34+", label: "Packages Shipped" },
+    { value: "75K+", label: "Lines of Code" },
     { value: "13", label: "Exchange Targets" },
   ];
 
@@ -212,9 +215,11 @@ function WhatWeBuilt() {
     { icon: "⚡", title: "x402 Payment Protocol", desc: "HTTP 402 standard for machine-to-machine payments. Sub-second settlement. 9 premium API routes monetized and live.", bg: "rgba(59,130,246,0.1)" },
     { icon: "🏗️", title: "UnyKorn L1 Blockchain", desc: "Chain ID 7331. Trinity Consensus with ~1s finality. Native UNY gas. Purpose-built for AI infrastructure transactions.", bg: "rgba(168,85,247,0.1)" },
     { icon: "🤖", title: "A2A Agent Framework", desc: "12 AI agents across 3 operational planes. Google A2A protocol support. Agent-to-agent commerce with x402 payments.", bg: "rgba(34,211,238,0.1)" },
-    { icon: "🏦", title: "Treasury & Settlement", desc: "Auto-refill treasury service, multi-tier balance management, and real-time invoice settlement for x402 payments.", bg: "rgba(245,166,35,0.1)" },
+    { icon: "🔐", title: "Rust Signer & Security", desc: "Custody-grade Ed25519 key management in Rust. 10 wallet domains with per-tx policy limits. No app generates keys directly — enforced by architecture.", bg: "rgba(239,68,68,0.1)" },
+    { icon: "🏦", title: "Treasury & Settlement", desc: "Auto-refill treasury service, UNY Ledger with PostgreSQL persistence, and real-time invoice settlement for x402 payments.", bg: "rgba(245,166,35,0.1)" },
     { icon: "📊", title: "Economics Engine", desc: "On-chain AMM pricing. Genesis provenance tracking. Revenue flywheel. Credibility scoring system. All transparent.", bg: "rgba(34,197,94,0.1)" },
-    { icon: "🏛️", title: "Exchange Listing Ready", desc: "CoinGecko & CMC standard APIs. Proof of Reserves with Merkle tree. 30-point compliance engine. Applications for 9 exchanges.", bg: "rgba(236,72,153,0.1)" },
+    { icon: "🛡️", title: "7-Layer Security Stack", desc: "Rust Signer → Signing Client → Wallet Policy → Security Config → Audit Events → Guardian Daemons → Policy Enforcement. E2E proven.", bg: "rgba(96,165,250,0.1)" },
+    { icon: "🏛️", title: "Exchange Listing Ready", desc: "CoinGecko & CMC standard APIs. Proof of Reserves with Merkle tree. 30-point compliance engine. Applications for 13 exchanges.", bg: "rgba(236,72,153,0.1)" },
   ];
 
   return (
@@ -234,6 +239,85 @@ function WhatWeBuilt() {
               <p style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.7 }}>{item.desc}</p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SecurityArchitecture() {
+  const layers = [
+    { id: "1", label: "Rust Signer", desc: "Ed25519 key generation, custody, policy-enforced signing", status: "LIVE", color: "#22c55e" },
+    { id: "2", label: "Signing Client", desc: "TypeScript HTTP client — all services use this, never generate keys directly", status: "LIVE", color: "#22c55e" },
+    { id: "3", label: "Wallet Policy", desc: "10 wallet domains with per-tx spending limits and action whitelists", status: "LIVE", color: "#22c55e" },
+    { id: "4", label: "Audit Events", desc: "Append-only audit trail — every key operation logged immutably", status: "LIVE", color: "#22c55e" },
+    { id: "5", label: "Guardian Daemons", desc: "8 security daemons: rate limiter, anomaly detector, replay protector", status: "LIVE", color: "#22c55e" },
+    { id: "6", label: "Policy Enforcement", desc: "Per-domain tx limits enforced at signing time (HTTP 403 on violation)", status: "LIVE", color: "#22c55e" },
+    { id: "7", label: "HSM Integration", desc: "Hardware Security Module for production cold root key custody", status: "PLANNED", color: "#6b7280" },
+  ];
+
+  const domains = [
+    { name: "cold_root", limit: "$0", desc: "Air-gapped master key" },
+    { name: "treasury_hot", limit: "$10K", desc: "Day-to-day treasury ops" },
+    { name: "issuance", limit: "$50K", desc: "Token minting" },
+    { name: "agent_execution", limit: "$1K", desc: "AI agent operational keys" },
+    { name: "escrow", limit: "$5K", desc: "Task settlement holds" },
+    { name: "fee_collector", limit: "$1K", desc: "x402 protocol fees" },
+  ];
+
+  return (
+    <section className="section" id="security" style={{ background: "var(--bg)" }}>
+      <div className="container">
+        <div className="sec-header">
+          <h2>Custody-Grade <span className="grad-text">Security</span></h2>
+          <p>
+            No app generates, stores, or uses privileged keys directly. Every cryptographic
+            operation flows through a purpose-built Rust signer with policy enforcement and
+            append-only audit trails. E2E proven: register → sign → verify → policy denial.
+          </p>
+        </div>
+
+        {/* Security Layers */}
+        <div className="glass-solid" style={{ padding: 32, borderRadius: "var(--r-lg)", marginBottom: 32 }}>
+          <h3 style={{ marginBottom: 24, fontSize: 18, fontWeight: 700 }}>Security Stack — 7 Layers</h3>
+          {layers.map((l) => (
+            <div key={l.id} style={{
+              display: "flex", alignItems: "center", gap: 16, padding: "10px 16px",
+              margin: "4px 0", borderRadius: "var(--r-sm)",
+              background: `${l.color}08`, border: `1px solid ${l.color}22`,
+            }}>
+              <span style={{ fontFamily: "var(--mono)", fontWeight: 700, color: l.color, minWidth: 24 }}>L{l.id}</span>
+              <span style={{ fontWeight: 600, minWidth: 140 }}>{l.label}</span>
+              <span style={{ fontSize: 13, color: "var(--text-muted)", flex: 1 }}>{l.desc}</span>
+              <span style={{
+                padding: "2px 10px", borderRadius: "var(--r-full)", fontSize: 11, fontWeight: 600,
+                background: `${l.color}18`, color: l.color, border: `1px solid ${l.color}33`,
+              }}>{l.status}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Wallet Domains */}
+        <div className="info-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}>
+          {domains.map((d) => (
+            <div className="glass" key={d.name} style={{ padding: 20, textAlign: "center" }}>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--blue)", marginBottom: 6 }}>{d.name}</div>
+              <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "var(--mono)", marginBottom: 4 }}>{d.limit}</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{d.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* E2E Proof badges */}
+        <div style={{ marginTop: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            E2E Integration Proven
+          </div>
+          <div className="chain-row" style={{ justifyContent: "center" }}>
+            {["Register → Signer", "Sign → Policy ✓", "Verify → Valid", "Over-Limit → 403"].map((b) => (
+              <div className="glass chain-badge" key={b} style={{ fontSize: 12, color: "var(--green)" }}>✓ {b}</div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -488,9 +572,11 @@ function Footer() {
     <footer className="footer">
       <div className="footer-links">
         <a href="https://main.unykorn-explorer.pages.dev" target="_blank" rel="noreferrer">Explorer</a>
+        <a href="https://main.unykorn-explorer.pages.dev/security" target="_blank" rel="noreferrer">Security</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws" target="_blank" rel="noreferrer">GitHub</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/TOKENOMICS.md" target="_blank" rel="noreferrer">Tokenomics</a>
+        <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/SECURITY-STANDARD.md" target="_blank" rel="noreferrer">Security Standard</a>
         <a href="mailto:listing@unykorn.org">Contact</a>
       </div>
       <p>© 2025–2026 FTH Trading · UnyKorn Protocol · All rights reserved.</p>
@@ -522,6 +608,7 @@ export default function App() {
       <Hero />
       <Stats />
       <WhatWeBuilt />
+      <SecurityArchitecture />
       <Tokenomics />
       <Tiers />
       <ExchangeReadiness />
