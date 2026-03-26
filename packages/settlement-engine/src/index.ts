@@ -2,11 +2,12 @@
  * @unykorn/settlement-engine — Receipt Creation, Batching & Verification
  *
  * Creates settlement receipts, batches them with Merkle trees,
- * signs and verifies receipts using SHA-256 as a stand-in for Ed25519.
+ * signs receipts with real Ed25519 signatures and verifies against public keys.
  */
 
 import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
+import { signData, verifySignature } from "@unykorn/identity-engine";
 import type {
   SettlementReceipt,
   ReceiptBatch,
@@ -37,10 +38,11 @@ export class SettlementEngine {
     executionLogRef?: string;
     policyApprovalLogRef?: string;
     signerPublicKey: string;
+    signerPrivateKey: string;
   }): SettlementReceipt {
     const receiptId = `rcpt:${nanoid(12)}`;
     const dataToSign = this.buildSignaturePayload(receiptId, params);
-    const signature = this.sign(dataToSign);
+    const signature = signData(dataToSign, params.signerPrivateKey);
 
     const receipt: SettlementReceipt = {
       receiptId,
@@ -114,16 +116,8 @@ export class SettlementEngine {
   // ── Signing & Verification ───────────────────────────────
 
   /**
-   * Placeholder sign using SHA-256 HMAC (stand-in for Ed25519).
-   * In production this would use Ed25519 private key signing.
-   */
-  sign(data: string): string {
-    return createHash("sha256").update(data).digest("hex");
-  }
-
-  /**
-   * Verify a receipt by re-computing signature from its data.
-   * Returns true if the computed signature matches the stored one.
+   * Verify a receipt's Ed25519 signature against the signer's public key.
+   * Returns true if the signature is cryptographically valid.
    */
   verifyReceipt(receiptId: string): boolean {
     const receipt = this.receipts.get(receiptId);
@@ -142,8 +136,12 @@ export class SettlementEngine {
       policyApprovalLogRef: receipt.policyApprovalLogRef ?? undefined,
       signerPublicKey: receipt.signerPublicKey,
     });
-    const expected = this.sign(dataToSign);
-    const valid = expected === receipt.signature;
+
+    const valid = verifySignature(
+      dataToSign,
+      receipt.signature,
+      receipt.signerPublicKey,
+    );
 
     if (valid) {
       receipt.status = "verified";

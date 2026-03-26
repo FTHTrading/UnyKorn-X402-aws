@@ -1,11 +1,17 @@
 /**
  * @unykorn/identity-engine — Agent Identity Management & Authorization
  *
- * Manages agent identities, key pairs, permissions, and organizations.
+ * Manages agent identities, real Ed25519 key pairs, permissions, and organizations.
  * Provides isAuthorized() gate for identity + permission checks.
  */
 
-import { randomBytes } from "node:crypto";
+import {
+  generateKeyPairSync,
+  sign as cryptoSign,
+  verify as cryptoVerify,
+  createPublicKey,
+  createPrivateKey,
+} from "node:crypto";
 import { nanoid } from "nanoid";
 import type {
   AgentIdentity,
@@ -16,18 +22,86 @@ import type {
 } from "@unykorn/shared-types";
 
 // ═══════════════════════════════════════════════════════════
-// Key Pair (placeholder)
+// Ed25519 Key Pair — Real Cryptography
 // ═══════════════════════════════════════════════════════════
 
+// DER headers for Ed25519 key encoding/decoding
+const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex"); // 12 bytes
+const ED25519_PKCS8_PREFIX = Buffer.from(
+  "302e020100300506032b657004220420",
+  "hex",
+); // 16 bytes
+
 export interface KeyPair {
-  publicKey: string;
-  privateKey: string;
+  publicKey: string; // 64-char hex (32 bytes raw Ed25519 public key)
+  privateKey: string; // 64-char hex (32 bytes raw Ed25519 private seed)
 }
 
+/**
+ * Generate a real Ed25519 key pair.
+ * Returns hex-encoded raw 32-byte keys (public + private seed).
+ */
 export function generateKeyPair(): KeyPair {
-  const privateKey = randomBytes(32).toString("hex");
-  const publicKey = randomBytes(32).toString("hex");
-  return { publicKey, privateKey };
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const pubDer = publicKey.export({ type: "spki", format: "der" });
+  const privDer = privateKey.export({ type: "pkcs8", format: "der" });
+  return {
+    publicKey: pubDer.subarray(ED25519_SPKI_PREFIX.length).toString("hex"),
+    privateKey: privDer.subarray(ED25519_PKCS8_PREFIX.length).toString("hex"),
+  };
+}
+
+/**
+ * Sign data with an Ed25519 private key.
+ * @param data - The data string to sign
+ * @param privateKeyHex - 64-char hex private key seed
+ * @returns Hex-encoded Ed25519 signature (128 chars = 64 bytes)
+ */
+export function signData(data: string, privateKeyHex: string): string {
+  const privDer = Buffer.concat([
+    ED25519_PKCS8_PREFIX,
+    Buffer.from(privateKeyHex, "hex"),
+  ]);
+  const keyObject = createPrivateKey({
+    key: privDer,
+    format: "der",
+    type: "pkcs8",
+  });
+  const signature = cryptoSign(null, Buffer.from(data, "utf-8"), keyObject);
+  return signature.toString("hex");
+}
+
+/**
+ * Verify an Ed25519 signature against a public key.
+ * @param data - The original data string
+ * @param signatureHex - 128-char hex signature
+ * @param publicKeyHex - 64-char hex public key
+ * @returns true if signature is valid
+ */
+export function verifySignature(
+  data: string,
+  signatureHex: string,
+  publicKeyHex: string,
+): boolean {
+  try {
+    const pubDer = Buffer.concat([
+      ED25519_SPKI_PREFIX,
+      Buffer.from(publicKeyHex, "hex"),
+    ]);
+    const keyObject = createPublicKey({
+      key: pubDer,
+      format: "der",
+      type: "spki",
+    });
+    return cryptoVerify(
+      null,
+      Buffer.from(data, "utf-8"),
+      keyObject,
+      Buffer.from(signatureHex, "hex"),
+    );
+  } catch {
+    return false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
