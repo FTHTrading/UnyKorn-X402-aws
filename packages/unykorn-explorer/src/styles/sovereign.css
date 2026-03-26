@@ -1,0 +1,110 @@
+/*
+ * SOVEREIGN Design System — UnyKorn Brand Tokens
+ * Deep black • royal electric blue • purple gradient
+ * From: design-system/tokens/sovereign.css + brands/unykorn.css
+ */
+
+:root {
+  /* ── Backgrounds ── */
+  --sov-bg:             #0a0a0f;
+  --sov-bg-alt:         #0f0f18;
+  --sov-bg-elevated:    #141420;
+
+  /* ── Surfaces ── */
+  --sov-surface:        rgba(22, 22, 30, 0.65);
+  --sov-surface-solid:  #16161e;
+  --sov-surface-hover:  rgba(22, 22, 30, 0.85);
+
+  /* ── Borders ── */
+  --sov-border:         rgba(255, 255, 255, 0.06);
+  --sov-border-hover:   rgba(255, 255, 255, 0.12);
+  --sov-border-glow:    rgba(59, 130, 246, 0.3);
+
+  /* ── Text ── */
+  --sov-text:           #f0f0f5;
+  --sov-text-muted:     #707080;
+  --sov-text-faint:     #50505c;
+  --sov-text-inverse:   #ffffff;
+
+  /* ── Accents (UnyKorn brand) ── */
+  --sov-accent-1:       #3b82f6;
+  --sov-accent-2:       #a855f7;
+  --sov-accent-3:       #ffffff;
+
+  /* ── Semantic ── */
+  --sov-success:        #22c55e;
+  --sov-warning:        #f5a623;
+  --sov-danger:         #e84142;
+  --sov-info:           #60a5fa;
+
+  /* ── Glow & Glass ── */
+  --sov-glow:           rgba(59, 130, 246, 0.25);
+  --sov-glass-blur:     20px;
+
+  /* ── Gradients ── */
+  --sov-gradient:       linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+  --sov-gradient-h:     linear-gradient(90deg, #3b82f6 0%, #a855f7 100%);
+
+  /* ── Typography ── */
+  --sov-font-sans:      "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  --sov-font-mono:      "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+
+  --sov-text-xs:        11px;
+  --sov-text-sm:        13px;
+  --sov-text-md:        15px;
+  --sov-text-lg:        18px;
+  --sov-text-xl:        clamp(1.5rem, 3vw, 2rem);
+  --sov-text-2xl:       clamp(2rem, 5vw, 3.5rem);
+
+  /* ── Motion ── */
+  --sov-speed-fast:     150ms;
+  --sov-speed-normal:   250ms;
+  --sov-ease-smooth:    cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Spacing ── */
+  --sov-space-xs:       4px;
+  --sov-space-sm:       8px;
+  --sov-space-md:       16px;
+  --sov-space-lg:       24px;
+  --sov-space-xl:       32px;
+  --sov-space-2xl:      48px;
+
+  /* ── Radius ── */
+  --sov-radius-sm:      6px;
+  --sov-radius-md:      10px;
+  --sov-radius-lg:      16px;
+  --sov-radius-full:    9999px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--sov-font-sans);
+  background: var(--sov-bg);
+  color: var(--sov-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--sov-accent-1);
+  text-decoration: none;
+  transition: color var(--sov-speed-fast) var(--sov-ease-smooth);
+}
+a:hover { color: var(--sov-accent-2); }
+
+code, .mono {
+  font-family: var(--sov-font-mono);
+  font-size: var(--sov-text-sm);
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: var(--sov-text);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
