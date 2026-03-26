@@ -80,8 +80,10 @@ function Nav() {
         <a href="#about">About</a>
         <a href="#tokenomics">Tokenomics</a>
         <a href="#tiers">Tiers</a>
+        <a href="#exchanges">Exchanges</a>
         <a href="#roadmap">Roadmap</a>
         <a href="https://main.unykorn-explorer.pages.dev" target="_blank" rel="noreferrer">Explorer</a>
+        <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
       </div>
       <a href="#sale" className="nav-cta">Join Sale</a>
     </nav>
@@ -273,7 +275,7 @@ function Tokenomics() {
             <h3 style={{ marginBottom: 24, fontSize: 18, fontWeight: 700 }}>Key Facts</h3>
             {[
               ["Token Name", "UnyKorn Token (UNY)"],
-              ["Standard", "ERC-20 + Burnable"],
+              ["Standard", "Native L1 + Burnable"],
               ["Max Supply", "1,000,000,000"],
               ["Mintable", "No ✓"],
               ["Burnable", "Yes — Deflationary ✓"],
@@ -487,9 +489,9 @@ function Footer() {
     <footer className="footer">
       <div className="footer-links">
         <a href="https://main.unykorn-explorer.pages.dev" target="_blank" rel="noreferrer">Explorer</a>
-        <a href="https://github.com/FTHTrading" target="_blank" rel="noreferrer">GitHub</a>
-        <a href="https://407.unykorn.org" target="_blank" rel="noreferrer">Docs</a>
-        <a href="https://x402.unykorn.org" target="_blank" rel="noreferrer">x402 Protocol</a>
+        <a href="https://github.com/FTHTrading/UnyKorn-X402-aws" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
+        <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/TOKENOMICS.md" target="_blank" rel="noreferrer">Tokenomics</a>
         <a href="mailto:listing@unykorn.org">Contact</a>
       </div>
       <p>© 2025–2026 FTH Trading · UnyKorn Protocol · All rights reserved.</p>
