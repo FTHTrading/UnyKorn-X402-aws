@@ -9,6 +9,7 @@ import Namespaces from "./pages/Namespaces";
 import Economics from "./pages/Economics";
 import Listing from "./pages/Listing";
 import Genesis from "./pages/Genesis";
+import ProofCenter from "./pages/ProofCenter";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="namespaces" element={<Namespaces />} />
         <Route path="economics" element={<Economics />} />
         <Route path="listing" element={<Listing />} />
+        <Route path="proof" element={<ProofCenter />} />
         <Route path="genesis" element={<Genesis />} />
       </Route>
     </Routes>
