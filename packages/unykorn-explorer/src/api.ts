@@ -67,6 +67,53 @@ export interface Block {
   txCount: number;
   anchorCount: number;
   gasUsed: string;
+  producer?: string;
+  merkleRoot?: string;
+}
+
+/** L1 node in the network topology */
+export interface NodeInfo {
+  nodeId: string;
+  role: "producer" | "validator" | "oracle";
+  status: "active" | "syncing" | "idle" | "offline";
+  region: string;
+  blockHeight: number;
+  peers: number;
+  uptime: number;
+  lastBlock: string;
+  version: string;
+  ip: string;
+}
+
+/** Infrastructure service */
+export interface InfraService {
+  name: string;
+  port: number;
+  status: string;
+  uptime: number | null;
+  kind: string;
+}
+
+/** AI system */
+export interface AISystem {
+  name: string;
+  status: string;
+  purpose: string;
+  model?: string;
+  runtime?: string;
+  agents?: number;
+  batches?: number;
+  functions?: number;
+  region?: string;
+}
+
+/** Infrastructure overview */
+export interface InfrastructureOverview {
+  cloud: { provider: string; region: string; account: string };
+  services: InfraService[];
+  ai: AISystem[];
+  db: { engine: string; host: string; database: string; status: string };
+  domains: { name: string; target: string; status: string; ssl: string }[];
 }
 
 export interface Transaction {
@@ -454,6 +501,8 @@ export async function getRecentBlocks(count = 10): Promise<Block[]> {
         txCount: b.txCount,
         anchorCount: 0,
         gasUsed: "0",
+        producer: b.producer,
+        merkleRoot: b.merkleRoot,
       }));
     }
   } catch { /* fall through to legacy */ }
@@ -495,6 +544,26 @@ function mapLedgerType(type: string): Transaction["type"] {
     case "escrow_release": return "escrow_release";
     case "reserve": return "reserve";
     default: return "transfer";
+  }
+}
+
+// ── Node Topology (from L1 RPC) ────────────────────────────
+
+export async function getNodeStatus(): Promise<NodeInfo[]> {
+  try {
+    return await l1Rpc<NodeInfo[]>("chain_getNodes");
+  } catch {
+    return [];
+  }
+}
+
+// ── Infrastructure Overview (from L1 RPC) ──────────────────
+
+export async function getInfrastructureOverview(): Promise<InfrastructureOverview | null> {
+  try {
+    return await l1Rpc<InfrastructureOverview>("chain_getInfrastructure");
+  } catch {
+    return null;
   }
 }
 

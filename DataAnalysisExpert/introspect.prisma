@@ -1,0 +1,346 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model credit_accounts {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wallet_address String   @unique
+  rail           String   @default("unykorn-l1")
+  namespace      String?
+  asset          String   @default("UNY")
+  balance        Decimal  @default(0)
+  frozen         Boolean  @default(false)
+  kyc_level      String   @default("basic")
+  pubkey         String?
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model credit_transactions {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  account_id    String   @db.Uuid
+  type          String
+  amount        Decimal
+  balance_after Decimal
+  reference     String?
+  rail          String?
+  tx_hash       String?
+  metadata      Json?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model guardian_audit_log {
+  id         BigInt    @id @default(autoincrement())
+  event_type String
+  source     String
+  severity   String?   @default("info")
+  message    String?
+  details    Json?     @default("{}")
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model guardian_daemon_state {
+  daemon_name   String    @id
+  status        String?   @default("stopped")
+  last_run_at   DateTime? @db.Timestamptz(6)
+  next_run_at   DateTime? @db.Timestamptz(6)
+  error_count   Int?      @default(0)
+  success_count Int?      @default(0)
+  config        Json?     @default("{}")
+  metadata      Json?     @default("{}")
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model guardian_metrics {
+  id           BigInt    @id @default(autoincrement())
+  metric_name  String
+  metric_value Float
+  labels       Json?     @default("{}")
+  recorded_at  DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model guardian_revenue {
+  id           BigInt    @id @default(autoincrement())
+  source       String
+  amount_uny   String    @default("0")
+  amount_alt   String    @default("0")
+  tx_hash      String?
+  block_height BigInt?
+  category     String?   @default("fee")
+  details      Json?     @default("{}")
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model guardian_security_events {
+  id           BigInt    @id @default(autoincrement())
+  event_type   String
+  source_ip    String?
+  target       String?
+  severity     String?   @default("medium")
+  action_taken String?
+  blocked      Boolean?  @default(false)
+  details      Json?     @default("{}")
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model guardian_upgrades {
+  id           BigInt    @id @default(autoincrement())
+  component    String
+  from_version String?
+  to_version   String
+  status       String?   @default("pending")
+  initiated_by String?   @default("auto")
+  started_at   DateTime? @default(now()) @db.Timestamptz(6)
+  completed_at DateTime? @db.Timestamptz(6)
+  rollback_at  DateTime? @db.Timestamptz(6)
+  details      Json?     @default("{}")
+}
+
+model invoices {
+  invoice_id     String    @id
+  nonce          String
+  resource       String?
+  namespace      String    @default("default")
+  asset          String    @default("UNY")
+  amount         String
+  receiver       String?
+  rail           String    @default("unykorn-l1")
+  status         String    @default("pending")
+  policy_version String?
+  payer          String?
+  proof_type     String?
+  proof_data     Json?
+  expires_at     DateTime? @db.Timestamptz(6)
+  paid_at        DateTime? @db.Timestamptz(6)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model namespace_records {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fqn              String   @unique
+  owner            String
+  resolve_type     String
+  resolve_network  String?
+  resolve_value    String
+  visibility       String   @default("public")
+  acl              String[] @default([])
+  payment_required Boolean? @default(false)
+  payment_config   Json?
+  onchain_anchor   Json?
+  metadata_hash    String?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model payment_channels {
+  id               Int      @default(autoincrement())
+  channel_id       String   @id
+  wallet_address   String
+  namespace        String?
+  rail             String   @default("unykorn-l1")
+  asset            String   @default("UNY")
+  deposited_amount Decimal  @default(0)
+  available_amount Decimal  @default(0)
+  spent_amount     Decimal  @default(0)
+  sequence         Int      @default(0)
+  status           String   @default("open")
+  opened_tx_hash   String?
+  closed_tx_hash   String?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model rate_limit_log {
+  id             Int      @id @default(autoincrement())
+  wallet_address String
+  namespace      String?
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model receipt_roots {
+  id             Int       @default(autoincrement())
+  batch_id       String    @id
+  merkle_root    String
+  rail           String    @default("unykorn-l1")
+  anchor_tx_hash String?
+  item_count     Int       @default(0)
+  anchored_at    DateTime? @db.Timestamptz(6)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+model receipts {
+  id              Int      @default(autoincrement())
+  receipt_id      String   @id
+  invoice_id      String?
+  channel_id      String?
+  payer           String?
+  amount          String?
+  asset           String?
+  rail            String?
+  proof_type      String?
+  batch_id        String?
+  merkle_index    Int?
+  facilitator_sig String?
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model treasury_agents {
+  agent_id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  wallet_address    String    @unique
+  namespace         String?
+  asset             String    @default("UNY")
+  status            String    @default("active")
+  target_balance    Decimal   @db.Decimal
+  min_balance       Decimal   @db.Decimal
+  max_single_refill Decimal   @db.Decimal
+  max_daily_refill  Decimal   @db.Decimal
+  last_refill_at    DateTime? @db.Timestamptz(6)
+  metadata          Json?
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+model treasury_halts {
+  halt_id    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope_type String
+  scope_key  String?
+  active     Boolean   @default(true)
+  reason     String?
+  metadata   Json?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  cleared_at DateTime? @db.Timestamptz(6)
+}
+
+model treasury_refills {
+  refill_id      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id       String?   @db.Uuid
+  account_id     String?   @db.Uuid
+  wallet_address String?
+  asset          String    @default("UNY")
+  amount         Decimal?  @db.Decimal
+  funding_mode   String?
+  reference      String?
+  anchor_tx_hash String?
+  status         String    @default("pending")
+  metadata       Json?
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  completed_at   DateTime? @db.Timestamptz(6)
+}
+
+model webhook_deliveries {
+  id              String    @id
+  subscription_id String
+  event_type      String
+  payload         Json
+  status          String    @default("pending")
+  attempts        Int       @default(0)
+  response_code   Int?
+  response_body   String?
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  last_attempt_at DateTime? @db.Timestamptz(6)
+}
+
+model webhook_subscriptions {
+  id             String   @id
+  wallet_address String
+  url            String
+  secret         String?
+  events         String[] @default([])
+  active         Boolean  @default(true)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+}
+
+enum AgentStatus {
+  active
+  paused
+  revoked
+  draining
+}
+
+enum AgentTier {
+  control
+  execution
+  intelligence
+  interface_tier
+}
+
+enum BudgetPeriod {
+  daily
+  weekly
+  monthly
+  per_task
+  unlimited
+}
+
+enum EscrowStatus {
+  locked
+  partially_released
+  fully_released
+  refunded
+  disputed
+  expired
+}
+
+enum GenesisBalanceClass {
+  OPERATING
+  ESCROW
+  RESERVED
+  STAKED_RELIABILITY
+  PROOF_RECEIPT
+  COMPLIANCE_CLEARED
+}
+
+enum LedgerEntryType {
+  deposit
+  withdrawal
+  transfer
+  escrow_lock
+  escrow_release
+  escrow_refund
+  reserve
+  unreserve
+  stake
+  unstake
+  settle
+  compliance_clear
+  burn
+  treasury_refill
+  dispute_hold
+  dispute_release
+}
+
+enum PolicyEffect {
+  allow
+  deny
+  require_approval
+  rate_limit
+  audit_only
+}
+
+enum TaskPriority {
+  critical
+  high
+  normal
+  low
+}
+
+enum TaskStatus {
+  requested
+  quoted
+  approved
+  budget_reserved
+  executing
+  delivered
+  settled
+  disputed
+  failed
+  cancelled
+  escalated
+}
