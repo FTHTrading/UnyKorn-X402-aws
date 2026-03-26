@@ -344,7 +344,9 @@ async function facilitatorGet<T>(path: string): Promise<T> {
 }
 
 export async function getFacilitatorHealth(): Promise<FacilitatorHealth> {
-  return facilitatorGet("/health");
+  // When using API proxy, use service-specific health path
+  const isProxy = FACILITATOR_URL.includes("api.unykorn.org");
+  return facilitatorGet(isProxy ? "/facilitator/health" : "/health");
 }
 
 export async function getInvoices(): Promise<Invoice[]> {
@@ -403,7 +405,10 @@ export async function getRevenueFeed(): Promise<any[]> {
 // ── Gateway API ────────────────────────────────────────────
 
 export async function getGatewayHealth(): Promise<GatewayHealth> {
-  const res = await fetch(`${GATEWAY_URL}/health`);
+  // When using API proxy, use service-specific health path
+  const isProxy = GATEWAY_URL.includes("api.unykorn.org");
+  const url = isProxy ? `${GATEWAY_URL}/gateway/health` : `${GATEWAY_URL}/health`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Gateway ${res.status}`);
   return res.json();
 }
@@ -757,7 +762,9 @@ export async function getSignerAudit(): Promise<AuditEvent[]> {
 
 export async function getSignerHealth(): Promise<any> {
   try {
-    const res = await fetch(`${SIGNER_URL}/health`);
+    const isProxy = SIGNER_URL.includes("api.unykorn.org");
+    const url = isProxy ? `${SIGNER_URL}/signer/health` : `${SIGNER_URL}/health`;
+    const res = await fetch(url);
     if (!res.ok) return null;
     return res.json();
   } catch {

@@ -1403,7 +1403,7 @@ async function publishSync(): Promise<void> {
   if (!SYNC_URL) return;
   try {
     // Collect all RPC data
-    const [status, latestBlocks, nodes, infra, econ, integrity, systemState] = await Promise.all([
+    const [status, latestBlocks, nodes, infra, econ, integrity, systemState, recentTasks, recentPolicies, recentSettlements] = await Promise.all([
       rpcMethods.chain_status([]),
       rpcMethods.chain_getBlocks([Math.max(1, (blocks.length > 0 ? blocks[blocks.length - 1].height : 0) - 19), 20]),
       rpcMethods.chain_getNodes([]),
@@ -1411,11 +1411,14 @@ async function publishSync(): Promise<void> {
       rpcMethods.chain_getEconomicState([]),
       rpcMethods.chain_verifyIntegrity([]),
       rpcMethods.chain_getSystemState([]),
+      rpcMethods.chain_getRecentTasks([20]),
+      rpcMethods.chain_getRecentPolicies([20]),
+      rpcMethods.chain_getRecentSettlements([20]),
     ]);
 
     const latestBlock = blocks.length > 0 ? blocks[blocks.length - 1] : null;
 
-    // Collect REST data
+    // Collect REST data from ledger
     const [ledgerData, treasuryData] = await Promise.all([
       prisma.ledgerEntry.findMany({ take: 50, orderBy: { sequence: "desc" } }),
       (async () => {
@@ -1425,7 +1428,35 @@ async function publishSync(): Promise<void> {
       })(),
     ]);
 
-    const payload = {
+    // Fetch from other local services (best-effort)
+    const safeFetch = async (url: string): Promise<any> => {
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch { return null; }
+    };
+
+    const [facHealth, facStats, facInvoices, facReceipts, facRoots, facNamespaces, facRevenue, facEcon,
+           gwHealth, gwAgents, gwOrgs,
+           sigHealth, sigKeys, sigAudit] = await Promise.all([
+      safeFetch("http://localhost:3100/health"),
+      safeFetch("http://localhost:3100/explorer/stats"),
+      safeFetch("http://localhost:3100/explorer/invoices?limit=50"),
+      safeFetch("http://localhost:3100/explorer/receipts?limit=50"),
+      safeFetch("http://localhost:3100/explorer/roots?limit=20"),
+      safeFetch("http://localhost:3100/explorer/namespaces"),
+      safeFetch("http://localhost:3100/explorer/revenue?limit=20"),
+      safeFetch("http://localhost:3100/economics/overview"),
+      safeFetch("http://localhost:4010/health"),
+      safeFetch("http://localhost:4010/agents"),
+      safeFetch("http://localhost:4010/organizations"),
+      safeFetch("http://localhost:4050/health"),
+      safeFetch("http://localhost:4050/keys"),
+      safeFetch("http://localhost:4050/audit"),
+    ]);
+
+    const payload: Record<string, unknown> = {
       // RPC data
       "rpc:chain_status": status,
       "rpc:chain_getBlocks": latestBlocks,
@@ -1434,13 +1465,36 @@ async function publishSync(): Promise<void> {
       "rpc:chain_getEconomicState": econ,
       "rpc:chain_verifyIntegrity": integrity,
       "rpc:chain_getSystemState": systemState,
+      "rpc:chain_getRecentTasks": recentTasks,
+      "rpc:chain_getRecentPolicies": recentPolicies,
+      "rpc:chain_getRecentSettlements": recentSettlements,
       "rpc:chain_getLatestBlock": latestBlock ? { height: latestBlock.height, hash: latestBlock.hash, timestamp: latestBlock.timestamp, chain_id: CHAIN_ID } : null,
-      // REST data
+      // Ledger REST data
       "rest:health": { service: SERVICE, status: "healthy", database: "connected", entries: ledger.entryCount(), uptime: process.uptime() },
       "rest:status": { chainId: CHAIN_ID, blockHeight: latestBlock?.height ?? 0, blockHash: latestBlock?.hash ?? "", synced: true, nodeId: NODE_ID },
       "rest:ledger": { entries: ledgerData, total: ledgerData.length, limit: 50, offset: 0 },
       "rest:treasury": treasuryData,
     };
+
+    // Facilitator data (if available)
+    if (facHealth) payload["rest:facilitator:health"] = facHealth;
+    if (facStats) payload["rest:facilitator:stats"] = facStats;
+    if (facInvoices) payload["rest:facilitator:invoices"] = facInvoices;
+    if (facReceipts) payload["rest:facilitator:receipts"] = facReceipts;
+    if (facRoots) payload["rest:facilitator:roots"] = facRoots;
+    if (facNamespaces) payload["rest:facilitator:namespaces"] = facNamespaces;
+    if (facRevenue) payload["rest:facilitator:revenue"] = facRevenue;
+    if (facEcon) payload["rest:facilitator:economics"] = facEcon;
+
+    // Gateway data (if available)
+    if (gwHealth) payload["rest:gateway:health"] = gwHealth;
+    if (gwAgents) payload["rest:gateway:agents"] = gwAgents;
+    if (gwOrgs) payload["rest:gateway:organizations"] = gwOrgs;
+
+    // Signer data (if available)
+    if (sigHealth) payload["rest:signer:health"] = sigHealth;
+    if (sigKeys) payload["rest:signer:keys"] = sigKeys;
+    if (sigAudit) payload["rest:signer:audit"] = sigAudit;
 
     const res = await fetch(SYNC_URL, {
       method: "POST",

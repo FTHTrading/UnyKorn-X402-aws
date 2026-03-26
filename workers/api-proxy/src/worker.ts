@@ -128,10 +128,15 @@ async function handleRest(path: string, env: Env, origin: string): Promise<Respo
     "/economics/overview": "rest:facilitator:economics",
     // Gateway
     "/agents": "rest:gateway:agents",
+    "/agents/active": "rest:gateway:agents",
     "/organizations": "rest:gateway:organizations",
     // Signer
     "/keys": "rest:signer:keys",
     "/audit": "rest:signer:audit",
+    // Service-specific health endpoints
+    "/facilitator/health": "rest:facilitator:health",
+    "/gateway/health": "rest:gateway:health",
+    "/signer/health": "rest:signer:health",
   };
 
   // Strip query params for matching
