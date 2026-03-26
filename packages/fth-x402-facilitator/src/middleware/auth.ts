@@ -87,9 +87,9 @@ export function registerAuthMiddleware(app: FastifyInstance): void {
       typeof signature === "string" &&
       SIGNING_KEY
     ) {
-      // Collect raw body — for Fastify, req.body is already parsed,
-      // but we need the raw string for HMAC verification.
-      const rawBody = req.body ? JSON.stringify(req.body) : "";
+      // Collect raw body — prefer captured rawBody (exact bytes sender signed)
+      // over re-serialized JSON.stringify(req.body) which may differ.
+      const rawBody = (req as any).rawBody ?? (req.body ? JSON.stringify(req.body) : "");
 
       const result = verifyServiceSignature(
         SIGNING_KEY,

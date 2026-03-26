@@ -44,6 +44,8 @@ export interface Env {
   ASSETS?: R2Bucket;
   /** Shared signing key for HMAC service-to-service auth. */
   FTH_SERVICE_SECRET?: string;
+  /** Admin API token for fallback auth with facilitator. */
+  ADMIN_API_TOKEN?: string;
   /** OpenMeter endpoint (optional — metering disabled if unset). */
   OPENMETER_ENDPOINT?: string;
   /** OpenMeter API key (optional). */

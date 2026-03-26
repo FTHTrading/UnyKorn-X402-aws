@@ -67,6 +67,21 @@ async function main() {
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   });
 
+  // Capture raw request body for HMAC signature verification.
+  // Fastify parses JSON before onRequest hooks, so re-serializing may differ
+  // from what the sender signed. We store the original bytes on the request.
+  app.addHook("preParsing", async (req, _reply, payload) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of payload as AsyncIterable<Buffer>) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const raw = Buffer.concat(chunks);
+    (req as any).rawBody = raw.toString("utf8");
+    // Return a new readable stream so Fastify can still parse the body
+    const { Readable } = await import("stream");
+    return Readable.from([raw]);
+  });
+
   // Auth middleware — must come before routes
   registerAuthMiddleware(app);
 

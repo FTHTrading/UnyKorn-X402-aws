@@ -13,6 +13,12 @@ RUN npm install
 COPY packages/fth-guardian/tsconfig.json .
 COPY packages/fth-guardian/src ./src
 
+# Copy workspace dependencies
+COPY packages/fth-x402-core/src /build/packages/fth-x402-core/src
+COPY packages/fth-x402-a2a/src /build/packages/fth-x402-a2a/src
+COPY packages/fth-x402-a2a/package.json /build/packages/fth-x402-a2a/package.json
+COPY packages/fth-x402-a2a/tsconfig.json /build/packages/fth-x402-a2a/tsconfig.json
+
 # Build
 RUN npx tsc
 

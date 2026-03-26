@@ -11,6 +11,12 @@ RUN npm install
 COPY packages/fth-x402-treasury/tsconfig.json .
 COPY packages/fth-x402-treasury/src ./src
 
+# Copy workspace dependencies
+COPY packages/fth-x402-core/src /build/packages/fth-x402-core/src
+COPY packages/fth-x402-a2a/src /build/packages/fth-x402-a2a/src
+COPY packages/fth-x402-a2a/package.json /build/packages/fth-x402-a2a/package.json
+COPY packages/fth-x402-a2a/tsconfig.json /build/packages/fth-x402-a2a/tsconfig.json
+
 RUN npx tsc
 
 # --- Production image ---

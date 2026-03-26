@@ -15,6 +15,16 @@ COPY packages/fth-x402-facilitator/tsconfig.json .
 # Copy core package source (compiled inline via tsconfig rootDir="..")
 COPY packages/fth-x402-core/src /build/packages/fth-x402-core/src
 
+# Copy A2A agent framework package
+COPY packages/fth-x402-a2a/src /build/packages/fth-x402-a2a/src
+COPY packages/fth-x402-a2a/package.json /build/packages/fth-x402-a2a/package.json
+COPY packages/fth-x402-a2a/tsconfig.json /build/packages/fth-x402-a2a/tsconfig.json
+
+# Build A2A package first (it's a dependency)
+WORKDIR /build/packages/fth-x402-core
+RUN npx tsc -p /build/packages/fth-x402-facilitator/tsconfig.json --rootDir /build/packages || true
+WORKDIR /build/packages/fth-x402-facilitator
+
 # Copy facilitator source
 COPY packages/fth-x402-facilitator/src ./src
 

@@ -21,6 +21,7 @@ import {
   HEADERS,
 } from "./types";
 import { interpolatePattern } from "../../fth-x402-core/src/helpers";
+import { createServiceHeaders } from "./service-auth";
 
 /**
  * Create a 402 response for a paid route.
@@ -53,13 +54,21 @@ export async function build402Response(
       ttl_seconds: DEFAULT_INVOICE_TTL_SECONDS,
     };
 
+    const bodyStr = JSON.stringify(body);
+
+    // Use admin token auth (simpler, avoids HMAC raw-body mismatch with Fastify)
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (env.ADMIN_API_TOKEN) {
+      headers["x-admin-token"] = env.ADMIN_API_TOKEN;
+    }
+
     const res = await fetch(`${env.FACILITATOR_URL}/invoices`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        ...headers,
         "User-Agent": "Cloudflare-Worker/fth-x402-gateway",
       },
-      body: JSON.stringify(body),
+      body: bodyStr,
     });
 
     if (!res.ok) {
