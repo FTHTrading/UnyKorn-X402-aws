@@ -567,6 +567,46 @@ export async function getInfrastructureOverview(): Promise<InfrastructureOvervie
   }
 }
 
+// ── Economic State (from L1 RPC) ───────────────────────────
+
+export interface AgentBalance {
+  agentId: string;
+  name: string;
+  operating: string;
+  escrow: string;
+  reserved: string;
+  staked: string;
+  proofReceipt: string;
+  totalDeposited: string;
+}
+
+export interface EconomicState {
+  econCycle: number;
+  agents: AgentBalance[];
+  recentFlowTypes: Record<string, number>;
+  recentVolume: string;
+  treasury: {
+    totalDeposits: string;
+    totalOperating: string;
+    totalEscrowed: string;
+    totalReserved: string;
+    totalStaked: string;
+    totalSettled: string;
+    supplyIntegrity: string;
+  };
+  flowTypes: number;
+  systemAgents: number;
+  timestamp: string;
+}
+
+export async function getEconomicState(): Promise<EconomicState | null> {
+  try {
+    return await l1Rpc<EconomicState>("chain_getEconomicState");
+  } catch {
+    return null;
+  }
+}
+
 // ── Block Detail (from L1 RPC) ─────────────────────────────
 
 export interface BlockDetail {

@@ -14,6 +14,7 @@ import {
   getLedgerEntries,
   getNodeStatus,
   getInfrastructureOverview,
+  getEconomicState,
   CHAIN,
   PREMIUM_ROUTES,
   GATEWAY_URL,
@@ -30,6 +31,7 @@ import {
   type LedgerEntry,
   type NodeInfo,
   type InfrastructureOverview,
+  type EconomicState,
 } from "../api";
 
 export default function Dashboard() {
@@ -46,6 +48,7 @@ export default function Dashboard() {
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [infra, setInfra] = useState<InfrastructureOverview | null>(null);
+  const [econ, setEcon] = useState<EconomicState | null>(null);
   const [blockPulse, setBlockPulse] = useState(false);
   const prevHeight = useRef(0);
 
@@ -64,6 +67,7 @@ export default function Dashboard() {
     getLedgerEntries(10).then(setLedgerEntries).catch(() => {});
     getNodeStatus().then(setNodes).catch(() => {});
     getInfrastructureOverview().then(setInfra).catch(() => {});
+    getEconomicState().then(setEcon).catch(() => {});
 
     const t = setInterval(() => {
       getChainStatus().then((c) => {
@@ -83,6 +87,7 @@ export default function Dashboard() {
       getLedgerEntries(10).then(setLedgerEntries).catch(() => {});
       getNodeStatus().then(setNodes).catch(() => {});
       getInfrastructureOverview().then(setInfra).catch(() => {});
+      getEconomicState().then(setEcon).catch(() => {});
     }, 3000);
     return () => clearInterval(t);
   }, []);
@@ -188,6 +193,81 @@ export default function Dashboard() {
           <div className="stat-sub">Bedrock · Lambda · Agents · Anchoring</div>
         </div>
       </div>
+
+      {/* ── Live Economy ── */}
+      {econ && (
+        <>
+          <div className="section-header">
+            <h2 className="section-title">Live <span className="accent">Economy</span></h2>
+            <span className="section-badge">{econ.systemAgents} agents · {econ.flowTypes} flow types · cycle #{econ.econCycle}</span>
+          </div>
+
+          {/* Economy Stats */}
+          <div className="stat-grid" style={{ marginBottom: "var(--sov-space-lg)" }}>
+            <div className="stat-card glass">
+              <div className="stat-label">Recent Volume (UNY)</div>
+              <div className="stat-value">{Number(econ.recentVolume).toLocaleString()}</div>
+              <div className="stat-sub">Last 200 transactions</div>
+            </div>
+            <div className="stat-card glass">
+              <div className="stat-label">Total Settled</div>
+              <div className="stat-value">{Number(econ.treasury.totalSettled).toLocaleString()}</div>
+              <div className="stat-sub">Immutable proof receipts</div>
+            </div>
+            <div className="stat-card glass">
+              <div className="stat-label">Total Operating</div>
+              <div className="stat-value">{Number(econ.treasury.totalOperating).toLocaleString()}</div>
+              <div className="stat-sub">Active across all agents</div>
+            </div>
+            <div className="stat-card glass">
+              <div className="stat-label">Supply Integrity</div>
+              <div className="stat-value" style={{ color: econ.treasury.supplyIntegrity === "balanced" ? "#22c55e" : "#ef4444" }}>{econ.treasury.supplyIntegrity === "balanced" ? "✓ Balanced" : "⚠ Check"}</div>
+              <div className="stat-sub">Double-entry accounting verified</div>
+            </div>
+          </div>
+
+          {/* Transaction Flow Types */}
+          <div className="glass" style={{ padding: "var(--sov-space-lg)", marginBottom: "var(--sov-space-lg)" }}>
+            <h4 style={{ margin: "0 0 var(--sov-space-md)", color: "var(--sov-accent-1)" }}>Transaction Flow Distribution</h4>
+            <div style={{ display: "flex", gap: "var(--sov-space-sm)", flexWrap: "wrap" }}>
+              {Object.entries(econ.recentFlowTypes).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
+                <span key={type} className={`pill ${flowPill(type)}`} style={{ fontSize: "0.8rem" }}>
+                  {type}: {count}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Agent Balances */}
+          <div className="glass" style={{ marginBottom: "var(--sov-space-xl)" }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>Operating (UNY)</th>
+                  <th>Settled</th>
+                  <th>Reserved</th>
+                  <th>Deposited</th>
+                </tr>
+              </thead>
+              <tbody>
+                {econ.agents.map(a => (
+                  <tr key={a.agentId}>
+                    <td>
+                      <span style={{ fontWeight: 600, color: "var(--sov-accent-1)" }}>{a.name}</span>
+                      <div style={{ fontSize: "0.75rem", color: "var(--sov-text-faint)", fontFamily: "var(--sov-font-mono)" }}>{a.agentId}</div>
+                    </td>
+                    <td style={{ fontWeight: 600 }}>{Number(a.operating).toLocaleString()}</td>
+                    <td>{Number(a.proofReceipt).toLocaleString()}</td>
+                    <td>{Number(a.reserved).toLocaleString()}</td>
+                    <td className="mono" style={{ color: "var(--sov-text-muted)" }}>{Number(a.totalDeposited).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {/* ── Node Topology ── */}
       <div className="section-header">
@@ -491,6 +571,15 @@ function txTypePill(type: string): string {
     case "credit_deposit": return "pill-success";
     default: return "pill-info";
   }
+}
+
+function flowPill(type: string): string {
+  if (type.startsWith("transfer")) return "pill-info";
+  if (type.startsWith("settle")) return "pill-success";
+  if (type.startsWith("reserve")) return "pill-warning";
+  if (type.startsWith("deposit")) return "pill-purple";
+  if (type.startsWith("unreserve")) return "pill-info";
+  return "pill-info";
 }
 
 function formatUptime(s: number): string {

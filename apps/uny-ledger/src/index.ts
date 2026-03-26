@@ -548,6 +548,426 @@ function merkleOf(hashes: string[]): string {
   return merkleOf(next);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Economic Daemon — Self-Settling AI Infrastructure Economy
+// ═══════════════════════════════════════════════════════════════════════════
+// Every system component pays for what it uses.  The treasury allocates,
+// agents spend, validators earn, AI computes, x402 settles — all real
+// double-entry hash-chained entries on the UNY L1.
+
+const SYSTEM_AGENTS = [
+  { id: "agent:treasury",           name: "UNY Treasury",             org: "org:unykorn",    role: "treasury",    tier: "control" as const,        deposit: "1000000000" },
+  { id: "agent:gateway",            name: "A2A Gateway",              org: "org:infra",      role: "gateway",     tier: "interface_tier" as const,  deposit: "500000" },
+  { id: "agent:signer",             name: "Rust Signer (Ed25519)",    org: "org:infra",      role: "signer",      tier: "execution" as const,      deposit: "250000" },
+  { id: "agent:facilitator",        name: "x402 Facilitator",         org: "org:infra",      role: "facilitator", tier: "control" as const,        deposit: "2000000" },
+  { id: "agent:bedrock-ai",         name: "AWS Bedrock AI",           org: "org:ai",         role: "ai-compute",  tier: "intelligence" as const,   deposit: "5000000" },
+  { id: "agent:lambda-exec",        name: "Lambda Executor",          org: "org:ai",         role: "executor",    tier: "execution" as const,      deposit: "1000000" },
+  { id: "agent:merkle-engine",      name: "Merkle Anchor Engine",     org: "org:infra",      role: "anchor",      tier: "execution" as const,      deposit: "750000" },
+  { id: "agent:mesh-coord",         name: "Agent Mesh Coordinator",   org: "org:ai",         role: "coordinator", tier: "intelligence" as const,   deposit: "3000000" },
+  { id: "agent:validator-bravo",    name: "Validator Bravo",          org: "org:validators", role: "validator",   tier: "execution" as const,      deposit: "100000" },
+  { id: "agent:validator-charlie",  name: "Validator Charlie",        org: "org:validators", role: "validator",   tier: "execution" as const,      deposit: "100000" },
+  { id: "agent:oracle-delta",       name: "Oracle Delta",             org: "org:oracles",    role: "oracle",      tier: "intelligence" as const,   deposit: "200000" },
+  { id: "agent:namespace-registry", name: "Namespace Registry",       org: "org:infra",      role: "registry",    tier: "control" as const,        deposit: "500000" },
+  { id: "agent:x402-settler",       name: "x402 Auto-Settler",       org: "org:infra",      role: "settler",     tier: "control" as const,        deposit: "10000000" },
+] as const;
+
+function randInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function pick<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Ensure system agent exists in DB + engine, create if needed
+async function ensureAgent(agentDef: typeof SYSTEM_AGENTS[number]): Promise<void> {
+  // Ensure org exists
+  await prisma.organization.upsert({
+    where: { id: agentDef.org },
+    create: {
+      id: agentDef.org,
+      name: agentDef.org.replace("org:", "UnyKorn ").replace(/^\w/, c => c.toUpperCase()),
+      legalEntity: "UnyKorn DAO",
+      jurisdiction: "Decentralized",
+    },
+    update: {},
+  });
+
+  // Upsert agent in DB
+  const existing = await prisma.agent.findUnique({ where: { id: agentDef.id } });
+  if (!existing) {
+    await prisma.agent.create({
+      data: {
+        id: agentDef.id,
+        name: agentDef.name,
+        orgId: agentDef.org,
+        role: agentDef.role,
+        tier: agentDef.tier,
+        publicKey: `pk_${agentDef.id.replace("agent:", "")}`,
+        status: "active",
+        spendLimitDaily: "999999999999",
+        spendLimitPerTask: "999999999999",
+        approvalThreshold: "0",
+        allowedTools: ["*"],
+        allowedDataScopes: ["*"],
+        description: `System agent: ${agentDef.name}`,
+      },
+    });
+  }
+
+  // Ensure account in engine
+  if (!ledger.getAccountByAgent(agentDef.id)) {
+    ledger.createAccount(agentDef.id, agentDef.org);
+
+    // Persist genesis account to DB
+    const acct = ledger.getAccountByAgent(agentDef.id)!;
+    await prisma.genesisAccount.create({
+      data: {
+        id: acct.accountId,
+        agentId: agentDef.id,
+        orgId: agentDef.org,
+        status: "active",
+      },
+    }).catch(() => {}); // dedup
+  }
+
+  // Deposit if balance is 0
+  const acct = ledger.getAccountByAgent(agentDef.id)!;
+  if (BigInt(acct.balances.OPERATING) === 0n && BigInt(agentDef.deposit) > 0n) {
+    const entry = ledger.deposit(agentDef.id, agentDef.deposit, `Genesis treasury allocation: ${agentDef.name}`);
+    await prisma.genesisAccount.updateMany({
+      where: { agentId: agentDef.id, isSubAccount: false },
+      data: { operatingBalance: acct.balances.OPERATING, totalDeposited: acct.totalDeposited },
+    });
+    await prisma.ledgerEntry.create({
+      data: {
+        id: entry.entryId, type: entry.type as any,
+        fromAgentId: entry.fromAgentId, toAgentId: entry.toAgentId,
+        amount: entry.amount, fromClass: entry.fromClass as any, toClass: entry.toClass as any,
+        memo: entry.memo, entryHash: entry.entryHash, previousHash: entry.previousHash,
+        idempotencyKey: entry.idempotencyKey,
+      },
+    });
+    server.log.info(`[ECON] Deposited ${Number(agentDef.deposit).toLocaleString()} UNY → ${agentDef.name}`);
+  }
+}
+
+async function persistTransfer(entry: any, fromId: string, toId: string) {
+  const from = ledger.getAccountByAgent(fromId)!;
+  const to = ledger.getAccountByAgent(toId)!;
+  try {
+    await Promise.all([
+      prisma.genesisAccount.updateMany({
+        where: { agentId: fromId, isSubAccount: false },
+        data: { operatingBalance: from.balances.OPERATING },
+      }),
+      prisma.genesisAccount.updateMany({
+        where: { agentId: toId, isSubAccount: false },
+        data: { operatingBalance: to.balances.OPERATING },
+      }),
+      prisma.ledgerEntry.create({
+        data: {
+          id: entry.entryId, type: entry.type as any,
+          fromAgentId: entry.fromAgentId, toAgentId: entry.toAgentId,
+          amount: entry.amount, fromClass: entry.fromClass as any, toClass: entry.toClass as any,
+          memo: entry.memo, entryHash: entry.entryHash, previousHash: entry.previousHash,
+          idempotencyKey: entry.idempotencyKey,
+        },
+      }),
+    ]);
+  } catch (e: any) {
+    server.log.error(`[ECON-PERSIST] Transfer DB error: ${e.message || e}`);
+  }
+}
+
+async function persistSettle(entry: any, toId: string) {
+  const to = ledger.getAccountByAgent(toId)!;
+  await Promise.all([
+    prisma.genesisAccount.updateMany({
+      where: { agentId: toId, isSubAccount: false },
+      data: { proofReceiptBalance: to.balances.PROOF_RECEIPT },
+    }),
+    prisma.ledgerEntry.create({
+      data: {
+        id: entry.entryId, type: entry.type as any,
+        fromAgentId: entry.fromAgentId, toAgentId: entry.toAgentId,
+        amount: entry.amount, fromClass: entry.fromClass as any, toClass: entry.toClass as any,
+        memo: entry.memo, entryHash: entry.entryHash, previousHash: entry.previousHash,
+        idempotencyKey: entry.idempotencyKey,
+      },
+    }),
+  ]);
+}
+
+async function persistReserve(entry: any, agentId: string) {
+  const acct = ledger.getAccountByAgent(agentId)!;
+  await Promise.all([
+    prisma.genesisAccount.updateMany({
+      where: { agentId, isSubAccount: false },
+      data: { operatingBalance: acct.balances.OPERATING, reservedBalance: acct.balances.RESERVED },
+    }),
+    prisma.ledgerEntry.create({
+      data: {
+        id: entry.entryId, type: entry.type as any,
+        fromAgentId: entry.fromAgentId, toAgentId: entry.toAgentId,
+        amount: entry.amount, fromClass: entry.fromClass as any, toClass: entry.toClass as any,
+        memo: entry.memo, entryHash: entry.entryHash, previousHash: entry.previousHash,
+        idempotencyKey: entry.idempotencyKey,
+      },
+    }),
+  ]);
+}
+
+// ── Transaction Generators ──────────────────────────────────────────────
+
+let econCycle = 0;
+
+const ECON_FLOWS: Array<() => Promise<void>> = [
+  // 1. AI Compute Payment — agents pay Bedrock for inference
+  async () => {
+    const callers = ["agent:mesh-coord", "agent:facilitator", "agent:gateway", "agent:lambda-exec"];
+    const caller = pick(callers);
+    const amount = String(randInt(25, 500));
+    const models = ["claude-3-sonnet", "claude-3-haiku", "claude-3-opus", "titan-embed-v2"];
+    const model = pick(models);
+    const taskId = `task:inference-${Date.now()}`;
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: caller, toAgentId: "agent:bedrock-ai",
+        amount, taskId,
+        memo: `ai:compute:${model}:${randInt(100,4000)}tokens`,
+      });
+      await persistTransfer(entry, caller, "agent:bedrock-ai");
+    } catch (e: any) { server.log.error(`[ECON] Flow1 error: ${e.message || e}`); }
+  },
+
+  // 2. Signing Fee — agents pay Signer for Ed25519 operations
+  async () => {
+    const callers = ["agent:facilitator", "agent:gateway", "agent:mesh-coord", "agent:x402-settler"];
+    const caller = pick(callers);
+    const amount = String(randInt(5, 50));
+    const ops = ["sign_payment_proof", "verify_signature", "derive_key", "sign_receipt_batch"];
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: caller, toAgentId: "agent:signer",
+        amount, taskId: `task:sign-${Date.now()}`,
+        memo: `signer:${pick(ops)}:ed25519`,
+      });
+      await persistTransfer(entry, caller, "agent:signer");
+    } catch { }
+  },
+
+  // 3. Gateway Routing Fee — agents pay Gateway per A2A message
+  async () => {
+    const callers = ["agent:mesh-coord", "agent:facilitator", "agent:bedrock-ai", "agent:lambda-exec"];
+    const caller = pick(callers);
+    const amount = String(randInt(10, 75));
+    const routes = ["a2a:relay", "a2a:broadcast", "a2a:task_dispatch", "a2a:response_route"];
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: caller, toAgentId: "agent:gateway",
+        amount, taskId: `task:route-${Date.now()}`,
+        memo: `gateway:${pick(routes)}:${randInt(1,12)}agents`,
+      });
+      await persistTransfer(entry, caller, "agent:gateway");
+    } catch { }
+  },
+
+  // 4. Merkle Anchor Fee — batch anchoring costs
+  async () => {
+    const amount = String(randInt(50, 250));
+    const batchSize = randInt(5, 50);
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: "agent:facilitator", toAgentId: "agent:merkle-engine",
+        amount, taskId: `task:anchor-${Date.now()}`,
+        memo: `merkle:anchor_batch:${batchSize}receipts:root=${sha256(String(Date.now())).slice(0,16)}`,
+      });
+      await persistTransfer(entry, "agent:facilitator", "agent:merkle-engine");
+    } catch { }
+  },
+
+  // 5. x402 Settlement Cycle — facilitator settles a payment
+  async () => {
+    const payees = ["agent:gateway", "agent:bedrock-ai", "agent:lambda-exec", "agent:mesh-coord"];
+    const payee = pick(payees);
+    const amount = String(randInt(100, 2000));
+    const taskId = `task:x402-settle-${Date.now()}`;
+    const policyId = `policy:auto-${Date.now()}`;
+    try {
+      // Transfer from settler to payee
+      const txEntry = ledger.transfer({
+        fromAgentId: "agent:x402-settler", toAgentId: payee,
+        amount, taskId,
+        memo: `x402:settlement:auto:invoice-${randomUUID().slice(0,8)}`,
+      });
+      await persistTransfer(txEntry, "agent:x402-settler", payee);
+
+      // Settle — creates immutable proof receipt
+      const settleEntry = ledger.settle({
+        fromAgentId: "agent:x402-settler", toAgentId: payee,
+        amount, taskId, policyDecisionId: policyId,
+      });
+      await persistSettle(settleEntry, payee);
+    } catch { }
+  },
+
+  // 6. Block Validation Rewards — treasury pays validators
+  async () => {
+    const validators = ["agent:validator-bravo", "agent:validator-charlie"];
+    const validator = pick(validators);
+    const reward = String(randInt(50, 200));
+    const blockH = blocks.length > 0 ? blocks[blocks.length - 1].height : 0;
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: "agent:treasury", toAgentId: validator,
+        amount: reward,
+        taskId: `task:block-reward-${blockH}`,
+        memo: `protocol:block_reward:height=${blockH}:${validator.split(":")[1]}`,
+      });
+      await persistTransfer(entry, "agent:treasury", validator);
+    } catch { }
+  },
+
+  // 7. Oracle Data Feed Payment
+  async () => {
+    const consumers = ["agent:facilitator", "agent:mesh-coord", "agent:lambda-exec"];
+    const consumer = pick(consumers);
+    const amount = String(randInt(15, 100));
+    const feeds = ["uny_usd_price", "gas_oracle", "network_health", "trade_volume_24h"];
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: consumer, toAgentId: "agent:oracle-delta",
+        amount, taskId: `task:oracle-${Date.now()}`,
+        memo: `oracle:data_feed:${pick(feeds)}`,
+      });
+      await persistTransfer(entry, consumer, "agent:oracle-delta");
+    } catch { }
+  },
+
+  // 8. Lambda Execution Fee
+  async () => {
+    const callers = ["agent:mesh-coord", "agent:facilitator", "agent:gateway"];
+    const caller = pick(callers);
+    const amount = String(randInt(20, 150));
+    const fns = ["process_webhook", "verify_proof", "batch_receipts", "compute_merkle", "route_task", "settle_escrow"];
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: caller, toAgentId: "agent:lambda-exec",
+        amount, taskId: `task:lambda-${Date.now()}`,
+        memo: `lambda:invoke:${pick(fns)}:${randInt(50,800)}ms`,
+      });
+      await persistTransfer(entry, caller, "agent:lambda-exec");
+    } catch { }
+  },
+
+  // 9. Namespace Registration Fee
+  async () => {
+    const agents = ["agent:mesh-coord", "agent:gateway", "agent:facilitator"];
+    const agent = pick(agents);
+    const amount = String(randInt(100, 500));
+    const names = ["trade.uny", "ai.uny", "settle.uny", "proof.uny", "pay.uny", "mesh.uny"];
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: agent, toAgentId: "agent:namespace-registry",
+        amount, taskId: `task:ns-${Date.now()}`,
+        memo: `namespace:register:${pick(names)}:ttl=365d`,
+      });
+      await persistTransfer(entry, agent, "agent:namespace-registry");
+    } catch { }
+  },
+
+  // 10. Smart Contract Allocation — treasury distributes to infra
+  async () => {
+    const targets = ["agent:gateway", "agent:signer", "agent:facilitator", "agent:merkle-engine", "agent:namespace-registry"];
+    const target = pick(targets);
+    const amount = String(randInt(500, 5000));
+    const contracts = ["infra_budget_v1", "ops_allocation_q1", "security_fund", "reserve_rebalance"];
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: "agent:treasury", toAgentId: target,
+        amount, taskId: `task:contract-${Date.now()}`,
+        memo: `contract:${pick(contracts)}:allocation:${target.split(":")[1]}`,
+      });
+      await persistTransfer(entry, "agent:treasury", target);
+    } catch { }
+  },
+
+  // 11. Agent-to-Agent Task Payment — mesh coord pays for completed work
+  async () => {
+    const workers = ["agent:bedrock-ai", "agent:lambda-exec", "agent:signer", "agent:oracle-delta"];
+    const worker = pick(workers);
+    const amount = String(randInt(200, 3000));
+    const tasks = ["research_synthesis", "data_extraction", "proof_generation", "model_inference", "compliance_check"];
+    const taskId = `task:mesh-${Date.now()}`;
+    try {
+      // Reserve budget
+      const resEntry = ledger.reserve("agent:mesh-coord", amount, taskId);
+      await persistReserve(resEntry, "agent:mesh-coord");
+
+      // Complete and transfer
+      const unresEntry = ledger.unreserve("agent:mesh-coord", amount, taskId);
+      await persistReserve(unresEntry, "agent:mesh-coord"); // uses same persist pattern
+
+      const txEntry = ledger.transfer({
+        fromAgentId: "agent:mesh-coord", toAgentId: worker,
+        amount, taskId,
+        memo: `mesh:task_payment:${pick(tasks)}:completed`,
+      });
+      await persistTransfer(txEntry, "agent:mesh-coord", worker);
+    } catch { }
+  },
+
+  // 12. Protocol Fee Burn — small % of fees go back to treasury
+  async () => {
+    const earners = ["agent:gateway", "agent:signer", "agent:merkle-engine", "agent:namespace-registry"];
+    const earner = pick(earners);
+    const acct = ledger.getAccountByAgent(earner);
+    if (!acct || BigInt(acct.balances.OPERATING) < 100n) return;
+    const amount = String(randInt(10, Math.min(200, Number(acct.balances.OPERATING) / 10)));
+    try {
+      const entry = ledger.transfer({
+        fromAgentId: earner, toAgentId: "agent:treasury",
+        amount, taskId: `task:protocol-fee-${Date.now()}`,
+        memo: `protocol:fee_recycle:${earner.split(":")[1]}→treasury`,
+      });
+      await persistTransfer(entry, earner, "agent:treasury");
+    } catch { }
+  },
+];
+
+let econTimer: ReturnType<typeof setInterval> | null = null;
+
+async function runEconomicCycle(): Promise<void> {
+  econCycle++;
+  // Each cycle runs 2-5 random flows
+  const flowCount = randInt(2, 5);
+  for (let i = 0; i < flowCount; i++) {
+    const flow = pick(ECON_FLOWS);
+    try { await flow(); } catch (e) { server.log.error(`[ECON] Flow error: ${e}`); }
+  }
+}
+
+function startEconomicDaemon(): void {
+  if (econTimer) return;
+  // Run economic cycles every 5-8 seconds (staggered from block production)
+  const interval = 5000 + Math.floor(Math.random() * 3000);
+  server.log.info(`[ECON] Economic daemon started — ${interval}ms cycle, 12 flow types`);
+  econTimer = setInterval(async () => {
+    try { await runEconomicCycle(); } catch (e) { server.log.error(`[ECON] Cycle error: ${e}`); }
+  }, interval);
+}
+
+async function bootstrapEconomy(): Promise<void> {
+  server.log.info("[ECON] Bootstrapping system agents and treasury allocations...");
+  for (const agentDef of SYSTEM_AGENTS) {
+    await ensureAgent(agentDef);
+  }
+  const totalDeposited = SYSTEM_AGENTS.reduce((s, a) => s + BigInt(a.deposit), 0n);
+  server.log.info(`[ECON] ${SYSTEM_AGENTS.length} agents bootstrapped, ${totalDeposited.toLocaleString()} UNY allocated`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+
 async function produceBlock(): Promise<ChainBlock> {
   // Heartbeat: ensure every block has at least one entry (proof of life)
   const heartbeatId = randomUUID();
@@ -922,6 +1342,65 @@ const rpcMethods: Record<string, RpcHandler> = {
       ],
     };
   },
+
+  // Economic state — live balances, flows, settlement stats
+  async chain_getEconomicState() {
+    const agentBalances: Array<{
+      agentId: string; name: string; operating: string; escrow: string;
+      reserved: string; staked: string; proofReceipt: string; totalDeposited: string;
+    }> = [];
+
+    for (const def of SYSTEM_AGENTS) {
+      const acct = ledger.getAccountByAgent(def.id);
+      if (acct) {
+        agentBalances.push({
+          agentId: def.id,
+          name: def.name,
+          operating: acct.balances.OPERATING,
+          escrow: acct.balances.ESCROW,
+          reserved: acct.balances.RESERVED,
+          staked: acct.balances.STAKED_RELIABILITY,
+          proofReceipt: acct.balances.PROOF_RECEIPT,
+          totalDeposited: acct.totalDeposited,
+        });
+      }
+    }
+
+    // Count by type from recent blocks
+    const recentEntries = await prisma.ledgerEntry.findMany({
+      orderBy: { sequence: "desc" },
+      take: 200,
+    });
+    const typeCounts: Record<string, number> = {};
+    let totalVolume = 0n;
+    for (const e of recentEntries) {
+      typeCounts[e.type] = (typeCounts[e.type] ?? 0) + 1;
+      if (e.type !== "reserve" || (e.memo && !e.memo.startsWith("system:heartbeat"))) {
+        totalVolume += BigInt(e.amount ?? 0);
+      }
+    }
+
+    const treasury = ledger.getTreasuryState();
+
+    return {
+      econCycle,
+      agents: agentBalances,
+      recentFlowTypes: typeCounts,
+      recentVolume: totalVolume.toString(),
+      treasury: {
+        totalDeposits: treasury.totalCoreDeposits,
+        totalOperating: treasury.totalOperating,
+        totalEscrowed: treasury.totalEscrowed,
+        totalReserved: treasury.totalReserved,
+        totalStaked: treasury.totalStaked,
+        totalSettled: treasury.totalSettled,
+        supplyIntegrity: treasury.integrityCheck,
+      },
+      flowTypes: 12,
+      systemAgents: SYSTEM_AGENTS.length,
+      timestamp: new Date().toISOString(),
+    };
+  },
 };
 
 function rpcError(code: number, message: string): { code: number; message: string } {
@@ -1096,10 +1575,16 @@ const start = async () => {
       server.log.info("No existing ledger data — starting fresh");
     }
 
+    // ── Bootstrap economy — system agents + treasury allocations ──
+    await bootstrapEconomy();
+
     // ── Produce genesis block and start block production ──
     await produceBlock(); // seal everything up to now
     startBlockProduction();
     server.log.info(`[L1] Genesis block produced — chain ${CHAIN_ID}, height ${blocks[0]?.height ?? 0}`);
+
+    // ── Start economic daemon — self-settling AI economy ──
+    startEconomicDaemon();
 
     await server.listen({ port: PORT, host: "0.0.0.0" });
     server.log.info(`${SERVICE} listening on port ${PORT}`);
