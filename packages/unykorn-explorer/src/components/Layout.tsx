@@ -25,14 +25,15 @@ export default function Layout() {
         {chain && (
           <div className="ex-chain-badge">
             <span className="ex-chain-dot" />
-            Chain {chain.chainId} · {chain.blockHeight} Ledger Entries · {chain.synced ? "Live" : "Offline"}
+            Chain {chain.chainId} · Block #{chain.blockHeight.toLocaleString()} · {chain.synced ? "Live" : "Offline"}
           </div>
         )}
 
         <nav className="ex-nav">
           <NavLink to="/" end>Dashboard</NavLink>
-          <NavLink to="/blocks">Ledger</NavLink>
+          <NavLink to="/blocks">Blocks</NavLink>
           <NavLink to="/transactions">Transactions</NavLink>
+          <NavLink to="/verify">Verify</NavLink>
           <NavLink to="/x402">x402</NavLink>
           <NavLink to="/agents">A2A Agents</NavLink>
           <NavLink to="/namespaces">Namespaces</NavLink>

@@ -2,7 +2,9 @@ import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Blocks from "./pages/Blocks";
+import BlockDetail from "./pages/BlockDetail";
 import Transactions from "./pages/Transactions";
+import Verify from "./pages/Verify";
 import X402 from "./pages/X402";
 import Agents from "./pages/Agents";
 import Namespaces from "./pages/Namespaces";
@@ -18,7 +20,9 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="blocks" element={<Blocks />} />
+        <Route path="blocks/:height" element={<BlockDetail />} />
         <Route path="transactions" element={<Transactions />} />
+        <Route path="verify" element={<Verify />} />
         <Route path="x402" element={<X402 />} />
         <Route path="agents" element={<Agents />} />
         <Route path="namespaces" element={<Namespaces />} />

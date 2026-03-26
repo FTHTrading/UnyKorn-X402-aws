@@ -549,6 +549,23 @@ function merkleOf(hashes: string[]): string {
 }
 
 async function produceBlock(): Promise<ChainBlock> {
+  // Heartbeat: ensure every block has at least one entry (proof of life)
+  const heartbeatId = randomUUID();
+  const heartbeatHash = sha256(`heartbeat:${heartbeatId}:${Date.now()}`);
+  try {
+    await prisma.ledgerEntry.create({
+      data: {
+        id: heartbeatId,
+        type: "reserve",
+        amount: 0,
+        memo: `system:heartbeat:${NODE_ID}:${Date.now()}`,
+        entryHash: heartbeatHash,
+        previousHash: "",
+        idempotencyKey: `hb:${heartbeatId}`,
+      },
+    });
+  } catch { /* OK if heartbeat fails — block still proceeds */ }
+
   const entries = await prisma.ledgerEntry.findMany({
     where: { sequence: { gt: lastSealedSeq } },
     orderBy: { sequence: "asc" },
@@ -754,6 +771,117 @@ const rpcMethods: Record<string, RpcHandler> = {
         ip: "10.0.5.10",
       },
     ];
+  },
+
+  // Block detail with full proof (prevHash, merkleRoot, entry range)
+  async chain_getBlockDetail(params) {
+    const h = Number(params[0]);
+    const b = blocks.find(bl => bl.height === h);
+    if (!b) throw rpcError(-32602, `Block ${h} not found`);
+
+    // Fetch the entries sealed in this block
+    const entries = await prisma.ledgerEntry.findMany({
+      where: { sequence: { gte: b.entryRange[0], lte: b.entryRange[1] } },
+      orderBy: { sequence: "asc" },
+    });
+
+    // Recompute merkle root for verification
+    const entryHashes = entries.map(e => e.entryHash ?? sha256(e.id));
+    const recomputedMerkle = merkleOf(entryHashes);
+    const recomputedHash = sha256(`${b.prevHash}:${b.merkleRoot}:${b.height}:${b.timestamp}`);
+
+    return {
+      height: b.height,
+      hash: b.hash,
+      prevHash: b.prevHash,
+      merkleRoot: b.merkleRoot,
+      txCount: b.txCount,
+      entryRange: b.entryRange,
+      timestamp: b.timestamp,
+      producer: b.producer,
+      chainId: CHAIN_ID,
+      // Verification data
+      verification: {
+        recomputedMerkle,
+        merkleMatch: recomputedMerkle === b.merkleRoot,
+        recomputedHash,
+        hashMatch: recomputedHash === b.hash,
+        formula: `SHA256(prevHash + ":" + merkleRoot + ":" + height + ":" + timestamp)`,
+      },
+      // Entries sealed in this block
+      entries: entries.map(e => ({
+        sequence: Number(e.sequence),
+        id: e.id,
+        type: e.type,
+        amount: e.amount?.toString() ?? "0",
+        entryHash: e.entryHash,
+        fromAgentId: e.fromAgentId,
+        toAgentId: e.toAgentId,
+        memo: e.memo,
+        timestamp: e.timestamp,
+      })),
+    };
+  },
+
+  // Chain integrity verification  — verify the full hash chain from genesis to tip
+  async chain_verifyIntegrity() {
+    const genesisHash = sha256("genesis-7331");
+    let valid = true;
+    let brokenAt = -1;
+    let totalTx = 0;
+    const checked = blocks.length;
+
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      const expectedPrev = i === 0 ? genesisHash : blocks[i - 1].hash;
+      const expectedHash = sha256(`${expectedPrev}:${b.merkleRoot}:${b.height}:${b.timestamp}`);
+      totalTx += b.txCount;
+
+      if (b.prevHash !== expectedPrev || b.hash !== expectedHash) {
+        valid = false;
+        brokenAt = b.height;
+        break;
+      }
+    }
+
+    const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+    return {
+      valid,
+      blocksChecked: checked,
+      tipHeight: latest?.height ?? 0,
+      tipHash: latest?.hash ?? genesisHash,
+      genesisHash,
+      totalTransactions: totalTx,
+      brokenAtHeight: brokenAt >= 0 ? brokenAt : null,
+      chainId: CHAIN_ID,
+      verifiedAt: new Date().toISOString(),
+    };
+  },
+
+  // Verify a specific hash against the chain
+  async chain_verifyHash(params) {
+    const hash = String(params[0]);
+
+    // Check blocks
+    const block = blocks.find(b => b.hash === hash);
+    if (block) {
+      return { found: true, type: "block", height: block.height, timestamp: block.timestamp, producer: block.producer, txCount: block.txCount };
+    }
+
+    // Check entries
+    const entry = await prisma.ledgerEntry.findFirst({ where: { entryHash: hash } });
+    if (entry) {
+      const b = blocks.find(bl => Number(entry.sequence) >= bl.entryRange[0] && Number(entry.sequence) <= bl.entryRange[1]);
+      return { found: true, type: "entry", sequence: Number(entry.sequence), blockHeight: b?.height ?? null, entryType: entry.type, amount: entry.amount?.toString() ?? "0", timestamp: entry.timestamp };
+    }
+
+    // Check anchors
+    const anchor = anchors.find(a => a.txHash === hash || a.merkleRoot === hash);
+    if (anchor) {
+      return { found: true, type: "anchor", batchId: anchor.batchId, merkleRoot: anchor.merkleRoot, blockHeight: anchor.blockHeight, timestamp: anchor.anchoredAt };
+    }
+
+    return { found: false, hash, message: "Hash not found on chain" };
   },
 
   // Infrastructure status — services, AI, cloud

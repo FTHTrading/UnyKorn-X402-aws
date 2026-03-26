@@ -567,6 +567,95 @@ export async function getInfrastructureOverview(): Promise<InfrastructureOvervie
   }
 }
 
+// ── Block Detail (from L1 RPC) ─────────────────────────────
+
+export interface BlockDetail {
+  height: number;
+  hash: string;
+  prevHash: string;
+  merkleRoot: string;
+  txCount: number;
+  entryRange: [number, number];
+  timestamp: string;
+  producer: string;
+  chainId: number;
+  verification: {
+    recomputedMerkle: string;
+    merkleMatch: boolean;
+    recomputedHash: string;
+    hashMatch: boolean;
+    formula: string;
+  };
+  entries: {
+    sequence: number;
+    id: string;
+    type: string;
+    amount: string;
+    entryHash: string | null;
+    fromAgentId: string | null;
+    toAgentId: string | null;
+    memo: string | null;
+    timestamp: string;
+  }[];
+}
+
+export async function getBlockDetail(height: number): Promise<BlockDetail | null> {
+  try {
+    return await l1Rpc<BlockDetail>("chain_getBlockDetail", [height]);
+  } catch {
+    return null;
+  }
+}
+
+// ── Chain Integrity Verification ───────────────────────────
+
+export interface ChainVerification {
+  valid: boolean;
+  blocksChecked: number;
+  tipHeight: number;
+  tipHash: string;
+  genesisHash: string;
+  totalTransactions: number;
+  brokenAtHeight: number | null;
+  chainId: number;
+  verifiedAt: string;
+}
+
+export async function verifyChainIntegrity(): Promise<ChainVerification | null> {
+  try {
+    return await l1Rpc<ChainVerification>("chain_verifyIntegrity");
+  } catch {
+    return null;
+  }
+}
+
+// ── Hash Lookup ────────────────────────────────────────────
+
+export interface HashLookupResult {
+  found: boolean;
+  type?: "block" | "entry" | "anchor";
+  hash?: string;
+  message?: string;
+  height?: number;
+  sequence?: number;
+  blockHeight?: number | null;
+  timestamp?: string;
+  producer?: string;
+  txCount?: number;
+  entryType?: string;
+  amount?: string;
+  batchId?: string;
+  merkleRoot?: string;
+}
+
+export async function verifyHash(hash: string): Promise<HashLookupResult> {
+  try {
+    return await l1Rpc<HashLookupResult>("chain_verifyHash", [hash]);
+  } catch {
+    return { found: false, hash, message: "RPC unavailable" };
+  }
+}
+
 // ── Real Agents (from Gateway DB) ──────────────────────────
 
 export async function getRealAgents(): Promise<RealAgent[]> {
