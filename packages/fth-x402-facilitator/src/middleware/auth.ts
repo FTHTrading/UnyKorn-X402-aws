@@ -32,6 +32,7 @@ const PUBLIC_ROUTES = new Set([
 /** Route prefixes that are fully public (health checks, root). */
 const PUBLIC_PREFIXES: string[] = [
   "/explorer/",      // Explorer public data endpoints
+  "/economics/",     // Economics engine — transparency by design
   "/.well-known/",   // A2A discovery
 ];
 

@@ -6,6 +6,7 @@ import Transactions from "./pages/Transactions";
 import X402 from "./pages/X402";
 import Agents from "./pages/Agents";
 import Namespaces from "./pages/Namespaces";
+import Economics from "./pages/Economics";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="x402" element={<X402 />} />
         <Route path="agents" element={<Agents />} />
         <Route path="namespaces" element={<Namespaces />} />
+        <Route path="economics" element={<Economics />} />
       </Route>
     </Routes>
   );

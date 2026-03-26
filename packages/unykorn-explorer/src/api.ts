@@ -451,3 +451,75 @@ export async function tryPaidRoute(examplePath: string): Promise<{
   const paymentHeader = res.headers.get("x-payment-required") ?? undefined;
   return { status: res.status, body, paymentHeader };
 }
+
+// ── Economics Engine ───────────────────────────────────────
+
+export interface EconomicsOverview {
+  system: string;
+  amm: any;
+  flywheel: any;
+  fundamentals: any;
+  credibility: any;
+  reserves: any;
+  links: Record<string, string>;
+}
+
+export async function getEconomicsOverview(): Promise<EconomicsOverview | null> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/economics/overview`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAMMState(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/economics/amm`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getFlywheelState(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/economics/flywheel`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getGenesisProvenance(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/economics/genesis`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getCredibilityScore(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/economics/credibility`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getInfrastructure(): Promise<any> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/economics/infrastructure`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}

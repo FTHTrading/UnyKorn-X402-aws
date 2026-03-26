@@ -25,6 +25,7 @@ import operatorRoutes from "./routes/operator";
 import a2aRoutes from "./routes/a2a";
 import a2aJsonRpcRoutes from "./routes/a2a-rpc";
 import explorerRoutes from "./routes/explorer";
+import { createEconomicsRoutes } from "../../uny-economics/src/routes";
 
 // Auth
 import { registerAuthMiddleware } from "./middleware/auth";
@@ -108,6 +109,15 @@ async function main() {
         "/admin/treasury/refills",
         "/l1/health",
         "/l1/batches",
+        "/economics/overview",
+        "/economics/amm",
+        "/economics/amm/quote",
+        "/economics/flywheel",
+        "/economics/genesis",
+        "/economics/credibility",
+        "/economics/fundamentals",
+        "/economics/reserves",
+        "/economics/infrastructure",
       ],
     });
   });
@@ -158,6 +168,10 @@ async function main() {
   await app.register(a2aRoutes);
   await app.register(a2aJsonRpcRoutes);
   await app.register(explorerRoutes);
+
+  // Economics engine (AMM, flywheel, genesis provenance, credibility)
+  createEconomicsRoutes(app);
+  app.log.info("Economics engine mounted at /economics/*");
 
   // Start receipt batcher
   startBatcher();
