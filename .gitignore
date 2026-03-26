@@ -28,6 +28,7 @@ artifacts/
 cache/
 .cache/
 typechain-types/
+*.tsbuildinfo
 exports/
 
 # -- OS noise --
@@ -52,6 +53,11 @@ target/
 **/*.rs.bk
 Cargo.lock
 cargo_*.txt
+
+# -- SQLite databases --
+*.db
+*.db-journal
+*.db-wal
 
 # -- Docker / CI temp --
 docker_build.txt

@@ -9,7 +9,7 @@ import Fastify from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { AgentRegistry, TaskManager, BudgetManager } from "@unykorn/agent-core";
 import { PolicyEngine } from "@unykorn/policy-engine";
-import { generateKeyPair } from "@unykorn/identity-engine";
+import { SigningClient } from "@unykorn/signing-client";
 import type { AgentRole, AgentTier, TaskStatus } from "@unykorn/shared-types";
 import type { AgentTier as PrismaAgentTier } from "@prisma/client";
 
@@ -28,6 +28,14 @@ const SERVICE = "@unykorn/agent-gateway";
 
 const server = Fastify({ logger: true });
 const prisma = new PrismaClient();
+
+// Signing client — all key operations go through rust-signer
+const SIGNER_PORT = Number(process.env.SIGNER_PORT ?? 4050);
+const SIGNER_HOST = process.env.SIGNER_HOST ?? "127.0.0.1";
+const signer = new SigningClient({
+  baseUrl: `http://${SIGNER_HOST}:${SIGNER_PORT}`,
+  timeoutMs: 15_000,
+});
 
 // Serialize BigInt as string in JSON responses
 server.addHook("preSerialization", async (_request, _reply, payload) => {
@@ -109,8 +117,22 @@ server.post<{
   const org = await prisma.organization.findUnique({ where: { id: body.orgId } });
   if (!org) return reply.status(400).send({ error: "Organization not found" });
 
-  // Generate real Ed25519 key pair
-  const keys = generateKeyPair();
+  // Generate key through signer service (agent_execution domain)
+  // HARD RULE: No app generates keys directly — all go through rust-signer.
+  let signerKey: { key_id: string; public_key_hex: string };
+  try {
+    signerKey = await signer.generateKey(
+      "agent_execution",
+      `agent-gateway:register:${body.name}`,
+      `agent-${body.name}-${body.role}`
+    );
+  } catch (err: any) {
+    server.log.error({ err }, "Signer key generation failed");
+    return reply.status(502).send({
+      error: "Key generation failed — signer service unavailable",
+      detail: err.message,
+    });
+  }
 
   // Register in-memory
   const identity = registry.register({
@@ -118,7 +140,7 @@ server.post<{
     orgId: body.orgId,
     role: body.role,
     tier: body.tier,
-    publicKey: keys.publicKey,
+    publicKey: signerKey.public_key_hex,
     spendLimitDaily: body.spendLimitDaily,
     spendLimitPerTask: body.spendLimitPerTask,
     approvalThreshold: body.approvalThreshold,
@@ -155,9 +177,9 @@ server.post<{
 
   return reply.status(201).send({
     agent,
-    publicKey: keys.publicKey,
-    // NOTE: privateKey returned ONLY on registration, caller must store it
-    privateKey: keys.privateKey,
+    publicKey: signerKey.public_key_hex,
+    signerKeyId: signerKey.key_id,
+    // NOTE: private key stays in rust-signer — never leaves the signer boundary
   });
 });
 

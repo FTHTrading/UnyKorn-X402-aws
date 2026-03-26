@@ -434,6 +434,55 @@ export class GenesisLedger {
     return this.entries.length;
   }
 
+  // ── Hydration (Restore from DB on Boot) ────────────────
+
+  /**
+   * Restore in-memory state from persisted data.
+   * Called once on startup to rebuild the ledger from the database.
+   *
+   * @param accounts  - GenesisAccount rows from DB
+   * @param entries   - LedgerEntry rows from DB (ordered by sequence ASC)
+   * @param escrows   - Escrow rows from DB
+   */
+  hydrate(params: {
+    accounts: GenesisAccount[];
+    entries: LedgerEntry[];
+    escrows?: EscrowObject[];
+  }): { accountCount: number; entryCount: number; escrowCount: number; lastHash: string } {
+    // Restore accounts
+    for (const acct of params.accounts) {
+      this.accounts.set(acct.accountId, { ...acct });
+    }
+
+    // Restore ledger entries — rebuild hash chain
+    const sortedEntries = [...params.entries].sort((a, b) => {
+      const seqA = typeof a.sequence === "bigint" ? a.sequence : BigInt(a.sequence);
+      const seqB = typeof b.sequence === "bigint" ? b.sequence : BigInt(b.sequence);
+      return seqA < seqB ? -1 : seqA > seqB ? 1 : 0;
+    });
+
+    for (const entry of sortedEntries) {
+      const seq = typeof entry.sequence === "bigint" ? entry.sequence : BigInt(entry.sequence);
+      if (seq > this.sequence) this.sequence = seq;
+      this.entries.push(entry);
+      if (entry.entryHash) this.lastHash = entry.entryHash;
+    }
+
+    // Restore escrows
+    if (params.escrows) {
+      for (const escrow of params.escrows) {
+        this.escrows.set(escrow.escrowId, { ...escrow });
+      }
+    }
+
+    return {
+      accountCount: this.accounts.size,
+      entryCount: this.entries.length,
+      escrowCount: this.escrows.size,
+      lastHash: this.lastHash,
+    };
+  }
+
   // ── Internal Helpers ──────────────────────────────────
 
   private credit(account: GenesisAccount, cls: GenesisBalanceClass, amount: string): void {

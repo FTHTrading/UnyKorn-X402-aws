@@ -564,6 +564,82 @@ const start = async () => {
     await prisma.$connect();
     server.log.info("Database connected");
 
+    // ── Hydrate in-memory ledger from DB ──────────────────
+    const [dbAccounts, dbEntries, dbEscrows] = await Promise.all([
+      prisma.genesisAccount.findMany(),
+      prisma.ledgerEntry.findMany({ orderBy: { sequence: "asc" } }),
+      prisma.escrow.findMany({ include: { conditions: true } }),
+    ]);
+
+    if (dbAccounts.length > 0 || dbEntries.length > 0) {
+      const result = ledger.hydrate({
+        accounts: dbAccounts.map((a) => ({
+          accountId: a.id,
+          agentId: a.agentId,
+          orgId: a.orgId,
+          balances: {
+            OPERATING: a.operatingBalance?.toString() ?? "0",
+            ESCROW: a.escrowBalance?.toString() ?? "0",
+            RESERVED: a.reservedBalance?.toString() ?? "0",
+            STAKED_RELIABILITY: a.stakedBalance?.toString() ?? "0",
+            PROOF_RECEIPT: a.proofReceiptBalance?.toString() ?? "0",
+            COMPLIANCE_CLEARED: a.complianceClearedBalance?.toString() ?? "0",
+          },
+          isSubAccount: a.isSubAccount,
+          parentAccountId: a.parentAccountId,
+          status: a.status as "active" | "frozen" | "closed",
+          totalDeposited: a.totalDeposited?.toString() ?? "0",
+          totalWithdrawn: a.totalWithdrawn?.toString() ?? "0",
+          createdAt: a.createdAt.toISOString(),
+          updatedAt: a.updatedAt.toISOString(),
+        })),
+        entries: dbEntries.map((e) => ({
+          entryId: e.id,
+          sequence: BigInt(e.sequence),
+          type: e.type as any,
+          fromAgentId: e.fromAgentId,
+          toAgentId: e.toAgentId,
+          amount: e.amount.toString(),
+          fromClass: e.fromClass as any,
+          toClass: e.toClass as any,
+          taskId: e.taskId,
+          policyDecisionId: e.policyDecisionId,
+          memo: e.memo ?? "",
+          timestamp: e.createdAt.toISOString(),
+          entryHash: e.entryHash ?? "",
+          previousHash: e.previousHash ?? "",
+          idempotencyKey: e.idempotencyKey ?? "",
+        })),
+        escrows: dbEscrows.map((esc) => ({
+          escrowId: esc.id,
+          taskId: esc.taskId,
+          depositorAgentId: esc.depositorAgentId,
+          beneficiaryAgentId: esc.beneficiaryAgentId,
+          amount: esc.amount.toString(),
+          releasedAmount: esc.releasedAmount?.toString() ?? "0",
+          refundedAmount: esc.refundedAmount?.toString() ?? "0",
+          status: esc.status as any,
+          releaseConditions: esc.conditions.map((c) => ({
+            conditionId: c.id,
+            type: c.type as any,
+            releaseAmount: c.releaseAmount.toString(),
+            description: c.description ?? "",
+            met: c.met,
+          })),
+          expiresAt: esc.expiresAt.toISOString(),
+          createdAt: esc.createdAt.toISOString(),
+          updatedAt: esc.updatedAt.toISOString(),
+        })),
+      });
+
+      server.log.info(
+        `Hydrated ledger: ${result.accountCount} accounts, ${result.entryCount} entries, ` +
+        `${result.escrowCount} escrows, lastHash=${result.lastHash.slice(0, 16)}…`
+      );
+    } else {
+      server.log.info("No existing ledger data — starting fresh");
+    }
+
     await server.listen({ port: PORT, host: "0.0.0.0" });
     server.log.info(`${SERVICE} listening on port ${PORT}`);
   } catch (err) {
