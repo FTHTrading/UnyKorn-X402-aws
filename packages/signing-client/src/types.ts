@@ -45,10 +45,10 @@ export interface GenerateKeyRequest {
 
 export interface GenerateKeyResponse {
   key_id: string;
-  public_key_hex: string;
+  public_key: string;
   domain: WalletDomain;
   algorithm: string;
-  created_at: string;
+  private_key: string;
 }
 
 export interface KeyMeta {

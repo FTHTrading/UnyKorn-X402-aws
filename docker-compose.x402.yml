@@ -74,5 +74,76 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  # --- Rust Signer (key custody & signing) ---
+  x402-signer:
+    build:
+      context: services/rust-signer
+      dockerfile: Dockerfile
+    container_name: fth-x402-signer
+    ports:
+      - "4050:4050"
+    environment:
+      SIGNER_HOST: "0.0.0.0"
+      SIGNER_PORT: "4050"
+      SIGNER_DB_PATH: /app/data/signer.db
+    volumes:
+      - x402_signer_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:4050/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # --- UNY Ledger ---
+  x402-ledger:
+    image: node:20-alpine
+    container_name: fth-x402-ledger
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+    ports:
+      - "4030:4030"
+    environment:
+      NODE_ENV: production
+      PORT: "4030"
+      HOST: "0.0.0.0"
+      DATABASE_URL: postgresql://unykorn:unykorn_dev@x402-db:5432/fth_x402
+      SIGNER_URL: http://x402-signer:4050
+    depends_on:
+      x402-db:
+        condition: service_healthy
+      x402-migrate:
+        condition: service_completed_successfully
+    command: ["node", "apps/uny-ledger/dist/index.js"]
+    restart: unless-stopped
+
+  # --- Agent Gateway ---
+  x402-gateway:
+    image: node:20-alpine
+    container_name: fth-x402-gateway
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+    ports:
+      - "4010:4010"
+    environment:
+      NODE_ENV: production
+      PORT: "4010"
+      HOST: "0.0.0.0"
+      DATABASE_URL: postgresql://unykorn:unykorn_dev@x402-db:5432/fth_x402
+      SIGNER_URL: http://x402-signer:4050
+      LEDGER_URL: http://x402-ledger:4030
+    depends_on:
+      x402-db:
+        condition: service_healthy
+      x402-signer:
+        condition: service_healthy
+      x402-migrate:
+        condition: service_completed_successfully
+    command: ["node", "apps/agent-gateway/dist/index.js"]
+    restart: unless-stopped
+
 volumes:
   x402_pgdata:
+  x402_signer_data:

@@ -119,7 +119,7 @@ server.post<{
 
   // Generate key through signer service (agent_execution domain)
   // HARD RULE: No app generates keys directly — all go through rust-signer.
-  let signerKey: { key_id: string; public_key_hex: string };
+  let signerKey: { key_id: string; public_key: string };
   try {
     signerKey = await signer.generateKey(
       "agent_execution",
@@ -140,7 +140,7 @@ server.post<{
     orgId: body.orgId,
     role: body.role,
     tier: body.tier,
-    publicKey: signerKey.public_key_hex,
+    publicKey: signerKey.public_key,
     spendLimitDaily: body.spendLimitDaily,
     spendLimitPerTask: body.spendLimitPerTask,
     approvalThreshold: body.approvalThreshold,
@@ -177,7 +177,7 @@ server.post<{
 
   return reply.status(201).send({
     agent,
-    publicKey: signerKey.public_key_hex,
+    publicKey: signerKey.public_key,
     signerKeyId: signerKey.key_id,
     // NOTE: private key stays in rust-signer — never leaves the signer boundary
   });

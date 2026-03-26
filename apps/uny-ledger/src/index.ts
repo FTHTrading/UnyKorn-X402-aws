@@ -605,7 +605,7 @@ const start = async () => {
           taskId: e.taskId,
           policyDecisionId: e.policyDecisionId,
           memo: e.memo ?? "",
-          timestamp: e.createdAt.toISOString(),
+          timestamp: e.timestamp.toISOString(),
           entryHash: e.entryHash ?? "",
           previousHash: e.previousHash ?? "",
           idempotencyKey: e.idempotencyKey ?? "",
