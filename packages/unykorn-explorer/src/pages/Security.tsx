@@ -1,32 +1,36 @@
 import { useState, useEffect } from "react";
+import { truncHash, timeAgo } from "../api";
 
-// ── Types ──────────────────────────────────────────────────
+// ── Types (matching real Rust Signer responses) ────────────
 
 interface SignerHealth {
   status: string;
   service: string;
-  uptime_seconds: number;
-  total_keys: number;
-  total_audits: number;
+  uptime_secs: number;
+  timestamp: string;
 }
 
 interface SignerKey {
-  key_id: string;
-  domain: string;
-  actor_id: string;
+  id: string;
   public_key: string;
+  domain: string;
+  algorithm: string;
+  created_by: string;
   created_at: string;
+  rotated_from: string | null;
   revoked: boolean;
+  label: string;
 }
 
 interface AuditEvent {
-  id: number;
+  id: string;
   key_id: string;
-  event_type: string;
+  action: string;
   domain: string;
-  action: string | null;
   actor_id: string;
-  details: string | null;
+  payload_hash: string;
+  result: string;
+  reason: string;
   timestamp: string;
 }
 
@@ -74,13 +78,20 @@ export default function Security() {
 
     fetch(`${SIGNER_URL}/keys`)
       .then((r) => r.json())
-      .then((d) => setKeys(d.keys ?? []))
+      .then((d) => setKeys(Array.isArray(d) ? d : []))
       .catch(() => {});
 
     fetch(`${SIGNER_URL}/audit`)
       .then((r) => r.json())
-      .then((d) => setAudits(d.events ?? []))
+      .then((d) => setAudits(Array.isArray(d) ? d : []))
       .catch(() => {});
+
+    const t = setInterval(() => {
+      fetch(`${SIGNER_URL}/health`).then((r) => r.json()).then(setHealth).catch(() => {});
+      fetch(`${SIGNER_URL}/keys`).then((r) => r.json()).then((d) => setKeys(Array.isArray(d) ? d : [])).catch(() => {});
+      fetch(`${SIGNER_URL}/audit`).then((r) => r.json()).then((d) => setAudits(Array.isArray(d) ? d : [])).catch(() => {});
+    }, 10000);
+    return () => clearInterval(t);
   }, []);
 
   return (
@@ -122,17 +133,17 @@ export default function Security() {
             {health ? "Online" : error ?? "..."}
           </div>
           <div className="stat-sub">
-            {health ? `Uptime: ${Math.floor(health.uptime_seconds / 3600)}h ${Math.floor((health.uptime_seconds % 3600) / 60)}m` : "Connecting..."}
+            {health ? `Uptime: ${Math.floor(health.uptime_secs / 3600)}h ${Math.floor((health.uptime_secs % 3600) / 60)}m` : "Connecting..."}
           </div>
         </div>
         <div className="stat-card glass glass-glow">
           <div className="stat-label">Managed Keys</div>
-          <div className="stat-value">{health?.total_keys ?? keys.length}</div>
+          <div className="stat-value">{keys.length}</div>
           <div className="stat-sub">Ed25519 key pairs in signer custody</div>
         </div>
         <div className="stat-card glass glass-glow">
           <div className="stat-label">Audit Events</div>
-          <div className="stat-value">{health?.total_audits ?? audits.length}</div>
+          <div className="stat-value">{audits.length}</div>
           <div className="stat-sub">Immutable append-only trail</div>
         </div>
         <div className="stat-card glass glass-glow">
@@ -257,23 +268,27 @@ export default function Security() {
                 <tr>
                   <th>Key ID</th>
                   <th>Domain</th>
-                  <th>Actor</th>
+                  <th>Created By</th>
+                  <th>Label</th>
                   <th>Public Key</th>
                   <th>Status</th>
+                  <th>Created</th>
                 </tr>
               </thead>
               <tbody>
                 {keys.map((k) => (
-                  <tr key={k.key_id}>
-                    <td className="mono" style={{ color: "var(--sov-accent-1)" }}>{k.key_id.slice(0, 8)}…</td>
+                  <tr key={k.id}>
+                    <td className="mono" style={{ color: "var(--sov-accent-1)" }}>{truncHash(k.id, 8)}</td>
                     <td><span className="pill pill-info">{k.domain}</span></td>
-                    <td className="mono">{k.actor_id?.slice(0, 20) ?? "—"}…</td>
-                    <td className="mono">{k.public_key.slice(0, 16)}…</td>
+                    <td className="mono">{truncHash(k.created_by, 10)}</td>
+                    <td style={{ fontSize: "0.85rem" }}>{k.label}</td>
+                    <td className="mono">{truncHash(k.public_key, 8)}</td>
                     <td>
                       <span className={`pill ${k.revoked ? "pill-danger" : "pill-success"}`}>
                         {k.revoked ? "REVOKED" : "ACTIVE"}
                       </span>
                     </td>
+                    <td className="mono">{timeAgo(k.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -293,28 +308,33 @@ export default function Security() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Event</th>
-                  <th>Domain</th>
+                  <th>ID</th>
                   <th>Action</th>
+                  <th>Domain</th>
+                  <th>Result</th>
+                  <th>Actor</th>
                   <th>Key</th>
+                  <th>Reason</th>
                   <th>Time</th>
                 </tr>
               </thead>
               <tbody>
                 {audits.slice(0, 20).map((a) => {
-                  const eventColor = a.event_type === "generate" ? "pill-info"
-                    : a.event_type === "sign" ? "pill-success"
-                    : a.event_type === "reject" ? "pill-danger"
+                  const eventColor = a.action === "generate" ? "pill-info"
+                    : a.action === "sign" ? "pill-success"
+                    : a.action === "sign_rejected" ? "pill-danger"
                     : "pill-warning";
+                  const resultColor = a.result === "success" ? "pill-success" : "pill-danger";
                   return (
                     <tr key={a.id}>
-                      <td style={{ color: "var(--sov-text-faint)" }}>{a.id}</td>
-                      <td><span className={`pill ${eventColor}`}>{a.event_type}</span></td>
+                      <td className="mono" style={{ color: "var(--sov-text-faint)", fontSize: "0.75rem" }}>{truncHash(a.id, 6)}</td>
+                      <td><span className={`pill ${eventColor}`}>{a.action}</span></td>
                       <td className="mono">{a.domain}</td>
-                      <td className="mono">{a.action ?? "—"}</td>
-                      <td className="mono" style={{ color: "var(--sov-accent-1)" }}>{a.key_id.slice(0, 8)}…</td>
-                      <td className="mono">{new Date(a.timestamp).toLocaleTimeString()}</td>
+                      <td><span className={`pill ${resultColor}`}>{a.result}</span></td>
+                      <td className="mono" style={{ fontSize: "0.8rem" }}>{truncHash(a.actor_id, 8)}</td>
+                      <td className="mono" style={{ color: "var(--sov-accent-1)", fontSize: "0.8rem" }}>{truncHash(a.key_id, 8)}</td>
+                      <td style={{ fontSize: "0.8rem", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.reason}</td>
+                      <td className="mono">{timeAgo(a.timestamp)}</td>
                     </tr>
                   );
                 })}

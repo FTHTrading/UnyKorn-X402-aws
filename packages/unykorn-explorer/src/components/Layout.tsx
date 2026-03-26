@@ -6,8 +6,10 @@ export default function Layout() {
   const [chain, setChain] = useState<ChainStatus | null>(null);
 
   useEffect(() => {
-    setChain(getChainStatus());
-    const t = setInterval(() => setChain(getChainStatus()), 6000);
+    getChainStatus().then(setChain).catch(() => {});
+    const t = setInterval(() => {
+      getChainStatus().then(setChain).catch(() => {});
+    }, 6000);
     return () => clearInterval(t);
   }, []);
 
@@ -23,13 +25,13 @@ export default function Layout() {
         {chain && (
           <div className="ex-chain-badge">
             <span className="ex-chain-dot" />
-            Chain {chain.chainId} · Block #{chain.blockHeight.toLocaleString()}
+            Chain {chain.chainId} · {chain.blockHeight} Ledger Entries · {chain.synced ? "Live" : "Offline"}
           </div>
         )}
 
         <nav className="ex-nav">
           <NavLink to="/" end>Dashboard</NavLink>
-          <NavLink to="/blocks">Blocks</NavLink>
+          <NavLink to="/blocks">Ledger</NavLink>
           <NavLink to="/transactions">Transactions</NavLink>
           <NavLink to="/x402">x402</NavLink>
           <NavLink to="/agents">A2A Agents</NavLink>

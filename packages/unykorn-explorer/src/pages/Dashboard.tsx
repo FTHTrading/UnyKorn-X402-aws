@@ -8,6 +8,10 @@ import {
   getGatewayHealth,
   getExplorerStats,
   getRevenueFeed,
+  getRealAgents,
+  getTreasury,
+  getSignerHealth,
+  getLedgerEntries,
   CHAIN,
   PREMIUM_ROUTES,
   GATEWAY_URL,
@@ -19,6 +23,9 @@ import {
   type FacilitatorHealth,
   type GatewayHealth,
   type ExplorerStats,
+  type RealAgent,
+  type TreasuryState,
+  type LedgerEntry,
 } from "../api";
 
 export default function Dashboard() {
@@ -29,22 +36,34 @@ export default function Dashboard() {
   const [gHealth, setGHealth] = useState<GatewayHealth | null>(null);
   const [stats, setStats] = useState<ExplorerStats | null>(null);
   const [revenueFeed, setRevenueFeed] = useState<any[]>([]);
+  const [agents, setAgents] = useState<RealAgent[]>([]);
+  const [treasury, setTreasury] = useState<TreasuryState | null>(null);
+  const [signerHealth, setSignerHealth] = useState<any>(null);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
 
   useEffect(() => {
-    setChain(getChainStatus());
-    setBlocks(getRecentBlocks(6));
-    setTxs(getRecentTransactions(8));
+    // All data is real — fetched from live services
+    getChainStatus().then(setChain).catch(() => {});
+    getRecentBlocks(6).then(setBlocks).catch(() => {});
+    getRecentTransactions(8).then(setTxs).catch(() => {});
     getFacilitatorHealth().then(setFHealth).catch(() => {});
     getGatewayHealth().then(setGHealth).catch(() => {});
     getExplorerStats().then(setStats).catch(() => {});
     getRevenueFeed().then(setRevenueFeed).catch(() => {});
+    getRealAgents().then(setAgents).catch(() => {});
+    getTreasury().then(setTreasury).catch(() => {});
+    getSignerHealth().then(setSignerHealth).catch(() => {});
+    getLedgerEntries(10).then(setLedgerEntries).catch(() => {});
 
     const t = setInterval(() => {
-      setChain(getChainStatus());
-      setBlocks(getRecentBlocks(6));
-      setTxs(getRecentTransactions(8));
+      getChainStatus().then(setChain).catch(() => {});
+      getRecentBlocks(6).then(setBlocks).catch(() => {});
+      getRecentTransactions(8).then(setTxs).catch(() => {});
       getExplorerStats().then(setStats).catch(() => {});
       getRevenueFeed().then(setRevenueFeed).catch(() => {});
+      getRealAgents().then(setAgents).catch(() => {});
+      getTreasury().then(setTreasury).catch(() => {});
+      getLedgerEntries(10).then(setLedgerEntries).catch(() => {});
     }, 6000);
     return () => clearInterval(t);
   }, []);
@@ -96,19 +115,22 @@ export default function Dashboard() {
       {/* ── Stats Grid ── */}
       <div className="stat-grid">
         <div className="stat-card glass glass-glow">
-          <div className="stat-label">Block Height</div>
-          <div className="stat-value">{chain?.blockHeight.toLocaleString() ?? "—"}</div>
-          <div className="stat-sub">~6s block time · Chain {CHAIN.id}</div>
+          <div className="stat-label">Ledger Entries</div>
+          <div className="stat-value">{chain?.blockHeight ?? "—"}</div>
+          <div className="stat-sub">Real double-entry records · Chain {CHAIN.id}</div>
         </div>
         <div className="stat-card glass glass-glow">
           <div className="stat-label">Services</div>
           <div className="stat-value">
-            {fHealth ? "6" : "..."} / 6
+            {[fHealth, gHealth, signerHealth, chain?.synced].filter(Boolean).length + (treasury ? 1 : 0) + (agents.length > 0 ? 1 : 0)} / 6
           </div>
           <div className="stat-sub">
-            Facilitator {fHealth?.db === "connected" ? "✓" : "?"} ·
-            Gateway {gHealth ? "✓" : "?"} ·
-            Signer ✓ · Ledger ✓ · Treasury ✓ · Guardian ✓
+            Facilitator {fHealth?.db === "connected" ? "✓" : "✗"} ·
+            Gateway {gHealth ? "✓" : "✗"} ·
+            Signer {signerHealth ? "✓" : "✗"} ·
+            Ledger {chain?.synced ? "✓" : "✗"} ·
+            Treasury {treasury ? "✓" : "✗"} ·
+            Agents {agents.length > 0 ? "✓" : "✗"}
           </div>
         </div>
         <div className="stat-card glass glass-glow">
@@ -119,21 +141,22 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="stat-card glass glass-glow">
-          <div className="stat-label">Revenue (UNY)</div>
-          <div className="stat-value">{totalRevenue.toFixed(4)}</div>
+          <div className="stat-label">Treasury (UNY)</div>
+          <div className="stat-value">{treasury ? Number(treasury.engine.totalGenesisSupply).toLocaleString() : "—"}</div>
           <div className="stat-sub">
-            {uniquePayers} payers · {totalReceipts} receipts
+            Operating: {treasury ? Number(treasury.engine.totalOperating).toLocaleString() : "0"} ·
+            Balanced: {treasury?.engine.balanced ? "✓" : "—"}
           </div>
         </div>
         <div className="stat-card glass glass-glow">
-          <div className="stat-label">A2A Agents</div>
-          <div className="stat-value">12</div>
-          <div className="stat-sub">3 planes · Hub & spoke + JSON-RPC</div>
+          <div className="stat-label">Live Agents</div>
+          <div className="stat-value">{agents.length}</div>
+          <div className="stat-sub">Real registered agents in DB · {agents.filter(a => a.status === "active").length} active</div>
         </div>
         <div className="stat-card glass glass-glow">
-          <div className="stat-label">Settlement Rails</div>
-          <div className="stat-value">{CHAIN.rails.length}</div>
-          <div className="stat-sub">{CHAIN.rails.join(" · ")}</div>
+          <div className="stat-label">Signer Keys</div>
+          <div className="stat-value">{signerHealth?.status === "healthy" ? "✓" : "—"}</div>
+          <div className="stat-sub">Ed25519 · Uptime: {signerHealth ? Math.floor(signerHealth.uptime_secs / 60) + "m" : "—"}</div>
         </div>
       </div>
 
@@ -171,7 +194,7 @@ export default function Dashboard() {
           <div style={{ padding: "var(--sov-space-md) var(--sov-space-lg)", borderBottom: "1px solid var(--sov-border)" }}>
             <div className="section-header" style={{ margin: 0 }}>
               <h3 className="section-title" style={{ fontSize: "var(--sov-text-md)" }}>
-                Recent <span className="accent">Blocks</span>
+                Recent <span className="accent">Ledger Entries</span>
               </h3>
               <Link to="/blocks" className="section-badge">View All →</Link>
             </div>
@@ -179,9 +202,9 @@ export default function Dashboard() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Height</th>
-                <th>Hash</th>
-                <th>Txs</th>
+                <th>Seq</th>
+                <th>Entry Hash</th>
+                <th>Amount (UNY)</th>
                 <th>Time</th>
               </tr>
             </thead>
@@ -189,11 +212,11 @@ export default function Dashboard() {
               {blocks.map((b) => (
                 <tr key={b.height}>
                   <td style={{ fontWeight: 600, color: "var(--sov-accent-1)" }}>
-                    #{b.height.toLocaleString()}
+                    #{b.height}
                   </td>
                   <td className="mono">{truncHash(b.hash, 6)}</td>
                   <td>
-                    {b.txCount}
+                    {b.gasUsed}
                     {b.anchorCount > 0 && (
                       <span className="pill pill-purple" style={{ marginLeft: 6 }}>⚓</span>
                     )}

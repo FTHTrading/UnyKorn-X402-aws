@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { GATEWAY_URL } from "../api";
+import { useState, useEffect } from "react";
+import { GATEWAY_URL, getRealAgents, getSignerKeys, truncHash, timeAgo, type RealAgent, type SignerKey } from "../api";
 
 // ── Full A2A Agent Catalog (from fth-x402-a2a build) ──────
 
@@ -293,8 +293,19 @@ const VSCODE_INTEGRATION = [
 
 export default function Agents() {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"agents" | "discovery" | "vscode">("agents");
+  const [activeTab, setActiveTab] = useState<"live" | "agents" | "discovery" | "vscode">("live");
   const [cardJson, setCardJson] = useState<string | null>(null);
+  const [liveAgents, setLiveAgents] = useState<RealAgent[]>([]);
+  const [signerKeys, setSignerKeys] = useState<SignerKey[]>([]);
+
+  useEffect(() => {
+    getRealAgents().then(setLiveAgents).catch(() => {});
+    getSignerKeys().then(setSignerKeys).catch(() => {});
+    const t = setInterval(() => {
+      getRealAgents().then(setLiveAgents).catch(() => {});
+    }, 10000);
+    return () => clearInterval(t);
+  }, []);
 
   const grouped = PLANE_ORDER.map((id) => ({
     id,
@@ -349,19 +360,112 @@ export default function Agents() {
 
       {/* ── Tab Navigation ── */}
       <div style={{ display: "flex", gap: 8, marginBottom: "var(--sov-space-lg)" }}>
-        {(["agents", "discovery", "vscode"] as const).map((tab) => (
+        {(["live", "agents", "discovery", "vscode"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`pill ${activeTab === tab ? "pill-info" : ""}`}
             style={{ cursor: "pointer", padding: "0.5rem 1.25rem", fontSize: "0.9rem", border: activeTab === tab ? undefined : "1px solid rgba(255,255,255,0.1)", background: activeTab === tab ? undefined : "transparent" }}
           >
-            {tab === "agents" ? "12 Agents" : tab === "discovery" ? "Discovery & JSON-RPC" : "VS Code & AI"}
+            {tab === "live" ? `Live Agents (${liveAgents.length})` : tab === "agents" ? "12 A2A Catalog" : tab === "discovery" ? "Discovery & JSON-RPC" : "VS Code & AI"}
           </button>
         ))}
       </div>
 
-      {/* ── Agents Tab ── */}
+      {/* ── Live Agents Tab (REAL from DB) ── */}
+      {activeTab === "live" && (
+        <>
+          <div className="section-header">
+            <h2 className="section-title">Live <span className="accent">Registered Agents</span></h2>
+            <span className="section-badge">Real agents from Agent Gateway DB</span>
+          </div>
+
+          <div className="stat-grid" style={{ marginBottom: "var(--sov-space-lg)" }}>
+            <div className="stat-card glass glass-glow"><div className="stat-label">Registered</div><div className="stat-value">{liveAgents.length}</div></div>
+            <div className="stat-card glass glass-glow"><div className="stat-label">Active</div><div className="stat-value" style={{ color: "#22c55e" }}>{liveAgents.filter(a => a.status === "active").length}</div></div>
+            <div className="stat-card glass glass-glow"><div className="stat-label">Signer Keys</div><div className="stat-value" style={{ color: "#a855f7" }}>{signerKeys.length}</div></div>
+            <div className="stat-card glass glass-glow"><div className="stat-label">Source</div><div className="stat-value" style={{ fontSize: "0.9rem" }}>PostgreSQL</div></div>
+          </div>
+
+          {liveAgents.length === 0 ? (
+            <div className="glass" style={{ padding: "2rem", textAlign: "center", color: "var(--sov-text-faint)" }}>
+              No agents registered yet — register via <code>POST /agents/register</code> on the Agent Gateway (port 4010)
+            </div>
+          ) : (
+            <div className="glass" style={{ marginBottom: "var(--sov-space-xl)" }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Agent ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Tier</th>
+                    <th>Status</th>
+                    <th>Public Key</th>
+                    <th>Daily Limit</th>
+                    <th>Per-Task</th>
+                    <th>Registered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {liveAgents.map((a) => (
+                    <tr key={a.id}>
+                      <td className="mono" style={{ color: "var(--sov-accent-1)", fontSize: "0.8rem" }}>{truncHash(a.id, 8)}</td>
+                      <td style={{ fontWeight: 600 }}>{a.name}</td>
+                      <td><span className="pill pill-info">{a.role}</span></td>
+                      <td><span className="pill pill-purple">{a.tier}</span></td>
+                      <td><span className={`pill ${a.status === "active" ? "pill-success" : "pill-warning"}`}>{a.status}</span></td>
+                      <td className="mono" style={{ fontSize: "0.75rem" }}>{truncHash(a.publicKey, 8)}</td>
+                      <td style={{ fontWeight: 600 }}>{Number(a.spendLimitDaily).toLocaleString()} UNY</td>
+                      <td>{Number(a.spendLimitPerTask).toLocaleString()} UNY</td>
+                      <td className="mono">{timeAgo(a.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {signerKeys.length > 0 && (
+            <>
+              <div className="section-header">
+                <h2 className="section-title">Managed <span className="accent">Signer Keys</span></h2>
+                <span className="section-badge">From Rust Signer · Ed25519</span>
+              </div>
+              <div className="glass" style={{ marginBottom: "var(--sov-space-xl)" }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Key ID</th>
+                      <th>Domain</th>
+                      <th>Public Key</th>
+                      <th>Label</th>
+                      <th>Created By</th>
+                      <th>Revoked</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {signerKeys.map((k) => (
+                      <tr key={k.id}>
+                        <td className="mono" style={{ color: "var(--sov-accent-1)", fontSize: "0.8rem" }}>{truncHash(k.id, 8)}</td>
+                        <td><span className="pill pill-purple">{k.domain}</span></td>
+                        <td className="mono" style={{ fontSize: "0.75rem" }}>{truncHash(k.public_key, 8)}</td>
+                        <td style={{ fontSize: "0.85rem" }}>{k.label}</td>
+                        <td className="mono" style={{ fontSize: "0.8rem" }}>{truncHash(k.created_by, 10)}</td>
+                        <td><span className={`pill ${k.revoked ? "pill-warning" : "pill-success"}`}>{k.revoked ? "revoked" : "active"}</span></td>
+                        <td className="mono">{timeAgo(k.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── A2A Catalog Tab (Architecture Spec) ── */}
       {activeTab === "agents" && (
         <>
           {/* Stats */}
@@ -611,14 +715,14 @@ export default function Agents() {
           </div>
           <div className="glass" style={{ padding: "var(--sov-space-lg)", marginBottom: "var(--sov-space-xl)" }}>
             <p style={{ margin: "0 0 1rem", fontSize: "0.9rem", lineHeight: 1.7, color: "rgba(255,255,255,0.65)" }}>
-              UnyKorn was built AI-first. The entire 17-package, ~29,000-line codebase was developed
+              UnyKorn was built AI-first. The entire 34+ package, ~75,000-line codebase was developed
               using GitHub Copilot inside VS Code — from Terraform infrastructure to TypeScript services
               to Rust financial engines. The A2A protocol enables <strong>AI agents to discover, negotiate,
               and pay each other</strong> — and the development tools are themselves AI-powered.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "var(--sov-space-md)" }}>
               {[
-                { label: "Copilot-Built", value: "~29K lines", desc: "TypeScript + Rust + Solidity — all AI-assisted" },
+                { label: "Copilot-Built", value: "~75K lines", desc: "TypeScript + Rust + Solidity — all AI-assisted" },
                 { label: "OpenAPI Spec", value: "Machine-Readable", desc: "Any AI tool can understand every endpoint" },
                 { label: "AI Plugin", value: "ChatGPT + Copilot", desc: "/.well-known/ai-plugin.json for LLM discovery" },
                 { label: "Agent Cards", value: "12 Published", desc: "/.well-known/agent.json on every agent" },

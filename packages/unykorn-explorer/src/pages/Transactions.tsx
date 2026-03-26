@@ -5,8 +5,10 @@ export default function Transactions() {
   const [txs, setTxs] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    setTxs(getRecentTransactions(30));
-    const t = setInterval(() => setTxs(getRecentTransactions(30)), 8000);
+    getRecentTransactions(50).then(setTxs).catch(() => {});
+    const t = setInterval(() => {
+      getRecentTransactions(50).then(setTxs).catch(() => {});
+    }, 8000);
     return () => clearInterval(t);
   }, []);
 
@@ -16,15 +18,15 @@ export default function Transactions() {
         <h2 className="section-title">
           <span className="accent">Transactions</span> — UnyKorn L1
         </h2>
-        <span className="section-badge">{txs.length} recent</span>
+        <span className="section-badge">{txs.length} recent · Live from Ledger</span>
       </div>
 
       <div className="glass">
         <table className="data-table">
           <thead>
             <tr>
-              <th>Tx Hash</th>
-              <th>Block</th>
+              <th>Entry Hash</th>
+              <th>Seq</th>
               <th>Type</th>
               <th>From</th>
               <th>To</th>
@@ -39,7 +41,7 @@ export default function Transactions() {
                 <td className="mono" style={{ color: "var(--sov-accent-1)" }}>
                   {truncHash(tx.txHash, 6)}
                 </td>
-                <td>#{tx.blockHeight.toLocaleString()}</td>
+                <td>#{tx.blockHeight}</td>
                 <td>
                   <span className={`pill ${typeClass(tx.type)}`}>{tx.type}</span>
                 </td>
@@ -56,6 +58,13 @@ export default function Transactions() {
                 <td className="mono">{timeAgo(tx.timestamp)}</td>
               </tr>
             ))}
+            {txs.length === 0 && (
+              <tr>
+                <td colSpan={8} style={{ textAlign: "center", padding: "2rem", color: "var(--sov-text-faint)" }}>
+                  No transactions yet — create ledger entries via deposit/transfer/settle
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -66,7 +75,13 @@ export default function Transactions() {
 function typeClass(type: string): string {
   switch (type) {
     case "transfer": return "pill-info";
+    case "deposit": return "pill-success";
+    case "withdraw": return "pill-warning";
     case "anchor": return "pill-purple";
+    case "settle": return "pill-purple";
+    case "escrow_lock": return "pill-warning";
+    case "escrow_release": return "pill-success";
+    case "reserve": return "pill-info";
     case "channel_open": return "pill-success";
     case "channel_close": return "pill-warning";
     case "credit_deposit": return "pill-success";
