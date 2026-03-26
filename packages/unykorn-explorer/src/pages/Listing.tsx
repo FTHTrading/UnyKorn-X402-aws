@@ -121,7 +121,7 @@ export default function Listing() {
         <div className="ex-card">
           <div className="ex-card-label">Overall Readiness</div>
           <div className="ex-card-value gradient" style={{ fontSize: "2.5rem" }}>
-            {fmt(overallScore)}%
+            {fmt(overallScore)}<span style={{ fontSize: '1.2rem', opacity: 0.6 }}>/100</span>
           </div>
           <StatusBadge status={readiness?.overallStatus ?? "—"} />
         </div>

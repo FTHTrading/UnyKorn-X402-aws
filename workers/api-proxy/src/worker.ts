@@ -127,6 +127,10 @@ async function handleRest(path: string, env: Env, origin: string): Promise<Respo
     "/explorer/revenue": "rest:facilitator:revenue",
     "/economics/overview": "rest:facilitator:economics",
     "/economics/credibility": "rest:facilitator:credibility",
+    "/economics/amm": "rest:facilitator:economics:amm",
+    "/economics/flywheel": "rest:facilitator:economics:flywheel",
+    "/economics/genesis": "rest:facilitator:economics:genesis",
+    "/economics/infrastructure": "rest:facilitator:economics:infrastructure",
     // Listing / CoinGecko / CMC
     "/listing/v1/overview": "rest:facilitator:listing:overview",
     "/listing/v1/readiness": "rest:facilitator:listing:readiness",

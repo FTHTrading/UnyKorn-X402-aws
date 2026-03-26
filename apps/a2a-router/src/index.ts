@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 
-const PORT = 4010;
+const PORT = 4011;
 const SERVICE = "@unykorn/a2a-router";
 
 const server = Fastify({ logger: true });

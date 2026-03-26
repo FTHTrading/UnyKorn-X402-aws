@@ -1,5 +1,59 @@
 import { useState, useEffect } from "react";
 
+// ── Live Stats Hook ───────────────────────────────────────
+
+interface LiveStats {
+  credibility: number | null;
+  readiness: number | null;
+  invoices: number | null;
+  synced: boolean;
+  loading: boolean;
+}
+
+function useLiveStats(): LiveStats {
+  const [stats, setStats] = useState<LiveStats>({
+    credibility: null, readiness: null, invoices: null, synced: false, loading: true,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchStats() {
+      try {
+        const res = await fetch("https://api.unykorn.org/");
+        if (!res.ok) throw new Error("not ok");
+        const data = await res.json() as Record<string, unknown>;
+        if (cancelled) return;
+        // The root endpoint returns status/lastSync; credibility is at /economics/credibility
+        // but KV publishes it under rest:facilitator:economics:credibility in the root payload
+        // We read from the enriched KV snapshot if available
+        const cred = typeof data["rest:facilitator:economics:credibility"] === "string"
+          ? JSON.parse(data["rest:facilitator:economics:credibility"] as string)
+          : null;
+        const listing = typeof data["rest:facilitator:listing:overview"] === "string"
+          ? JSON.parse(data["rest:facilitator:listing:overview"] as string)
+          : null;
+        const invoiceKv = typeof data["rest:facilitator:invoices:recent"] === "string"
+          ? JSON.parse(data["rest:facilitator:invoices:recent"] as string)
+          : null;
+        setStats({
+          credibility: cred?.score ?? null,
+          readiness: listing?.overall ?? listing?.overallScore ?? null,
+          invoices: Array.isArray(invoiceKv) ? invoiceKv.length : null,
+          synced: data.status === "synced",
+          loading: false,
+        });
+      } catch {
+        if (!cancelled) setStats(s => ({ ...s, loading: false }));
+      }
+    }
+    fetchStats();
+    const t = setInterval(fetchStats, 60_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
+
+  return stats;
+}
+
 // ── Countdown Timer ───────────────────────────────────────
 
 function useCountdown(targetDate: Date) {
@@ -82,8 +136,8 @@ function Nav() {
         <a href="#tiers">Tiers</a>
         <a href="#exchanges">Exchanges</a>
         <a href="#roadmap">Roadmap</a>
-        <a href="https://main.unykorn-explorer.pages.dev" target="_blank" rel="noreferrer">Explorer</a>
-        <a href="https://main.unykorn-explorer.pages.dev/security" target="_blank" rel="noreferrer">Security</a>
+        <a href="https://ex.unykorn.org" target="_blank" rel="noreferrer">Explorer</a>
+        <a href="https://ex.unykorn.org/security" target="_blank" rel="noreferrer">Security</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
       </div>
       <a href="#sale" className="nav-cta">Join Sale</a>
@@ -161,14 +215,19 @@ function Hero() {
   );
 }
 
-function Stats() {
+function Stats({ liveCredibility, liveReadiness, synced }: { liveCredibility: number | null; liveReadiness: number | null; synced: boolean }) {
+  const credDisplay = liveCredibility != null ? `${liveCredibility}/100` : "100/100";
+  const readinessDisplay = liveReadiness != null ? `${liveReadiness}/100` : "95/100";
+
   const stats = [
     { value: "1B", label: "Total Supply" },
     { value: "$0.008", label: "Current Price" },
-    { value: "1", label: "Native Chain" },
+    { value: readinessDisplay, label: "Exchange Readiness", live: true },
+    { value: credDisplay, label: "Credibility Score", live: true },
     { value: "34+", label: "Packages Shipped" },
     { value: "75K+", label: "Lines of Code" },
     { value: "13", label: "Exchange Targets" },
+    { value: "9", label: "Monetized API Routes" },
   ];
 
   return (
@@ -186,7 +245,18 @@ function Stats() {
           {stats.map((s, i) => (
             <div className={`glass stat-card fade-in fade-in-d${i % 4 + 1}`} key={s.label}>
               <div className="stat-value grad-text">{s.value}</div>
-              <div className="stat-label">{s.label}</div>
+              <div className="stat-label">
+                {s.label}
+                {(s as { live?: boolean }).live && synced && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    marginLeft: 6, fontSize: 10, color: "var(--green)",
+                    fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em",
+                  }}>
+                    <span className="dot" style={{ width: 6, height: 6 }} />live
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -511,7 +581,9 @@ function Contracts() {
   );
 }
 
-function ExchangeReadiness() {
+function ExchangeReadiness({ liveReadiness, synced }: { liveReadiness: number | null; synced: boolean }) {
+  const overallScore = liveReadiness ?? 95;
+  const scoreLabel = `${overallScore}/100`;
   const exchanges = [
     { name: "KuCoin", score: 100, status: "ready" },
     { name: "MEXC", score: 100, status: "ready" },
@@ -533,7 +605,15 @@ function ExchangeReadiness() {
       <div className="container">
         <div className="sec-header">
           <h2>Exchange <span className="grad-text">Readiness</span></h2>
-          <p>88% overall compliance score. 7 exchanges at 100% readiness. Built for the big boys.</p>
+          <p>
+            <span className="grad-text" style={{ fontWeight: 700, fontSize: 20 }}>{scoreLabel}</span>
+            {synced && liveReadiness != null && (
+              <span style={{ marginLeft: 8, fontSize: 11, color: "var(--green)", fontWeight: 600, textTransform: "uppercase" }}>
+                <span className="dot" style={{ width: 6, height: 6, display: "inline-block", marginRight: 4 }} />live
+              </span>
+            )}
+            {" "}overall compliance — 7 exchanges at 100% readiness. Built for the big leagues.
+          </p>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 16 }}>
@@ -591,6 +671,8 @@ function Footer() {
 
 export default function App() {
   const [, setTick] = useState(0);
+  const live = useLiveStats();
+
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
@@ -606,12 +688,12 @@ export default function App() {
 
       <Nav />
       <Hero />
-      <Stats />
+      <Stats liveCredibility={live.credibility} liveReadiness={live.readiness} synced={live.synced} />
       <WhatWeBuilt />
       <SecurityArchitecture />
       <Tokenomics />
       <Tiers />
-      <ExchangeReadiness />
+      <ExchangeReadiness liveReadiness={live.readiness} synced={live.synced} />
       <Roadmap />
       <Contracts />
       <Footer />

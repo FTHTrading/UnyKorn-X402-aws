@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 
-const PORT = 4050;
+const PORT = 4051;
 const SERVICE = "@unykorn/ops-console";
 
 const server = Fastify({ logger: true });

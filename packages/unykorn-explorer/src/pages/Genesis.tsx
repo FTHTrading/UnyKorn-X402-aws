@@ -415,6 +415,33 @@ export default function Genesis() {
           </a>
         </div>
       </div>
+
+      {/* ── Ecosystem Links ── */}
+      <div className="glass" style={{ padding: "var(--sov-space-xl)", marginBottom: "var(--sov-space-xl)" }}>
+        <h2 style={{ margin: "0 0 1rem", fontSize: "1.3rem" }}>
+          <span className="gradient">Ecosystem</span>
+        </h2>
+        <p style={{ margin: "0 0 1.5rem", color: "rgba(255,255,255,0.6)", fontSize: "0.9rem" }}>
+          UnyKorn is one of three interconnected FTH protocols. Together they form a complete AI-native financial infrastructure stack.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
+          {[
+            { name: "UnyKorn x402", desc: "AI-native payment protocol. HTTP 402 machine payments, agent-to-agent commerce, UNY token.", link: "https://github.com/FTHTrading/UnyKorn-X402-aws", badge: "This Project" },
+            { name: "USDF Stablecoin", desc: "Multi-chain USD stablecoin. ERC-20 + XRPL + Stellar. Powers the UNY/USDF AMM pair.", link: "https://github.com/FTHTrading/USDF", badge: "Stablecoin Layer" },
+            { name: "Genesis World", desc: "Trinity consensus kernel, sentience protocol, 15 soul-bound NFTs, AI mesh infrastructure.", link: "https://github.com/FTHTrading/genesis-world", badge: "Consensus Layer" },
+          ].map((eco) => (
+            <a key={eco.name} href={eco.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+              <div className="glass" style={{ padding: "1rem", cursor: "pointer", transition: "border-color 0.2s", borderColor: "rgba(168,85,247,0.3)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{eco.name}</span>
+                  <span style={{ fontSize: "0.7rem", padding: "0.2rem 0.6rem", background: "rgba(168,85,247,0.15)", borderRadius: "0.5rem", color: "var(--sov-accent)" }}>{eco.badge}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: "0.82rem", color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>{eco.desc}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
     </>
   );
 }

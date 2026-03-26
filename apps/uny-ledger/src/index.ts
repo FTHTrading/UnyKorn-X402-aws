@@ -1649,7 +1649,8 @@ async function publishSync(): Promise<void> {
     };
 
     const [facHealth, facStats, facInvoices, facReceipts, facRoots, facNamespaces, facRevenue, facEcon,
-           facCredibility, facListingOverview, facListingReadiness, facListingPairs, facListingTickers,
+           facCredibility, facEconAmm, facEconFlywheel, facEconGenesis, facEconInfra,
+           facListingOverview, facListingReadiness, facListingPairs, facListingTickers,
            facListingSummary, facListingAssets, facListingAssetInfo, facListingContracts, facListingPor,
            gwHealth, gwAgents, gwOrgs,
            sigHealth, sigKeys, sigAudit] = await Promise.all([
@@ -1662,6 +1663,10 @@ async function publishSync(): Promise<void> {
       safeFetch("http://localhost:3100/explorer/revenue?limit=20"),
       safeFetch("http://localhost:3100/economics/overview"),
       safeFetch("http://localhost:3100/economics/credibility"),
+      safeFetch("http://localhost:3100/economics/amm"),
+      safeFetch("http://localhost:3100/economics/flywheel"),
+      safeFetch("http://localhost:3100/economics/genesis"),
+      safeFetch("http://localhost:3100/economics/infrastructure"),
       safeFetch("http://localhost:3100/listing/v1/overview"),
       safeFetch("http://localhost:3100/listing/v1/readiness"),
       safeFetch("http://localhost:3100/listing/v1/pairs"),
@@ -1709,6 +1714,10 @@ async function publishSync(): Promise<void> {
     if (facRevenue) payload["rest:facilitator:revenue"] = facRevenue;
     if (facEcon) payload["rest:facilitator:economics"] = facEcon;
     if (facCredibility) payload["rest:facilitator:credibility"] = facCredibility;
+    if (facEconAmm) payload["rest:facilitator:economics:amm"] = facEconAmm;
+    if (facEconFlywheel) payload["rest:facilitator:economics:flywheel"] = facEconFlywheel;
+    if (facEconGenesis) payload["rest:facilitator:economics:genesis"] = facEconGenesis;
+    if (facEconInfra) payload["rest:facilitator:economics:infrastructure"] = facEconInfra;
 
     // Listing data (if available)
     if (facListingOverview) payload["rest:facilitator:listing:overview"] = facListingOverview;
