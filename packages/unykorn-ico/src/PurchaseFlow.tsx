@@ -57,6 +57,15 @@ function makeProofPacket(order: SaleOrder, allocation: AllocationRecord | null) 
   };
 }
 
+function getExpiryProgress(order: SaleOrder): number {
+  const created = new Date(order.createdAt).getTime();
+  const expires = new Date(order.expiresAt).getTime();
+  const now = Date.now();
+  if (expires <= created) return 100;
+  const ratio = ((now - created) / (expires - created)) * 100;
+  return Math.max(0, Math.min(100, ratio));
+}
+
 export default function PurchaseFlow() {
   const [flow, setFlow] = useState<FlowState>({ config: null, loading: true, error: null });
   const [form, setForm] = useState<CreateOrderInput>(DEFAULT_FORM);
@@ -137,6 +146,7 @@ export default function PurchaseFlow() {
   const selectedTier = useMemo<SaleTier | undefined>(() => tiers.find((item) => item.id === form.tierId), [tiers, form.tierId]);
   const selectedMethod = useMemo<PaymentMethod | undefined>(() => methods.find((item) => item.id === form.paymentMethodId), [methods, form.paymentMethodId]);
   const activeMethod = useMemo<PaymentMethod | undefined>(() => methods.find((item) => item.id === order?.paymentMethodId) ?? selectedMethod, [methods, order?.paymentMethodId, selectedMethod]);
+  const txHashValid = useMemo(() => txHash.trim().length === 0 || isTxHash(txHash), [txHash]);
   const preview = useMemo(() => {
     if (!selectedTier) return null;
     const base = form.amountUsd / selectedTier.priceUsd;
@@ -224,6 +234,33 @@ export default function PurchaseFlow() {
     link.remove();
     URL.revokeObjectURL(url);
     setCopyMessage("Proof packet downloaded");
+  }
+
+  function downloadPaymentInstructions() {
+    if (!order) return;
+    const content = [
+      "UnyKorn ICO Payment Instructions",
+      `Order ID: ${order.orderId}`,
+      `Invoice ID: ${order.invoiceId}`,
+      `Tier: ${order.tierLabel}`,
+      `Amount Due: ${order.amountUsd} ${order.settlementAsset}`,
+      `Receiver: ${order.receiver}`,
+      `Buyer Wallet: ${order.buyerWallet}`,
+      `Created At: ${order.createdAt}`,
+      `Expires At: ${order.expiresAt}`,
+      `Allocation On Success: ${order.totalUny} UNY`,
+    ].join("\n");
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${order.orderId}-payment-instructions.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setCopyMessage("Payment instructions downloaded");
   }
 
   async function submitOrder() {
@@ -409,15 +446,51 @@ export default function PurchaseFlow() {
                     <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Order ID", order.orderId)}>Copy Order ID</button>
                     <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Invoice ID", order.invoiceId)}>Copy Invoice ID</button>
                     <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Treasury Address", order.receiver)}>Copy Treasury</button>
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Amount", `${order.amountUsd} ${order.settlementAsset}`)}>Copy Amount</button>
                     <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Recovery Link", `${window.location.origin}${window.location.pathname}?orderId=${encodeURIComponent(order.orderId)}`)}>Copy Recovery Link</button>
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={downloadPaymentInstructions}>Download Instructions</button>
                     <button type="button" className="btn-outline sale-mini-btn" onClick={downloadProofPacket}>Download Proof</button>
                     <button type="button" className="btn-outline sale-mini-btn" onClick={clearSavedState}>Clear Session</button>
+                  </div>
+
+                  <div className="sale-order-health glass">
+                    <div className="sale-order-health-head">
+                      <span>Order Window</span>
+                      <strong>{order.status === "pending_payment" ? `${Math.round(100 - getExpiryProgress(order))}% remaining` : "Closed"}</strong>
+                    </div>
+                    <div className="sale-order-health-bar">
+                      <div className="sale-order-health-fill" style={{ width: `${getExpiryProgress(order)}%` }} />
+                    </div>
                   </div>
 
                   <div className="sale-steps glass">
                     <div className="sale-step"><span>1</span><p>Send the exact amount shown below from the wallet you entered.</p></div>
                     <div className="sale-step"><span>2</span><p>Wait for network confirmation, then paste the transaction hash.</p></div>
                     <div className="sale-step"><span>3</span><p>Verification issues the allocation record and stores it under your wallet.</p></div>
+                  </div>
+
+                  <div className="sale-timeline glass">
+                    <div className={`sale-timeline-item ${order.createdAt ? "is-complete" : ""}`}>
+                      <span />
+                      <div>
+                        <strong>Order Opened</strong>
+                        <p>{fmtDate(order.createdAt)}</p>
+                      </div>
+                    </div>
+                    <div className={`sale-timeline-item ${order.status !== "cancelled" ? "is-complete" : ""}`}>
+                      <span />
+                      <div>
+                        <strong>Awaiting Payment</strong>
+                        <p>{order.status === "pending_payment" ? "Waiting for transfer and tx hash submission." : "Payment window processed."}</p>
+                      </div>
+                    </div>
+                    <div className={`sale-timeline-item ${order.status === "paid" ? "is-complete" : ""}`}>
+                      <span />
+                      <div>
+                        <strong>Allocation Issued</strong>
+                        <p>{order.paidAt ? fmtDate(order.paidAt) : "Will populate after on-chain verification succeeds."}</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="sale-instructions">
@@ -441,12 +514,13 @@ export default function PurchaseFlow() {
                         <span>Transaction Hash</span>
                         <input value={txHash} onChange={(e) => setTxHash(e.target.value)} placeholder="Paste on-chain tx hash after sending funds" />
                       </label>
+                      {!txHashValid && <div className="sale-error-text">Transaction hash must be a 0x-prefixed 64-byte hash.</div>}
                       {activeMethod && isTxHash(txHash) && activeMethod.explorerTxBase.includes("/tx/") && (
                         <a className="sale-explorer-link" href={`${activeMethod.explorerTxBase}${txHash.trim()}`} target="_blank" rel="noreferrer">
                           Open transaction in explorer
                         </a>
                       )}
-                      <button className="btn-primary sale-submit" onClick={submitConfirmation} disabled={confirming || !txHash.trim()}>
+                      <button className="btn-primary sale-submit" onClick={submitConfirmation} disabled={confirming || !txHash.trim() || !txHashValid}>
                         {confirming ? "Verifying Payment…" : "Verify Payment & Issue Allocation"}
                       </button>
                     </div>
