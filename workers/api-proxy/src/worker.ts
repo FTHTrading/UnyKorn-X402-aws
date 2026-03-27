@@ -9,7 +9,9 @@
  *   Explorer → GET/POST → Worker → reads KV → returns data
  */
 
-interface Env {
+import { handleIcoRequest, type IcoEnv } from "./ico";
+
+interface Env extends IcoEnv {
   STATE: KVNamespace;
   SYNC_SECRET: string;
   ALLOWED_ORIGINS: string;
@@ -209,6 +211,11 @@ export default {
     // Sync endpoint — receives state push from local services
     if (url.pathname === "/sync" && request.method === "POST") {
       return handleSync(request, env, origin);
+    }
+
+    // Public ICO sale API
+    if (url.pathname.startsWith("/ico/v1/")) {
+      return handleIcoRequest(request, url, env, (data, status = 200) => jsonResponse(data, status, origin, env));
     }
 
     // JSON-RPC endpoint

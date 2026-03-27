@@ -730,6 +730,230 @@ a { text-decoration: none; color: inherit; }
   margin: 0 auto;
 }
 
+/* ── Sale Checkout ── */
+.sale-shell {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.sale-panel {
+  padding: 28px;
+}
+
+.sale-panel-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sale-panel-head h3 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.sale-panel-head p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.sale-live-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: var(--r-full);
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sale-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sale-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sale-field-wide {
+  grid-column: 1 / -1;
+}
+
+.sale-field span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sale-field input,
+.sale-field select {
+  width: 100%;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  outline: none;
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.sale-field input:focus,
+.sale-field select:focus {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.sale-checks {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.sale-checks label {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+
+.sale-checks input {
+  margin-top: 3px;
+}
+
+.sale-preview {
+  margin: 20px 0;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sale-preview-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.sale-preview-value {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.sale-submit {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 15px;
+}
+
+.sale-error,
+.sale-error-text {
+  color: #ff8a8a;
+}
+
+.sale-error-text {
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.sale-empty {
+  padding: 32px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--r-lg);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sale-order-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.sale-order-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sale-order-meta span,
+.sale-success-grid span {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sale-status {
+  text-transform: capitalize;
+}
+
+.sale-status-pending_payment { color: var(--gold); }
+.sale-status-paid { color: var(--green); }
+.sale-status-expired { color: var(--red); }
+
+.sale-instructions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.sale-instruction-card {
+  padding: 18px;
+}
+
+.sale-instruction-amount {
+  font-size: 28px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.sale-mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  word-break: break-all;
+  color: var(--text);
+}
+
+.sale-confirm {
+  display: grid;
+  gap: 16px;
+}
+
+.sale-success {
+  margin-top: 18px;
+  padding: 22px;
+}
+
+.sale-success-title {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 16px;
+}
+
+.sale-success-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 /* ── Footer ── */
 .footer {
   padding: 48px 24px;
@@ -777,6 +1001,12 @@ a { text-decoration: none; color: inherit; }
   .hero h1 { font-size: 2.5rem; }
   .timer-grid { grid-template-columns: repeat(2, 1fr); }
   .stats-grid { grid-template-columns: 1fr 1fr; }
+  .sale-shell { grid-template-columns: 1fr; }
+  .sale-grid { grid-template-columns: 1fr; }
+  .sale-preview { grid-template-columns: 1fr 1fr; }
+  .sale-order-meta { grid-template-columns: 1fr; }
+  .sale-instructions { grid-template-columns: 1fr; }
+  .sale-success-grid { grid-template-columns: 1fr; }
   .info-grid { grid-template-columns: 1fr; }
   .tier-grid { grid-template-columns: 1fr; }
   .nav { padding: 12px 16px; }

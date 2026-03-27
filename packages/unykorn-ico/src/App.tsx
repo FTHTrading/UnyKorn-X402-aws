@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PurchaseFlow from "./PurchaseFlow";
 
 // ── Live Stats Hook ───────────────────────────────────────
 
@@ -128,7 +129,7 @@ function Nav() {
         <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, marginLeft: 4 }}>ICO</span>
       </div>
       <div className="nav-links">
-        <a href="#sale">Token Sale</a>
+        <a href="#checkout">Token Sale</a>
         <a href="#about">About</a>
         <a href="#tokenomics">Tokenomics</a>
         <a href="#tiers">Tiers</a>
@@ -138,7 +139,7 @@ function Nav() {
         <a href="https://ex.unykorn.org/security" target="_blank" rel="noreferrer">Security</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
       </div>
-      <a href="#sale" className="nav-cta">Join Sale</a>
+      <a href="#checkout" className="nav-cta">Join Sale</a>
     </nav>
   );
 }
@@ -166,7 +167,7 @@ function Hero() {
       </p>
 
       <div className="hero-actions">
-        <a href="#sale" className="btn-primary">Participate Now</a>
+        <a href="#checkout" className="btn-primary">Participate Now</a>
         <a href="#about" className="btn-outline">Learn More</a>
       </div>
 
@@ -686,6 +687,7 @@ export default function App() {
 
       <Nav />
       <Hero />
+      <PurchaseFlow />
       <Stats liveCredibility={live.credibility} liveReadiness={live.readiness} synced={live.synced} />
       <WhatWeBuilt />
       <SecurityArchitecture />

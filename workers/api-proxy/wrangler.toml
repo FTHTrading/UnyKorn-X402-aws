@@ -8,6 +8,10 @@ routes = [
 
 [vars]
 ALLOWED_ORIGINS = "https://ex.unykorn.org,https://ico.unykorn.org,https://build.unykorn-ico.pages.dev,https://unykorn.org,http://localhost:5173,http://localhost:4173"
+ICO_USDF_RECEIVER = "uny1_755098bacf6f6d9ef9d0f391a8e7c467e7db7190"
+UNYKORN_RPC_URL = "https://rpc.l1.unykorn.org"
+BASE_RPC_URL = "https://mainnet.base.org"
+BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 
 # Set the sync secret with:  npx wrangler secret put SYNC_SECRET
 # Set it to match the FTH_SERVICE_SECRET from .env
