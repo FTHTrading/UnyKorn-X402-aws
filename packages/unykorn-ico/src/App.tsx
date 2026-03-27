@@ -19,27 +19,25 @@ function useLiveStats(): LiveStats {
     let cancelled = false;
     async function fetchStats() {
       try {
-        const res = await fetch("https://api.unykorn.org/");
-        if (!res.ok) throw new Error("not ok");
-        const data = await res.json() as Record<string, unknown>;
+        const [rootRes, credRes, listingRes] = await Promise.all([
+          fetch("https://api.unykorn.org/"),
+          fetch("https://api.unykorn.org/economics/credibility"),
+          fetch("https://api.unykorn.org/listing/v1/overview"),
+        ]);
+
+        if (!rootRes.ok) throw new Error("root not ok");
+
+        const root = await rootRes.json() as { status?: string };
+        const cred = credRes.ok ? await credRes.json() as { score?: { overall?: number } } : null;
+        const listing = listingRes.ok ? await listingRes.json() as { readiness?: { overallScore?: number } } : null;
+
         if (cancelled) return;
-        // The root endpoint returns status/lastSync; credibility is at /economics/credibility
-        // but KV publishes it under rest:facilitator:economics:credibility in the root payload
-        // We read from the enriched KV snapshot if available
-        const cred = typeof data["rest:facilitator:economics:credibility"] === "string"
-          ? JSON.parse(data["rest:facilitator:economics:credibility"] as string)
-          : null;
-        const listing = typeof data["rest:facilitator:listing:overview"] === "string"
-          ? JSON.parse(data["rest:facilitator:listing:overview"] as string)
-          : null;
-        const invoiceKv = typeof data["rest:facilitator:invoices:recent"] === "string"
-          ? JSON.parse(data["rest:facilitator:invoices:recent"] as string)
-          : null;
+
         setStats({
-          credibility: cred?.score ?? null,
-          readiness: listing?.overall ?? listing?.overallScore ?? null,
-          invoices: Array.isArray(invoiceKv) ? invoiceKv.length : null,
-          synced: data.status === "synced",
+          credibility: cred?.score?.overall ?? null,
+          readiness: listing?.readiness?.overallScore ?? null,
+          invoices: null,
+          synced: root.status === "synced",
           loading: false,
         });
       } catch {

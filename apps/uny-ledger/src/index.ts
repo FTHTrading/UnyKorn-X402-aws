@@ -1754,10 +1754,10 @@ async function publishSync(): Promise<void> {
 
 function startSyncPublisher(): void {
   if (syncTimer || !SYNC_URL) return;
-  server.log.info(`[SYNC] State publisher started — syncing to ${SYNC_URL} every 15s`);
+  server.log.info(`[SYNC] State publisher started — syncing to ${SYNC_URL} every 5m`);
   syncTimer = setInterval(async () => {
     try { await publishSync(); } catch (e) { server.log.error(`[SYNC] Publish error: ${e}`); }
-  }, 15000);
+  }, 300000);
   // Initial sync after 5s
   setTimeout(() => publishSync().catch(() => {}), 5000);
 }

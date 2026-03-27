@@ -47,15 +47,25 @@ async function handleSync(request: Request, env: Env, origin: string): Promise<R
     const body = await request.json() as Record<string, unknown>;
     const keys = Object.keys(body);
 
-    // Store each key separately for granular reads
-    for (const key of keys) {
-      await env.STATE.put(key, JSON.stringify(body[key]), { expirationTtl: 86400 }); // 24h TTL
-    }
+    // Store one full snapshot to stay within free-tier KV write limits.
+    await env.STATE.put("_snapshot", JSON.stringify(body), { expirationTtl: 86400 });
     await env.STATE.put("_lastSync", new Date().toISOString(), { expirationTtl: 86400 });
 
     return jsonResponse({ ok: true, keys: keys.length, timestamp: new Date().toISOString() }, 200, origin, env);
   } catch (e: any) {
     return jsonResponse({ error: e.message }, 400, origin, env);
+  }
+}
+
+async function getSnapshotValue(env: Env, key: string): Promise<unknown | null> {
+  const snapshot = await env.STATE.get("_snapshot");
+  if (!snapshot) return null;
+
+  try {
+    const parsed = JSON.parse(snapshot) as Record<string, unknown>;
+    return parsed[key] ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -96,10 +106,15 @@ async function handleRpc(request: Request, env: Env, origin: string): Promise<Re
 
   const cached = await env.STATE.get(kvKey);
   if (!cached) {
-    return jsonResponse({
-      jsonrpc: "2.0", id: body.id ?? null,
-      error: { code: -32603, message: "Data not yet synced — chain node offline or sync pending" }
-    }, 200, origin, env);
+    const snapshotValue = await getSnapshotValue(env, kvKey);
+    if (snapshotValue == null) {
+      return jsonResponse({
+        jsonrpc: "2.0", id: body.id ?? null,
+        error: { code: -32603, message: "Data not yet synced — chain node offline or sync pending" }
+      }, 200, origin, env);
+    }
+
+    return jsonResponse({ jsonrpc: "2.0", id: body.id ?? null, result: snapshotValue }, 200, origin, env);
   }
 
   try {
@@ -164,7 +179,12 @@ async function handleRest(path: string, env: Env, origin: string): Promise<Respo
 
   const cached = await env.STATE.get(kvKey);
   if (!cached) {
-    return jsonResponse({ error: "Data not synced yet" }, 503, origin, env);
+    const snapshotValue = await getSnapshotValue(env, kvKey);
+    if (snapshotValue == null) {
+      return jsonResponse({ error: "Data not synced yet" }, 503, origin, env);
+    }
+
+    return jsonResponse(snapshotValue, 200, origin, env);
   }
 
   try {
