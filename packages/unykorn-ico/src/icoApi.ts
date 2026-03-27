@@ -81,7 +81,10 @@ export interface IcoConfig {
     riskDisclosure: boolean;
     whitelistMode: boolean;
     settlement: string;
+    purchaseAgreement?: string;
+    jurisdictionWarning?: string;
   };
+  blockedJurisdictions?: string[];
 }
 
 export interface CreateOrderInput {

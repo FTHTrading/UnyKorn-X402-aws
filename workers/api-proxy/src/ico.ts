@@ -138,6 +138,45 @@ const BASE_RPC_URL_DEFAULT = "https://mainnet.base.org";
 const UNYKORN_RPC_URL_DEFAULT = "https://rpc.l1.unykorn.org";
 const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
+// ── Compliance Constants ────────────────────────────────────
+
+/** OFAC / UN sanctioned countries — ISO 3166-1 alpha-2 */
+const BLOCKED_COUNTRY_CODES = new Set([
+	"KP", // North Korea
+	"IR", // Iran
+	"SY", // Syria
+	"CU", // Cuba
+	"RU", // Russia
+	"BY", // Belarus
+	"MM", // Myanmar
+	"VE", // Venezuela (partial sanctions)
+	"SD", // Sudan
+	"SO", // Somalia
+	"YE", // Yemen
+]);
+
+/** Human-readable names for blocked jurisdictions */
+const BLOCKED_JURISDICTIONS_TEXT = new Set([
+	"north korea", "dprk", "iran", "syria", "cuba", "russia",
+	"belarus", "myanmar", "burma", "venezuela", "sudan", "somalia", "yemen",
+	"crimea", "donetsk", "luhansk", "sevastopol",
+]);
+
+/** Rate-limit: max orders per IP per hour */
+const MAX_ORDERS_PER_IP_PER_HOUR = 5;
+
+/** Max pending (unpaid) orders per wallet */
+const MAX_PENDING_PER_WALLET = 3;
+
+/** Disposable / throwaway email domains (partial list) */
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+	"mailinator.com", "guerrillamail.com", "tempmail.com", "throwaway.email",
+	"yopmail.com", "sharklasers.com", "guerrillamailblock.com", "grr.la",
+	"dispostable.com", "maildrop.cc", "10minutemail.com", "trashmail.com",
+	"fakeinbox.com", "mailnesia.com", "tempr.email", "discard.email",
+	"temp-mail.org", "getnada.com", "mohmal.com", "emailondeck.com",
+]);
+
 const TIERS: IcoTier[] = [
 	{ id: "seed", label: "Seed", priceUsd: 0.005, bonusPct: 60, minUsd: 100, maxUsd: 25_000, live: true, allocation: "50,000,000 UNY" },
 	{ id: "private", label: "Private Sale", priceUsd: 0.008, bonusPct: 30, minUsd: 500, maxUsd: 100_000, live: false, allocation: "80,000,000 UNY" },
@@ -152,15 +191,25 @@ export async function handleIcoRequest(
 ): Promise<Response> {
 	const methods = getPaymentMethods(env);
 
+	// ── Geo-block via Cloudflare CF-IPCountry header ────────
+	const cfCountry = (request.headers.get("CF-IPCountry") ?? "").toUpperCase();
+	if (cfCountry && BLOCKED_COUNTRY_CODES.has(cfCountry)) {
+		await auditLog(env, "geo_block", { country: cfCountry, path: url.pathname, ip: request.headers.get("CF-Connecting-IP") ?? "unknown" });
+		return jsonResponse({ error: "This service is not available in your jurisdiction." }, 451);
+	}
+
 	if (url.pathname === "/ico/v1/config" && request.method === "GET") {
 		return jsonResponse({
 			saleEnabled: methods.length > 0,
 			tiers: TIERS,
 			paymentMethods: methods,
+			blockedJurisdictions: [...BLOCKED_COUNTRY_CODES].sort(),
 			terms: {
 				riskDisclosure: true,
 				whitelistMode: false,
 				settlement: "Direct wallet transfer only. No card processors. No custodial checkout.",
+				purchaseAgreement: "By proceeding you acknowledge this token purchase is (a) irreversible, (b) not registered under any securities act, (c) subject to a lock-up period, and (d) carries significant execution and market risk.",
+				jurisdictionWarning: "Participation is prohibited from OFAC/UN sanctioned jurisdictions. You attest you are not subject to trade sanctions and are legally permitted to acquire digital assets in your country.",
 			},
 		}, 200);
 	}
@@ -250,6 +299,38 @@ async function createOrder(
 		return jsonResponse({ error: "All sale acknowledgements must be accepted" }, 400);
 	}
 
+	// ── Compliance: Jurisdiction screening ──────────────────
+	const jurisdictionLower = body.jurisdiction.trim().toLowerCase();
+	for (const blocked of BLOCKED_JURISDICTIONS_TEXT) {
+		if (jurisdictionLower.includes(blocked)) {
+			await auditLog(env, "jurisdiction_block", { jurisdiction: body.jurisdiction, email: body.buyerEmail });
+			return jsonResponse({ error: "Participation from your declared jurisdiction is not permitted under applicable sanctions regulations." }, 451);
+		}
+	}
+
+	// ── Compliance: Disposable email rejection ──────────────
+	const emailDomain = (body.buyerEmail ?? "").trim().toLowerCase().split("@")[1];
+	if (emailDomain && DISPOSABLE_EMAIL_DOMAINS.has(emailDomain)) {
+		await auditLog(env, "disposable_email_block", { email: body.buyerEmail, domain: emailDomain });
+		return jsonResponse({ error: "Disposable or temporary email addresses are not accepted. Please use a permanent email." }, 400);
+	}
+
+	// ── Rate limiting: per-IP ───────────────────────────────
+	const clientIp = request.headers.get("CF-Connecting-IP") ?? request.headers.get("X-Real-IP") ?? "0.0.0.0";
+	const rateLimitOk = await checkRateLimit(env, clientIp);
+	if (!rateLimitOk) {
+		await auditLog(env, "rate_limit_hit", { ip: clientIp, email: body.buyerEmail });
+		return jsonResponse({ error: "Too many order requests. Please wait before trying again." }, 429);
+	}
+
+	// ── Compliance: Max pending orders per wallet ───────────
+	const normalizedWalletCheck = normalizeWallet(body.buyerWallet, method.rail);
+	const pendingCount = await countPendingOrders(env, normalizedWalletCheck);
+	if (pendingCount >= MAX_PENDING_PER_WALLET) {
+		await auditLog(env, "pending_limit_hit", { wallet: normalizedWalletCheck, count: pendingCount });
+		return jsonResponse({ error: `Maximum ${MAX_PENDING_PER_WALLET} pending orders per wallet. Complete or wait for existing orders to expire.` }, 429);
+	}
+
 	const amountUsd = Number(body.amountUsd ?? 0);
 	if (!Number.isFinite(amountUsd) || amountUsd < tier.minUsd || amountUsd > tier.maxUsd) {
 		return jsonResponse({ error: `Investment must be between ${tier.minUsd} and ${tier.maxUsd} USD` }, 400);
@@ -294,6 +375,20 @@ async function createOrder(
 
 	await env.STATE.put(orderKey(orderId), JSON.stringify(order));
 	await env.STATE.put(invoiceKey(invoiceId), JSON.stringify({ orderId }));
+	await trackWalletOrder(env, normalizedWallet, orderId);
+
+	await auditLog(env, "order_created", {
+		orderId,
+		invoiceId,
+		wallet: normalizedWallet,
+		email: body.buyerEmail?.trim().toLowerCase(),
+		jurisdiction: body.jurisdiction?.trim(),
+		amountUsd,
+		tierId: tier.id,
+		paymentMethod: method.id,
+		ip: request.headers.get("CF-Connecting-IP") ?? "unknown",
+		country: request.headers.get("CF-IPCountry") ?? "unknown",
+	});
 
 	return jsonResponse({
 		order,
@@ -402,6 +497,18 @@ async function confirmOrder(
 	await env.STATE.put(allocationKey(allocationId), JSON.stringify(allocation));
 	await env.STATE.put(txKey(txHash), orderId);
 	await addWalletAllocation(env, payer, allocationId);
+
+	await auditLog(env, "payment_confirmed", {
+		orderId,
+		allocationId,
+		receiptId,
+		wallet: payer,
+		txHash,
+		amountPaid: current.amountUsd,
+		totalUny: current.totalUny,
+		ip: request.headers.get("CF-Connecting-IP") ?? "unknown",
+		country: request.headers.get("CF-IPCountry") ?? "unknown",
+	});
 
 	return jsonResponse({ order: paidOrder, allocation }, 200);
 }
@@ -592,5 +699,65 @@ function amountMatches(invoiceAmount: string, observedValue: string, decimals: n
 		return observedUnits >= invoiceUnits;
 	} catch {
 		return false;
+	}
+}
+
+// ── Compliance: Rate Limiting ───────────────────────────────
+
+async function checkRateLimit(env: IcoEnv, ip: string): Promise<boolean> {
+	const hourBucket = Math.floor(Date.now() / 3600000);
+	const key = `ico:ratelimit:${ip}:${hourBucket}`;
+	const raw = await env.STATE.get(key);
+	const count = raw ? parseInt(raw, 10) : 0;
+	if (count >= MAX_ORDERS_PER_IP_PER_HOUR) return false;
+	await env.STATE.put(key, String(count + 1), { expirationTtl: 7200 });
+	return true;
+}
+
+// ── Compliance: Pending-Order Tracking ──────────────────────
+
+async function countPendingOrders(env: IcoEnv, wallet: string): Promise<number> {
+	const raw = await env.STATE.get(walletOrdersKey(wallet));
+	if (!raw) return 0;
+	const orderIds = JSON.parse(raw) as string[];
+	let pending = 0;
+	for (const oid of orderIds) {
+		const order = await loadOrder(env, oid);
+		if (order && withDerivedStatus(order).status === "pending_payment") pending++;
+	}
+	return pending;
+}
+
+async function trackWalletOrder(env: IcoEnv, wallet: string, orderId: string): Promise<void> {
+	const key = walletOrdersKey(wallet);
+	const raw = await env.STATE.get(key);
+	const ids = raw ? JSON.parse(raw) as string[] : [];
+	if (!ids.includes(orderId)) ids.unshift(orderId);
+	await env.STATE.put(key, JSON.stringify(ids.slice(0, 50)), { expirationTtl: 86400 * 30 });
+}
+
+function walletOrdersKey(wallet: string): string { return `ico:wallet_orders:${wallet.toLowerCase()}`; }
+
+// ── Compliance: Audit Trail ─────────────────────────────────
+
+async function auditLog(env: IcoEnv, event: string, data: Record<string, unknown>): Promise<void> {
+	try {
+		const entry = {
+			timestamp: new Date().toISOString(),
+			event,
+			...data,
+		};
+		const entryId = `ico:audit:${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+		await env.STATE.put(entryId, JSON.stringify(entry), { expirationTtl: 86400 * 365 });
+
+		// Also append to rolling log for easy retrieval
+		const logKey = `ico:audit_log:${new Date().toISOString().slice(0, 10)}`;
+		const existing = await env.STATE.get(logKey);
+		const entries = existing ? JSON.parse(existing) as unknown[] : [];
+		entries.push(entry);
+		// Keep max 500 entries per day to stay within KV limits
+		await env.STATE.put(logKey, JSON.stringify(entries.slice(-500)), { expirationTtl: 86400 * 365 });
+	} catch {
+		// Audit logging must never block the request
 	}
 }

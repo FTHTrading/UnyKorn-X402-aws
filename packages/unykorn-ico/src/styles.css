@@ -815,12 +815,44 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+/* ── Compliance Notice ── */
+
+.sale-compliance-notice {
+  margin: 20px 0 12px;
+  padding: 16px 18px;
+  border: 1px solid rgba(234, 179, 8, 0.25);
+  border-radius: 10px;
+  background: rgba(234, 179, 8, 0.04);
+}
+
+.sale-compliance-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+  margin-bottom: 10px;
+}
+
+.sale-compliance-text {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.sale-compliance-text:last-child { margin-bottom: 0; }
+
 .sale-checks {
   display: grid;
-  gap: 10px;
-  margin: 20px 0;
+  gap: 12px;
+  margin: 16px 0 20px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.6;
 }
 
 .sale-checks label {

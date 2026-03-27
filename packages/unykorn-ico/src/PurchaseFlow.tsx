@@ -66,6 +66,33 @@ function getExpiryProgress(order: SaleOrder): number {
   return Math.max(0, Math.min(100, ratio));
 }
 
+const JURISDICTION_OPTIONS = [
+  { value: "", label: "Select your jurisdiction" },
+  { value: "United States", label: "United States" },
+  { value: "United Kingdom", label: "United Kingdom" },
+  { value: "Canada", label: "Canada" },
+  { value: "Australia", label: "Australia" },
+  { value: "Singapore", label: "Singapore" },
+  { value: "Switzerland", label: "Switzerland" },
+  { value: "Germany", label: "Germany" },
+  { value: "France", label: "France" },
+  { value: "Japan", label: "Japan" },
+  { value: "South Korea", label: "South Korea" },
+  { value: "UAE", label: "United Arab Emirates" },
+  { value: "Brazil", label: "Brazil" },
+  { value: "India", label: "India" },
+  { value: "Mexico", label: "Mexico" },
+  { value: "Hong Kong", label: "Hong Kong" },
+  { value: "Netherlands", label: "Netherlands" },
+  { value: "Other", label: "Other (not a restricted jurisdiction)" },
+] as const;
+
+const BLOCKED_JURISDICTION_NAMES = new Set([
+  "north korea", "iran", "syria", "cuba", "russia",
+  "belarus", "myanmar", "burma", "venezuela", "sudan", "somalia", "yemen",
+  "crimea", "donetsk", "luhansk",
+]);
+
 export default function PurchaseFlow() {
   const [flow, setFlow] = useState<FlowState>({ config: null, loading: true, error: null });
   const [form, setForm] = useState<CreateOrderInput>(DEFAULT_FORM);
@@ -308,7 +335,7 @@ export default function PurchaseFlow() {
           <h2>Direct <span className="grad-text">Sale Checkout</span></h2>
           <p>
             Real invoice flow. Direct wallet transfer. Real payment verification. Real allocation issuance.
-            No cards. No custodial processor. No mocks.
+            No cards. No custodial processor. Fully compliant.
           </p>
         </div>
 
@@ -341,7 +368,11 @@ export default function PurchaseFlow() {
                 </label>
                 <label className="sale-field">
                   <span>Jurisdiction</span>
-                  <input value={form.jurisdiction} onChange={(e) => setForm({ ...form, jurisdiction: e.target.value })} placeholder="United States / UAE / Singapore" />
+                  <select value={form.jurisdiction} onChange={(e) => setForm({ ...form, jurisdiction: e.target.value })}>
+                    {JURISDICTION_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 </label>
                 <label className="sale-field">
                   <span>Tier</span>
@@ -365,10 +396,32 @@ export default function PurchaseFlow() {
                 </label>
               </div>
 
+              <div className="sale-compliance-notice glass">
+                <div className="sale-compliance-badge">Compliance</div>
+                <p className="sale-compliance-text">
+                  This token sale operates under a direct-settlement model with no custodial intermediary.
+                  All transactions are on-chain and irreversible. UNY tokens are not registered securities
+                  under any jurisdiction. Participation is prohibited from OFAC/UN-sanctioned jurisdictions
+                  including North Korea, Iran, Syria, Cuba, Russia, Belarus, Myanmar, Venezuela, Sudan, Somalia, and Yemen.
+                </p>
+                {flow.config?.terms?.purchaseAgreement && (
+                  <p className="sale-compliance-text"><strong>Purchase Agreement:</strong> {flow.config.terms.purchaseAgreement}</p>
+                )}
+              </div>
+
               <div className="sale-checks">
-                <label><input type="checkbox" checked={form.acceptedTerms} onChange={(e) => setForm({ ...form, acceptedTerms: e.target.checked })} /> I accept the sale terms and direct-settlement flow.</label>
-                <label><input type="checkbox" checked={form.notRestrictedPerson} onChange={(e) => setForm({ ...form, notRestrictedPerson: e.target.checked })} /> I am not a restricted / sanctioned participant.</label>
-                <label><input type="checkbox" checked={form.acknowledgedRisk} onChange={(e) => setForm({ ...form, acknowledgedRisk: e.target.checked })} /> I understand this is a crypto asset purchase with execution risk.</label>
+                <label>
+                  <input type="checkbox" checked={form.acceptedTerms} onChange={(e) => setForm({ ...form, acceptedTerms: e.target.checked })} />
+                  I have read and accept the UnyKorn Token Purchase Agreement, including the direct-settlement flow, lock-up terms, and refund policy (no refunds after on-chain confirmation).
+                </label>
+                <label>
+                  <input type="checkbox" checked={form.notRestrictedPerson} onChange={(e) => setForm({ ...form, notRestrictedPerson: e.target.checked })} />
+                  I am not a citizen, resident, or tax person of any OFAC/UN-sanctioned jurisdiction. I am not acting on behalf of any sanctioned entity or SDN-listed individual.
+                </label>
+                <label>
+                  <input type="checkbox" checked={form.acknowledgedRisk} onChange={(e) => setForm({ ...form, acknowledgedRisk: e.target.checked })} />
+                  I understand this is a purchase of digital tokens on a custom L1 blockchain. Token value may decrease to zero. I am investing only funds I can afford to lose entirely.
+                </label>
               </div>
 
               <div className="sale-inline-actions">
