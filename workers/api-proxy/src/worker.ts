@@ -10,8 +10,9 @@
  */
 
 import { handleIcoRequest, type IcoEnv } from "./ico";
+import { handleExchangeRequest, type ExchangeEnv } from "./exchange";
 
-interface Env extends IcoEnv {
+interface Env extends IcoEnv, ExchangeEnv {
   STATE: KVNamespace;
   SYNC_SECRET: string;
   ALLOWED_ORIGINS: string;
@@ -216,6 +217,11 @@ export default {
     // Public ICO sale API
     if (url.pathname.startsWith("/ico/v1/")) {
       return handleIcoRequest(request, url, env, (data, status = 200) => jsonResponse(data, status, origin, env));
+    }
+
+    // Exchange / Portfolio / Vesting / Referral API
+    if (url.pathname.startsWith("/exchange/v1/")) {
+      return handleExchangeRequest(request, url, env, (data, status = 200) => jsonResponse(data, status, origin, env));
     }
 
     // JSON-RPC endpoint

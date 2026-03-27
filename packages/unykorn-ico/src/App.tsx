@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import PurchaseFlow from "./PurchaseFlow";
+import { MarketTicker, ExchangeTerminal, PortfolioDashboard, VestingPanel, ReferralPanel, LeaderboardPanel } from "./Exchange";
 
 // ── Live Stats Hook ───────────────────────────────────────
 
@@ -130,13 +131,16 @@ function Nav() {
       </div>
       <div className="nav-links">
         <a href="#checkout">Token Sale</a>
-        <a href="#about">About</a>
+        <a href="#exchange">Exchange</a>
+        <a href="#portfolio">Portfolio</a>
+        <a href="#vesting">Vesting</a>
+        <a href="#referral">Referral</a>
         <a href="#tokenomics">Tokenomics</a>
         <a href="#tiers">Tiers</a>
-        <a href="#exchanges">Exchanges</a>
+        <a href="#exchanges">Listings</a>
+        <a href="#leaderboard">Leaderboard</a>
         <a href="#roadmap">Roadmap</a>
         <a href="https://ex.unykorn.org" target="_blank" rel="noreferrer">Explorer</a>
-        <a href="https://ex.unykorn.org/security" target="_blank" rel="noreferrer">Security</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
       </div>
       <a href="#checkout" className="nav-cta">Join Sale</a>
@@ -686,14 +690,20 @@ export default function App() {
       <div className="bg-orb-3" />
 
       <Nav />
+      <MarketTicker />
       <Hero />
       <PurchaseFlow />
+      <ExchangeTerminal />
+      <PortfolioDashboard />
+      <VestingPanel />
+      <ReferralPanel />
       <Stats liveCredibility={live.credibility} liveReadiness={live.readiness} synced={live.synced} />
       <WhatWeBuilt />
       <SecurityArchitecture />
       <Tokenomics />
       <Tiers />
       <ExchangeReadiness liveReadiness={live.readiness} synced={live.synced} />
+      <LeaderboardPanel />
       <Roadmap />
       <Contracts />
       <Footer />
