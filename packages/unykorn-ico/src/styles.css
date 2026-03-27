@@ -878,6 +878,14 @@ a { text-decoration: none; color: inherit; }
   font-size: 12px;
 }
 
+.sale-restore {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
 .sale-error,
 .sale-error-text {
   color: #ff8a8a;
@@ -898,10 +906,56 @@ a { text-decoration: none; color: inherit; }
 
 .sale-order-meta {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   padding: 18px;
   margin-bottom: 18px;
+}
+
+.sale-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.sale-mini-btn {
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.sale-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.sale-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.sale-step span {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--blue);
+  flex: 0 0 auto;
+}
+
+.sale-step p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .sale-order-meta div {
@@ -953,6 +1007,16 @@ a { text-decoration: none; color: inherit; }
 .sale-confirm {
   display: grid;
   gap: 16px;
+}
+
+.sale-explorer-link {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sale-explorer-link:hover {
+  color: var(--blue-bright);
 }
 
 .sale-success {
@@ -1049,7 +1113,9 @@ a { text-decoration: none; color: inherit; }
   .sale-grid { grid-template-columns: 1fr; }
   .sale-preview { grid-template-columns: 1fr 1fr; }
   .sale-inline-actions { flex-direction: column; align-items: stretch; }
+  .sale-restore { grid-template-columns: 1fr; }
   .sale-order-meta { grid-template-columns: 1fr; }
+  .sale-steps { grid-template-columns: 1fr; }
   .sale-instructions { grid-template-columns: 1fr; }
   .sale-success-grid { grid-template-columns: 1fr; }
   .sale-allocation-item { grid-template-columns: 1fr; }

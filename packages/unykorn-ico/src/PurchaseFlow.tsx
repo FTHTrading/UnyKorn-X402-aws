@@ -38,13 +38,27 @@ function fmtDate(value: string): string {
   return new Date(value).toLocaleString();
 }
 
+function getTimeRemaining(value: string): string {
+  const diff = Math.max(0, new Date(value).getTime() - Date.now());
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function isTxHash(value: string): boolean {
+  return /^0x[a-fA-F0-9]{64}$/.test(value.trim());
+}
+
 export default function PurchaseFlow() {
   const [flow, setFlow] = useState<FlowState>({ config: null, loading: true, error: null });
   const [form, setForm] = useState<CreateOrderInput>(DEFAULT_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [loadingAllocations, setLoadingAllocations] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [txHash, setTxHash] = useState("");
+  const [restoreOrderId, setRestoreOrderId] = useState("");
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [order, setOrder] = useState<SaleOrder | null>(null);
   const [allocation, setAllocation] = useState<AllocationRecord | null>(null);
   const [allocations, setAllocations] = useState<AllocationRecord[]>([]);
@@ -90,10 +104,17 @@ export default function PurchaseFlow() {
     return () => clearInterval(timer);
   }, [order]);
 
+  useEffect(() => {
+    if (!copyMessage) return;
+    const timer = window.setTimeout(() => setCopyMessage(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copyMessage]);
+
   const tiers = flow.config?.tiers ?? [];
   const methods = flow.config?.paymentMethods ?? [];
   const selectedTier = useMemo<SaleTier | undefined>(() => tiers.find((item) => item.id === form.tierId), [tiers, form.tierId]);
   const selectedMethod = useMemo<PaymentMethod | undefined>(() => methods.find((item) => item.id === form.paymentMethodId), [methods, form.paymentMethodId]);
+  const activeMethod = useMemo<PaymentMethod | undefined>(() => methods.find((item) => item.id === order?.paymentMethodId) ?? selectedMethod, [methods, order?.paymentMethodId, selectedMethod]);
   const preview = useMemo(() => {
     if (!selectedTier) return null;
     const base = form.amountUsd / selectedTier.priceUsd;
@@ -105,6 +126,14 @@ export default function PurchaseFlow() {
     };
   }, [form.amountUsd, selectedTier]);
 
+  useEffect(() => {
+    if (!selectedTier) return;
+    setForm((current) => {
+      const clamped = Math.min(selectedTier.maxUsd, Math.max(selectedTier.minUsd, current.amountUsd));
+      return clamped === current.amountUsd ? current : { ...current, amountUsd: clamped };
+    });
+  }, [selectedTier]);
+
   async function loadAllocations(wallet: string) {
     if (!wallet.trim()) return;
     setLoadingAllocations(true);
@@ -115,6 +144,35 @@ export default function PurchaseFlow() {
       setActionError(error instanceof Error ? error.message : "Failed to load allocations");
     } finally {
       setLoadingAllocations(false);
+    }
+  }
+
+  async function restoreOrder() {
+    if (!restoreOrderId.trim()) return;
+    setRestoring(true);
+    setActionError(null);
+    try {
+      const restored = await getSaleOrder(restoreOrderId.trim());
+      setOrder(restored);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(ORDER_STORAGE_KEY, restored.orderId);
+        window.localStorage.setItem(WALLET_STORAGE_KEY, restored.buyerWallet);
+      }
+      setForm((current) => ({ ...current, buyerWallet: restored.buyerWallet }));
+      await loadAllocations(restored.buyerWallet);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to restore order");
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  async function copyValue(label: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyMessage(`${label} copied`);
+    } catch {
+      setCopyMessage(`Copy ${label.toLowerCase()} manually`);
     }
   }
 
@@ -233,6 +291,16 @@ export default function PurchaseFlow() {
                 {order && <span className="sale-helper-text">Active order saved in-browser for this wallet.</span>}
               </div>
 
+              <div className="sale-restore glass">
+                <label className="sale-field sale-field-wide">
+                  <span>Restore Existing Order</span>
+                  <input value={restoreOrderId} onChange={(e) => setRestoreOrderId(e.target.value)} placeholder="Paste order ID to restore checkout state" />
+                </label>
+                <button type="button" className="btn-outline sale-secondary-btn" onClick={() => void restoreOrder()} disabled={restoring || !restoreOrderId.trim()}>
+                  {restoring ? "Restoring…" : "Restore Order"}
+                </button>
+              </div>
+
               {preview && selectedTier && selectedMethod && (
                 <div className="sale-preview glass">
                   <div>
@@ -259,6 +327,7 @@ export default function PurchaseFlow() {
               </button>
 
               {actionError && <div className="sale-error-text">{actionError}</div>}
+              {copyMessage && <div className="sale-helper-text">{copyMessage}</div>}
             </div>
 
             <div className="glass-solid sale-panel">
@@ -282,6 +351,20 @@ export default function PurchaseFlow() {
                     <div><span>Invoice</span><strong>{order.invoiceId}</strong></div>
                     <div><span>Status</span><strong className={`sale-status sale-status-${order.status}`}>{order.status.replace("_", " ")}</strong></div>
                     <div><span>Expires</span><strong>{fmtDate(order.expiresAt)}</strong></div>
+                    <div><span>Time Remaining</span><strong>{order.status === "pending_payment" ? getTimeRemaining(order.expiresAt) : "Completed"}</strong></div>
+                    <div><span>Rail</span><strong>{activeMethod?.label ?? order.settlementRail}</strong></div>
+                  </div>
+
+                  <div className="sale-action-row">
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Order ID", order.orderId)}>Copy Order ID</button>
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Invoice ID", order.invoiceId)}>Copy Invoice ID</button>
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Treasury Address", order.receiver)}>Copy Treasury</button>
+                  </div>
+
+                  <div className="sale-steps glass">
+                    <div className="sale-step"><span>1</span><p>Send the exact amount shown below from the wallet you entered.</p></div>
+                    <div className="sale-step"><span>2</span><p>Wait for network confirmation, then paste the transaction hash.</p></div>
+                    <div className="sale-step"><span>3</span><p>Verification issues the allocation record and stores it under your wallet.</p></div>
                   </div>
 
                   <div className="sale-instructions">
@@ -305,6 +388,11 @@ export default function PurchaseFlow() {
                         <span>Transaction Hash</span>
                         <input value={txHash} onChange={(e) => setTxHash(e.target.value)} placeholder="Paste on-chain tx hash after sending funds" />
                       </label>
+                      {activeMethod && isTxHash(txHash) && activeMethod.explorerTxBase.includes("/tx/") && (
+                        <a className="sale-explorer-link" href={`${activeMethod.explorerTxBase}${txHash.trim()}`} target="_blank" rel="noreferrer">
+                          Open transaction in explorer
+                        </a>
+                      )}
                       <button className="btn-primary sale-submit" onClick={submitConfirmation} disabled={confirming || !txHash.trim()}>
                         {confirming ? "Verifying Payment…" : "Verify Payment & Issue Allocation"}
                       </button>
@@ -336,6 +424,14 @@ export default function PurchaseFlow() {
                             <div>
                               <span>{item.amountPaid} {item.settlementAsset}</span>
                               <strong>{fmtDate(item.createdAt)}</strong>
+                            </div>
+                            <div>
+                              <span>Receipt</span>
+                              <strong>{item.receiptId}</strong>
+                            </div>
+                            <div>
+                              <span>Tx Hash</span>
+                              <strong className="sale-mono">{item.txHash}</strong>
                             </div>
                           </div>
                         ))}
