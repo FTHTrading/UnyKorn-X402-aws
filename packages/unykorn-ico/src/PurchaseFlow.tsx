@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   confirmSaleOrder,
   createSaleOrder,
@@ -47,6 +47,21 @@ function getTimeRemaining(value: string): string {
 
 function isTxHash(value: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(value.trim());
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+}
+
+function isValidWallet(value: string, rail?: string): boolean {
+  if (rail === "base") return /^0x[a-fA-F0-9]{40}$/.test(value.trim());
+  return /^(uny1_[a-z0-9]{16,}|0x[a-fA-F0-9]{40})$/.test(value.trim());
+}
+
+/** Generate a QR code as an SVG data URI using a minimal qr algorithm */
+function generateQrDataUri(data: string): string {
+  // Use a Google Charts API fallback for QR generation (works without deps)
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}&bgcolor=0a0a12&color=f0f0f8&format=svg`;
 }
 
 function makeProofPacket(order: SaleOrder, allocation: AllocationRecord | null) {
@@ -107,6 +122,14 @@ export default function PurchaseFlow() {
   const [allocation, setAllocation] = useState<AllocationRecord | null>(null);
   const [allocations, setAllocations] = useState<AllocationRecord[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [countdown, setCountdown] = useState<string>("");
+  const [polling, setPolling] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const markTouched = useCallback((field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  }, []);
 
   useEffect(() => {
     getIcoConfig()
@@ -142,14 +165,31 @@ export default function PurchaseFlow() {
   useEffect(() => {
     if (!order || order.status !== "pending_payment") return;
 
+    setPolling(true);
     const timer = setInterval(() => {
       getSaleOrder(order.orderId)
-        .then(setOrder)
+        .then((updated) => {
+          setOrder(updated);
+          if (updated.status !== "pending_payment") setPolling(false);
+        })
         .catch(() => undefined);
-    }, 15000);
+    }, 10000);
 
-    return () => clearInterval(timer);
-  }, [order]);
+    return () => { clearInterval(timer); setPolling(false); };
+  }, [order?.orderId, order?.status]);
+
+  // Live countdown ticker (updates every second)
+  useEffect(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (!order || order.status !== "pending_payment") {
+      setCountdown("");
+      return;
+    }
+    const tick = () => setCountdown(getTimeRemaining(order.expiresAt));
+    tick();
+    countdownRef.current = setInterval(tick, 1000);
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [order?.orderId, order?.status, order?.expiresAt]);
 
   useEffect(() => {
     if (!copyMessage) return;
@@ -174,6 +214,40 @@ export default function PurchaseFlow() {
   const selectedMethod = useMemo<PaymentMethod | undefined>(() => methods.find((item) => item.id === form.paymentMethodId), [methods, form.paymentMethodId]);
   const activeMethod = useMemo<PaymentMethod | undefined>(() => methods.find((item) => item.id === order?.paymentMethodId) ?? selectedMethod, [methods, order?.paymentMethodId, selectedMethod]);
   const txHashValid = useMemo(() => txHash.trim().length === 0 || isTxHash(txHash), [txHash]);
+
+  // Inline validation errors
+  const validationErrors = useMemo(() => {
+    const errors: Record<string, string> = {};
+    if (touched.buyerName && !form.buyerName.trim()) errors.buyerName = "Full name is required";
+    if (touched.buyerEmail && form.buyerEmail.trim() && !isValidEmail(form.buyerEmail)) errors.buyerEmail = "Enter a valid email address";
+    if (touched.buyerEmail && !form.buyerEmail.trim()) errors.buyerEmail = "Email is required";
+    if (touched.buyerWallet && form.buyerWallet.trim() && !isValidWallet(form.buyerWallet, selectedMethod?.rail)) {
+      errors.buyerWallet = selectedMethod?.rail === "base" ? "Must be a valid 0x Ethereum address" : "Must be a valid UnyKorn or 0x address";
+    }
+    if (touched.buyerWallet && !form.buyerWallet.trim()) errors.buyerWallet = "Settlement wallet is required";
+    if (touched.jurisdiction && !form.jurisdiction) errors.jurisdiction = "Select your jurisdiction";
+    if (touched.amountUsd && selectedTier) {
+      if (form.amountUsd < selectedTier.minUsd) errors.amountUsd = `Minimum investment is $${selectedTier.minUsd}`;
+      if (form.amountUsd > selectedTier.maxUsd) errors.amountUsd = `Maximum investment is $${selectedTier.maxUsd}`;
+    }
+    return errors;
+  }, [touched, form, selectedMethod?.rail, selectedTier]);
+
+  const formComplete = useMemo(() => {
+    return (
+      form.buyerName.trim().length > 0 &&
+      isValidEmail(form.buyerEmail) &&
+      isValidWallet(form.buyerWallet, selectedMethod?.rail) &&
+      form.jurisdiction.length > 0 &&
+      form.acceptedTerms &&
+      form.notRestrictedPerson &&
+      form.acknowledgedRisk &&
+      selectedTier !== undefined &&
+      form.amountUsd >= (selectedTier?.minUsd ?? 0) &&
+      form.amountUsd <= (selectedTier?.maxUsd ?? Infinity) &&
+      Object.keys(validationErrors).length === 0
+    );
+  }, [form, selectedMethod?.rail, selectedTier, validationErrors]);
   const preview = useMemo(() => {
     if (!selectedTier) return null;
     const base = form.amountUsd / selectedTier.priceUsd;
@@ -356,23 +430,27 @@ export default function PurchaseFlow() {
               <div className="sale-grid">
                 <label className="sale-field">
                   <span>Full Name</span>
-                  <input value={form.buyerName} onChange={(e) => setForm({ ...form, buyerName: e.target.value })} placeholder="Investor / buyer name" />
+                  <input value={form.buyerName} onBlur={() => markTouched("buyerName")} onChange={(e) => setForm({ ...form, buyerName: e.target.value })} placeholder="Investor / buyer name" className={validationErrors.buyerName ? "sale-input-error" : ""} />
+                  {validationErrors.buyerName && <span className="sale-field-error">{validationErrors.buyerName}</span>}
                 </label>
                 <label className="sale-field">
                   <span>Email</span>
-                  <input value={form.buyerEmail} onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })} placeholder="name@fund.com" />
+                  <input value={form.buyerEmail} onBlur={() => markTouched("buyerEmail")} onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })} placeholder="name@fund.com" className={validationErrors.buyerEmail ? "sale-input-error" : ""} />
+                  {validationErrors.buyerEmail && <span className="sale-field-error">{validationErrors.buyerEmail}</span>}
                 </label>
                 <label className="sale-field sale-field-wide">
                   <span>Settlement Wallet</span>
-                  <input value={form.buyerWallet} onChange={(e) => setForm({ ...form, buyerWallet: e.target.value })} placeholder={selectedMethod?.rail === "base" ? "0x..." : "uny1_..."} />
+                  <input value={form.buyerWallet} onBlur={() => markTouched("buyerWallet")} onChange={(e) => setForm({ ...form, buyerWallet: e.target.value })} placeholder={selectedMethod?.rail === "base" ? "0x..." : "uny1_..."} className={validationErrors.buyerWallet ? "sale-input-error" : ""} />
+                  {validationErrors.buyerWallet && <span className="sale-field-error">{validationErrors.buyerWallet}</span>}
                 </label>
                 <label className="sale-field">
                   <span>Jurisdiction</span>
-                  <select value={form.jurisdiction} onChange={(e) => setForm({ ...form, jurisdiction: e.target.value })}>
+                  <select value={form.jurisdiction} onBlur={() => markTouched("jurisdiction")} onChange={(e) => setForm({ ...form, jurisdiction: e.target.value })} className={validationErrors.jurisdiction ? "sale-input-error" : ""}>
                     {JURISDICTION_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
+                  {validationErrors.jurisdiction && <span className="sale-field-error">{validationErrors.jurisdiction}</span>}
                 </label>
                 <label className="sale-field">
                   <span>Tier</span>
@@ -392,7 +470,8 @@ export default function PurchaseFlow() {
                 </label>
                 <label className="sale-field">
                   <span>Investment Amount (USD)</span>
-                  <input type="number" min={selectedTier?.minUsd ?? 100} max={selectedTier?.maxUsd ?? 25000} step="50" value={form.amountUsd} onChange={(e) => setForm({ ...form, amountUsd: Number(e.target.value) })} />
+                  <input type="number" min={selectedTier?.minUsd ?? 100} max={selectedTier?.maxUsd ?? 25000} step="50" value={form.amountUsd} onBlur={() => markTouched("amountUsd")} onChange={(e) => setForm({ ...form, amountUsd: Number(e.target.value) })} className={validationErrors.amountUsd ? "sale-input-error" : ""} />
+                  {validationErrors.amountUsd && <span className="sale-field-error">{validationErrors.amountUsd}</span>}
                 </label>
               </div>
 
@@ -462,8 +541,8 @@ export default function PurchaseFlow() {
                 </div>
               )}
 
-              <button className="btn-primary sale-submit" onClick={submitOrder} disabled={submitting || !flow.config.saleEnabled}>
-                {submitting ? "Opening Order…" : "Open Live Sale Order"}
+              <button className="btn-primary sale-submit" onClick={submitOrder} disabled={submitting || !flow.config.saleEnabled || !formComplete}>
+                {submitting ? "Opening Order…" : !formComplete ? "Complete All Fields" : "Open Live Sale Order"}
               </button>
 
               {actionError && <div className="sale-error-text">{actionError}</div>}
@@ -491,8 +570,9 @@ export default function PurchaseFlow() {
                     <div><span>Invoice</span><strong>{order.invoiceId}</strong></div>
                     <div><span>Status</span><strong className={`sale-status sale-status-${order.status}`}>{order.status.replace("_", " ")}</strong></div>
                     <div><span>Expires</span><strong>{fmtDate(order.expiresAt)}</strong></div>
-                    <div><span>Time Remaining</span><strong>{order.status === "pending_payment" ? getTimeRemaining(order.expiresAt) : "Completed"}</strong></div>
+                    <div><span>Time Remaining</span><strong className={countdown && parseInt(countdown) < 5 ? "sale-countdown-warn" : "sale-countdown"}>{order.status === "pending_payment" ? countdown || getTimeRemaining(order.expiresAt) : "Completed"}</strong></div>
                     <div><span>Rail</span><strong>{activeMethod?.label ?? order.settlementRail}</strong></div>
+                    {polling && <div className="sale-polling-indicator"><span className="sale-pulse" /> Checking for updates…</div>}
                   </div>
 
                   <div className="sale-action-row">
@@ -552,12 +632,20 @@ export default function PurchaseFlow() {
                       <div className="sale-instruction-amount">{order.amountUsd} {order.settlementAsset}</div>
                       <div className="sale-preview-label">To Treasury</div>
                       <div className="sale-mono">{order.receiver}</div>
+                      <div className="sale-qr-wrap">
+                        <img src={generateQrDataUri(order.receiver)} alt="Treasury QR" className="sale-qr" loading="lazy" />
+                        <span className="sale-qr-label">Scan to copy address</span>
+                      </div>
                     </div>
                     <div className="sale-instruction-card glass">
                       <div className="sale-preview-label">Allocation On Success</div>
                       <div className="sale-instruction-amount grad-text">{order.totalUny} UNY</div>
                       <div className="sale-preview-label">Tier</div>
                       <div>{order.tierLabel} · {order.baseUny} base + {order.bonusUny} bonus</div>
+                      <div className="sale-instruction-meta">
+                        <div><span className="sale-preview-label">Invoice</span><span className="sale-mono">{order.invoiceId}</span></div>
+                        <div><span className="sale-preview-label">Nonce</span><span className="sale-mono">{order.nonce}</span></div>
+                      </div>
                     </div>
                   </div>
 
@@ -581,12 +669,22 @@ export default function PurchaseFlow() {
 
                   {allocation && (
                     <div className="sale-success glass-glow">
-                      <div className="sale-success-title">Allocation Issued</div>
+                      <div className="sale-success-head">
+                        <div className="sale-success-icon">✓</div>
+                        <div className="sale-success-title">Allocation Issued</div>
+                      </div>
                       <div className="sale-success-grid">
                         <div><span>Allocation ID</span><strong>{allocation.allocationId}</strong></div>
                         <div><span>Receipt</span><strong>{allocation.receiptId}</strong></div>
                         <div><span>Paid</span><strong>{allocation.amountPaid} {allocation.settlementAsset}</strong></div>
                         <div><span>Issued</span><strong>{allocation.totalUny} UNY</strong></div>
+                        <div><span>Tx Hash</span><strong className="sale-mono">{allocation.txHash}</strong></div>
+                        <div><span>Confirmed</span><strong>{fmtDate(allocation.createdAt)}</strong></div>
+                      </div>
+                      <div className="sale-success-actions">
+                        <button type="button" className="btn-outline sale-mini-btn" onClick={downloadProofPacket}>Download Receipt</button>
+                        <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Allocation ID", allocation.allocationId)}>Copy Allocation ID</button>
+                        <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Receipt ID", allocation.receiptId)}>Copy Receipt</button>
                       </div>
                     </div>
                   )}

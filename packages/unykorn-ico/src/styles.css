@@ -1224,6 +1224,124 @@ a { text-decoration: none; color: inherit; }
   .section { padding: 48px 0; }
 }
 
+/* ── Inline Validation ── */
+.sale-input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+.sale-field-error {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  display: block;
+  animation: fadeSlideIn 0.2s ease-out;
+}
+
+/* ── QR Code ── */
+.sale-qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.sale-qr {
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.08);
+  background: #111;
+}
+.sale-qr-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+/* ── Polling Pulse ── */
+.sale-polling-indicator {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--accent);
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.12);
+}
+.sale-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.4); }
+}
+
+/* ── Countdown Warn ── */
+.sale-countdown { color: var(--accent); font-variant-numeric: tabular-nums; }
+.sale-countdown-warn { color: #ef4444; font-variant-numeric: tabular-nums; animation: pulse 1s ease-in-out infinite; }
+
+/* ── Invoice/Nonce Meta ── */
+.sale-instruction-meta {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.sale-instruction-meta > div {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+/* ── Success Icon ── */
+.sale-success-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.sale-success-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  background: linear-gradient(135deg, var(--accent), #22d3ee);
+  color: var(--bg);
+  flex-shrink: 0;
+}
+.sale-success-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.sale-mini-btn {
+  font-size: 0.78rem !important;
+  padding: 6px 14px !important;
+}
+
+/* ── Fade Slide In Animation ── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
