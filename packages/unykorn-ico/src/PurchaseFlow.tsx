@@ -49,6 +49,14 @@ function isTxHash(value: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(value.trim());
 }
 
+function makeProofPacket(order: SaleOrder, allocation: AllocationRecord | null) {
+  return {
+    exportedAt: new Date().toISOString(),
+    order,
+    allocation,
+  };
+}
+
 export default function PurchaseFlow() {
   const [flow, setFlow] = useState<FlowState>({ config: null, loading: true, error: null });
   const [form, setForm] = useState<CreateOrderInput>(DEFAULT_FORM);
@@ -76,13 +84,16 @@ export default function PurchaseFlow() {
         }
 
         if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const queryOrderId = params.get("orderId");
           const savedWallet = window.localStorage.getItem(WALLET_STORAGE_KEY);
-          const savedOrderId = window.localStorage.getItem(ORDER_STORAGE_KEY);
+          const savedOrderId = queryOrderId || window.localStorage.getItem(ORDER_STORAGE_KEY);
           if (savedWallet) {
             setForm((current) => ({ ...current, buyerWallet: savedWallet }));
             void loadAllocations(savedWallet);
           }
           if (savedOrderId) {
+            setRestoreOrderId(savedOrderId);
             void getSaleOrder(savedOrderId)
               .then(setOrder)
               .catch(() => window.localStorage.removeItem(ORDER_STORAGE_KEY));
@@ -109,6 +120,17 @@ export default function PurchaseFlow() {
     const timer = window.setTimeout(() => setCopyMessage(null), 1800);
     return () => window.clearTimeout(timer);
   }, [copyMessage]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (order?.orderId) {
+      url.searchParams.set("orderId", order.orderId);
+    } else {
+      url.searchParams.delete("orderId");
+    }
+    window.history.replaceState({}, "", url.toString());
+  }, [order?.orderId]);
 
   const tiers = flow.config?.tiers ?? [];
   const methods = flow.config?.paymentMethods ?? [];
@@ -174,6 +196,34 @@ export default function PurchaseFlow() {
     } catch {
       setCopyMessage(`Copy ${label.toLowerCase()} manually`);
     }
+  }
+
+  function clearSavedState() {
+    setOrder(null);
+    setAllocation(null);
+    setTxHash("");
+    setRestoreOrderId("");
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(ORDER_STORAGE_KEY);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("orderId");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }
+
+  function downloadProofPacket() {
+    if (!order) return;
+    const packet = makeProofPacket(order, allocation);
+    const blob = new Blob([JSON.stringify(packet, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${order.orderId}-proof.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setCopyMessage("Proof packet downloaded");
   }
 
   async function submitOrder() {
@@ -359,6 +409,9 @@ export default function PurchaseFlow() {
                     <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Order ID", order.orderId)}>Copy Order ID</button>
                     <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Invoice ID", order.invoiceId)}>Copy Invoice ID</button>
                     <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Treasury Address", order.receiver)}>Copy Treasury</button>
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={() => void copyValue("Recovery Link", `${window.location.origin}${window.location.pathname}?orderId=${encodeURIComponent(order.orderId)}`)}>Copy Recovery Link</button>
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={downloadProofPacket}>Download Proof</button>
+                    <button type="button" className="btn-outline sale-mini-btn" onClick={clearSavedState}>Clear Session</button>
                   </div>
 
                   <div className="sale-steps glass">
