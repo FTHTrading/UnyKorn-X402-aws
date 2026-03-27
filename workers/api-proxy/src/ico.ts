@@ -230,7 +230,12 @@ async function createOrder(
 		return jsonResponse({ error: "Sale is not configured" }, 503);
 	}
 
-	const body = await request.json() as CreateOrderBody;
+	let body: CreateOrderBody;
+	try {
+		body = await request.json() as CreateOrderBody;
+	} catch {
+		return jsonResponse({ error: "Invalid JSON body" }, 400);
+	}
 	const tier = TIERS.find((item) => item.id === body.tierId);
 	const method = methods.find((item) => item.id === body.paymentMethodId);
 
@@ -329,10 +334,18 @@ async function confirmOrder(
 		return jsonResponse({ order: current, allocation }, 200);
 	}
 
-	const body = await request.json() as ConfirmOrderBody;
+	let body: ConfirmOrderBody;
+	try {
+		body = await request.json() as ConfirmOrderBody;
+	} catch {
+		return jsonResponse({ error: "Invalid JSON body" }, 400);
+	}
 	if (!body.txHash?.trim()) return jsonResponse({ error: "Transaction hash is required" }, 400);
 
 	const txHash = body.txHash.trim();
+	if (!isTxHash(txHash)) {
+		return jsonResponse({ error: "Valid transaction hash is required" }, 400);
+	}
 	const existingTx = await env.STATE.get(txKey(txHash));
 	if (existingTx && existingTx !== orderId) {
 		return jsonResponse({ error: "Transaction hash already used for another order" }, 409);
@@ -454,6 +467,10 @@ function isWalletValid(value: string, rail: "unykorn-l1" | "base"): boolean {
 
 function normalizeWallet(value: string, rail: "unykorn-l1" | "base"): string {
 	return rail === "base" ? value.toLowerCase() : value.trim().toLowerCase();
+}
+
+function isTxHash(value: string): boolean {
+	return /^0x[a-fA-F0-9]{64}$/.test(value);
 }
 
 async function verifyBasePayment(
