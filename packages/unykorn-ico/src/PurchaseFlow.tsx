@@ -4,12 +4,16 @@ import {
   createSaleOrder,
   getIcoConfig,
   getSaleOrder,
+  getWalletAllocations,
   type AllocationRecord,
   type CreateOrderInput,
   type PaymentMethod,
   type SaleOrder,
   type SaleTier,
 } from "./icoApi";
+
+const ORDER_STORAGE_KEY = "unykorn.ico.lastOrderId";
+const WALLET_STORAGE_KEY = "unykorn.ico.lastWallet";
 
 type FlowState = {
   config: Awaited<ReturnType<typeof getIcoConfig>> | null;
@@ -39,9 +43,11 @@ export default function PurchaseFlow() {
   const [form, setForm] = useState<CreateOrderInput>(DEFAULT_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [loadingAllocations, setLoadingAllocations] = useState(false);
   const [txHash, setTxHash] = useState("");
   const [order, setOrder] = useState<SaleOrder | null>(null);
   const [allocation, setAllocation] = useState<AllocationRecord | null>(null);
+  const [allocations, setAllocations] = useState<AllocationRecord[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,6 +59,20 @@ export default function PurchaseFlow() {
             ...current,
             paymentMethodId: config.paymentMethods[0].id,
           }));
+        }
+
+        if (typeof window !== "undefined") {
+          const savedWallet = window.localStorage.getItem(WALLET_STORAGE_KEY);
+          const savedOrderId = window.localStorage.getItem(ORDER_STORAGE_KEY);
+          if (savedWallet) {
+            setForm((current) => ({ ...current, buyerWallet: savedWallet }));
+            void loadAllocations(savedWallet);
+          }
+          if (savedOrderId) {
+            void getSaleOrder(savedOrderId)
+              .then(setOrder)
+              .catch(() => window.localStorage.removeItem(ORDER_STORAGE_KEY));
+          }
         }
       })
       .catch((error: Error) => setFlow({ config: null, loading: false, error: error.message }));
@@ -85,6 +105,19 @@ export default function PurchaseFlow() {
     };
   }, [form.amountUsd, selectedTier]);
 
+  async function loadAllocations(wallet: string) {
+    if (!wallet.trim()) return;
+    setLoadingAllocations(true);
+    try {
+      const records = await getWalletAllocations(wallet.trim());
+      setAllocations(records);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to load allocations");
+    } finally {
+      setLoadingAllocations(false);
+    }
+  }
+
   async function submitOrder() {
     setSubmitting(true);
     setActionError(null);
@@ -93,6 +126,10 @@ export default function PurchaseFlow() {
       setOrder(result.order);
       setAllocation(null);
       setTxHash("");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(ORDER_STORAGE_KEY, result.order.orderId);
+        window.localStorage.setItem(WALLET_STORAGE_KEY, result.order.buyerWallet);
+      }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to create order");
     } finally {
@@ -108,6 +145,10 @@ export default function PurchaseFlow() {
       const result = await confirmSaleOrder(order.orderId, txHash, form.buyerWallet);
       setOrder(result.order);
       setAllocation(result.allocation);
+      setAllocations((current) => [result.allocation, ...current.filter((item) => item.allocationId !== result.allocation.allocationId)]);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(WALLET_STORAGE_KEY, result.allocation.wallet);
+      }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Payment confirmation failed");
     } finally {
@@ -183,6 +224,13 @@ export default function PurchaseFlow() {
                 <label><input type="checkbox" checked={form.acceptedTerms} onChange={(e) => setForm({ ...form, acceptedTerms: e.target.checked })} /> I accept the sale terms and direct-settlement flow.</label>
                 <label><input type="checkbox" checked={form.notRestrictedPerson} onChange={(e) => setForm({ ...form, notRestrictedPerson: e.target.checked })} /> I am not a restricted / sanctioned participant.</label>
                 <label><input type="checkbox" checked={form.acknowledgedRisk} onChange={(e) => setForm({ ...form, acknowledgedRisk: e.target.checked })} /> I understand this is a crypto asset purchase with execution risk.</label>
+              </div>
+
+              <div className="sale-inline-actions">
+                <button type="button" className="btn-outline sale-secondary-btn" onClick={() => void loadAllocations(form.buyerWallet)} disabled={loadingAllocations || !form.buyerWallet.trim()}>
+                  {loadingAllocations ? "Loading Allocations…" : "Load My Allocations"}
+                </button>
+                {order && <span className="sale-helper-text">Active order saved in-browser for this wallet.</span>}
               </div>
 
               {preview && selectedTier && selectedMethod && (
@@ -271,6 +319,26 @@ export default function PurchaseFlow() {
                         <div><span>Receipt</span><strong>{allocation.receiptId}</strong></div>
                         <div><span>Paid</span><strong>{allocation.amountPaid} {allocation.settlementAsset}</strong></div>
                         <div><span>Issued</span><strong>{allocation.totalUny} UNY</strong></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {allocations.length > 0 && (
+                    <div className="sale-success glass">
+                      <div className="sale-success-title">Issued Allocations</div>
+                      <div className="sale-allocation-list">
+                        {allocations.map((item) => (
+                          <div key={item.allocationId} className="sale-allocation-item">
+                            <div>
+                              <span>{item.allocationId}</span>
+                              <strong>{item.totalUny} UNY</strong>
+                            </div>
+                            <div>
+                              <span>{item.amountPaid} {item.settlementAsset}</span>
+                              <strong>{fmtDate(item.createdAt)}</strong>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

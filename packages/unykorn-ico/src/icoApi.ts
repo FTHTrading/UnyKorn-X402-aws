@@ -131,3 +131,10 @@ export async function confirmSaleOrder(orderId: string, txHash: string, payer?: 
   if (!res.ok || !data.order || !data.allocation) throw new Error(data.error ?? "Failed to confirm payment");
   return { order: data.order, allocation: data.allocation };
 }
+
+export async function getWalletAllocations(wallet: string): Promise<AllocationRecord[]> {
+  const res = await fetch(`${ICO_API_BASE}/allocations/${encodeURIComponent(wallet)}`);
+  const data = await res.json() as { allocations?: AllocationRecord[]; error?: string };
+  if (!res.ok) throw new Error(data.error ?? "Failed to load allocations");
+  return data.allocations ?? [];
+}

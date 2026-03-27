@@ -860,6 +860,24 @@ a { text-decoration: none; color: inherit; }
   font-size: 15px;
 }
 
+.sale-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.sale-secondary-btn {
+  min-width: 220px;
+  text-align: center;
+}
+
+.sale-helper-text {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .sale-error,
 .sale-error-text {
   color: #ff8a8a;
@@ -954,6 +972,32 @@ a { text-decoration: none; color: inherit; }
   gap: 16px;
 }
 
+.sale-allocation-list {
+  display: grid;
+  gap: 12px;
+}
+
+.sale-allocation-item {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.sale-allocation-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sale-allocation-item span {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 /* ── Footer ── */
 .footer {
   padding: 48px 24px;
@@ -1004,9 +1048,11 @@ a { text-decoration: none; color: inherit; }
   .sale-shell { grid-template-columns: 1fr; }
   .sale-grid { grid-template-columns: 1fr; }
   .sale-preview { grid-template-columns: 1fr 1fr; }
+  .sale-inline-actions { flex-direction: column; align-items: stretch; }
   .sale-order-meta { grid-template-columns: 1fr; }
   .sale-instructions { grid-template-columns: 1fr; }
   .sale-success-grid { grid-template-columns: 1fr; }
+  .sale-allocation-item { grid-template-columns: 1fr; }
   .info-grid { grid-template-columns: 1fr; }
   .tier-grid { grid-template-columns: 1fr; }
   .nav { padding: 12px 16px; }
