@@ -24,6 +24,7 @@ import {
   type Trade,
   type VestingSchedule,
 } from "./exchangeApi";
+import { useToast, Skeleton, SkeletonRows, downloadCSV } from "./utils";
 
 // ── Market Ticker Strip ──────────────────────────────────────
 
@@ -104,7 +105,7 @@ function MiniChart({ candles }: { candles: OHLCV[] }) {
     }).join(" ");
   }, [candles]);
 
-  if (!svgPath) return null;
+  if (!svgPath) return <Skeleton height={120} radius={8} />;
 
   const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
 
@@ -122,6 +123,71 @@ function MiniChart({ candles }: { candles: OHLCV[] }) {
   );
 }
 
+// ── Depth Chart ──────────────────────────────────────────────
+
+function DepthChart({ book }: { book: OrderBook | null }) {
+  const paths = useMemo(() => {
+    if (!book || book.bids.length === 0 || book.asks.length === 0) return null;
+
+    const bids = [...book.bids].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+    const asks = [...book.asks].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+
+    // Cumulative
+    let bidCum = 0;
+    const bidPoints = bids.map(b => ({ price: parseFloat(b.price), cum: (bidCum += parseFloat(b.amount)) }));
+    let askCum = 0;
+    const askPoints = asks.map(a => ({ price: parseFloat(a.price), cum: (askCum += parseFloat(a.amount)) }));
+
+    const allPrices = [...bidPoints.map(p => p.price), ...askPoints.map(p => p.price)];
+    const allCum = [...bidPoints.map(p => p.cum), ...askPoints.map(p => p.cum)];
+    const minP = Math.min(...allPrices);
+    const maxP = Math.max(...allPrices);
+    const maxC = Math.max(...allCum);
+    const rangeP = maxP - minP || 1;
+    const w = 600;
+    const h = 100;
+
+    const toX = (price: number) => ((price - minP) / rangeP) * w;
+    const toY = (cum: number) => h - (cum / maxC) * (h - 10) - 5;
+
+    const bidPath = bidPoints.map((p, i) => `${i === 0 ? "M" : "L"}${toX(p.price).toFixed(1)},${toY(p.cum).toFixed(1)}`).join(" ");
+    const askPath = askPoints.map((p, i) => `${i === 0 ? "M" : "L"}${toX(p.price).toFixed(1)},${toY(p.cum).toFixed(1)}`).join(" ");
+
+    const bidFill = `${bidPath} L${toX(bidPoints[bidPoints.length - 1].price).toFixed(1)},${h} L${toX(bidPoints[0].price).toFixed(1)},${h} Z`;
+    const askFill = `${askPath} L${toX(askPoints[askPoints.length - 1].price).toFixed(1)},${h} L${toX(askPoints[0].price).toFixed(1)},${h} Z`;
+
+    return { bidPath, askPath, bidFill, askFill };
+  }, [book]);
+
+  if (!paths) return null;
+
+  return (
+    <div className="ex-depth-wrap">
+      <div className="ex-depth-label">Order Book Depth</div>
+      <svg viewBox="0 0 600 100" className="ex-depth-chart" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="bidDepthGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="askDepthGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={paths.bidFill} fill="url(#bidDepthGrad)" />
+        <path d={paths.askFill} fill="url(#askDepthGrad)" />
+        <path d={paths.bidPath} fill="none" stroke="#22c55e" strokeWidth="2" />
+        <path d={paths.askPath} fill="none" stroke="#ef4444" strokeWidth="2" />
+      </svg>
+      <div className="ex-depth-legend">
+        <span style={{ color: "var(--green)" }}>● Bids</span>
+        <span style={{ color: "var(--red)" }}>● Asks</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Exchange Terminal ────────────────────────────────────────
 
 export function ExchangeTerminal() {
@@ -133,7 +199,8 @@ export function ExchangeTerminal() {
   const [orderForm, setOrderForm] = useState({ side: "buy" as "buy" | "sell", type: "limit" as "limit" | "market", price: "0.008", amount: "10000" });
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"book" | "trades" | "orders">("book");
+  const [activeTab, setActiveTab] = useState<"book" | "trades" | "orders" | "depth">("book");
+  const { addToast } = useToast();
 
   useEffect(() => {
     const savedWallet = typeof window !== "undefined" ? window.localStorage.getItem("unykorn.ico.lastWallet") : null;
@@ -173,11 +240,13 @@ export function ExchangeTerminal() {
         parseFloat(orderForm.amount),
         orderForm.type,
       );
+      addToast("success", `Order placed: ${result.order.id} (${result.matched} fills)`);
       setMsg(`Order placed: ${result.order.id} (${result.matched} fills)`);
       await loadData();
       const orders = await getWalletOrders(wallet);
       setMyOrders(orders);
     } catch (e: any) {
+      addToast("error", e.message ?? "Order failed");
       setMsg(e.message ?? "Order failed");
     } finally {
       setSubmitting(false);
@@ -187,12 +256,24 @@ export function ExchangeTerminal() {
   async function handleCancel(orderId: string) {
     try {
       await cancelOrder(orderId, wallet);
+      addToast("success", "Order cancelled");
       setMsg("Order cancelled");
       const orders = await getWalletOrders(wallet);
       setMyOrders(orders);
     } catch (e: any) {
+      addToast("error", e.message ?? "Cancel failed");
       setMsg(e.message ?? "Cancel failed");
     }
+  }
+
+  function handleExportTrades() {
+    if (trades.length === 0) { addToast("info", "No trades to export"); return; }
+    downloadCSV(
+      "unykorn-trades.csv",
+      ["ID", "Pair", "Price", "Amount", "Total", "Time"],
+      trades.map(t => [t.id, t.pair, t.price, t.amount, t.total, t.createdAt]),
+    );
+    addToast("success", "Trades exported to CSV");
   }
 
   const total = useMemo(() => {
@@ -219,9 +300,11 @@ export function ExchangeTerminal() {
             <div className="ex-chart-stats">
               {book && <span>Spread: {book.spread}</span>}
               <span>24h Vol: ${(847500).toLocaleString()}</span>
+              <button className="btn-outline sale-mini-btn" onClick={handleExportTrades} title="Export trades to CSV">⇩ CSV</button>
             </div>
           </div>
           <MiniChart candles={candles} />
+          <DepthChart book={book} />
         </div>
 
         <div className="ex-terminal-grid">
@@ -229,6 +312,7 @@ export function ExchangeTerminal() {
           <div className="glass-solid ex-panel">
             <div className="ex-panel-tabs">
               <button className={activeTab === "book" ? "ex-tab-active" : ""} onClick={() => setActiveTab("book")}>Order Book</button>
+              <button className={activeTab === "depth" ? "ex-tab-active" : ""} onClick={() => setActiveTab("depth")}>Depth</button>
               <button className={activeTab === "trades" ? "ex-tab-active" : ""} onClick={() => setActiveTab("trades")}>Trades</button>
               <button className={activeTab === "orders" ? "ex-tab-active" : ""} onClick={() => setActiveTab("orders")}>My Orders</button>
             </div>
@@ -261,6 +345,11 @@ export function ExchangeTerminal() {
                 </div>
               </div>
             )}
+
+            {activeTab === "book" && !book && <SkeletonRows rows={10} />}
+
+            {activeTab === "depth" && <DepthChart book={book} />}
+            {activeTab === "depth" && !book && <SkeletonRows rows={6} />}
 
             {activeTab === "trades" && (
               <div className="ex-trades">
@@ -353,6 +442,7 @@ export function PortfolioDashboard() {
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("unykorn.ico.lastWallet") : null;
@@ -369,7 +459,9 @@ export function PortfolioDashboard() {
     try {
       const p = await getPortfolio(w.trim());
       setPortfolio(p);
+      addToast("success", "Portfolio loaded");
     } catch (e: any) {
+      addToast("error", e.message ?? "Failed to load portfolio");
       setError(e.message ?? "Failed to load portfolio");
     } finally {
       setLoading(false);
@@ -446,6 +538,7 @@ export function VestingPanel() {
   const [loading, setLoading] = useState(false);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("unykorn.ico.lastWallet") : null;
@@ -467,6 +560,7 @@ export function VestingPanel() {
     setMsg(null);
     try {
       await claimVesting(wallet.trim(), scheduleId, trancheId);
+      addToast("success", "Tranche claimed successfully!");
       setMsg("Tranche claimed successfully!");
       await loadVesting(wallet);
     } catch (e: any) {
@@ -552,6 +646,7 @@ export function ReferralPanel() {
   const [referral, setReferral] = useState<ReferralRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem("unykorn.ico.lastWallet") : null;
@@ -565,6 +660,7 @@ export function ReferralPanel() {
     try {
       const record = await generateReferral(wallet.trim());
       setReferral(record);
+      addToast("success", "Referral code generated!");
     } catch (e: any) {
       setMsg(e.message ?? "Failed to generate code");
     } finally {
@@ -576,6 +672,7 @@ export function ReferralPanel() {
     if (!referral) return;
     try {
       await navigator.clipboard.writeText(referral.code);
+      addToast("success", "Referral code copied!");
       setMsg("Referral code copied!");
     } catch { setMsg("Copy manually: " + referral.code); }
   }
@@ -585,6 +682,7 @@ export function ReferralPanel() {
     const link = `${window.location.origin}${window.location.pathname}?ref=${referral.code}`;
     try {
       await navigator.clipboard.writeText(link);
+      addToast("success", "Referral link copied!");
       setMsg("Referral link copied!");
     } catch { setMsg("Copy manually"); }
   }

@@ -1,6 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import PurchaseFlow from "./PurchaseFlow";
 import { MarketTicker, ExchangeTerminal, PortfolioDashboard, VestingPanel, ReferralPanel, LeaderboardPanel } from "./Exchange";
+import {
+  ToastProvider,
+  BackToTop,
+  RiskBanner,
+  SocialProofFeed,
+  ConnectionBadge,
+  useConnectionStatus,
+  useStakingCalc,
+  useKeyboardShortcuts,
+  AnimatedCounter,
+} from "./utils";
 
 // ── Live Stats Hook ───────────────────────────────────────
 
@@ -122,24 +133,34 @@ const ICO = {
 // ── Components ────────────────────────────────────────────
 
 function Nav() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const connStatus = useConnectionStatus();
+
   return (
     <nav className="nav">
       <div className="nav-logo">
         <div className="nav-logo-icon">U</div>
         <span>UnyKorn</span>
         <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 400, marginLeft: 4 }}>ICO</span>
+        <ConnectionBadge status={connStatus} />
       </div>
-      <div className="nav-links">
-        <a href="#checkout">Token Sale</a>
-        <a href="#exchange">Exchange</a>
-        <a href="#portfolio">Portfolio</a>
-        <a href="#vesting">Vesting</a>
-        <a href="#referral">Referral</a>
-        <a href="#tokenomics">Tokenomics</a>
-        <a href="#tiers">Tiers</a>
-        <a href="#exchanges">Listings</a>
-        <a href="#leaderboard">Leaderboard</a>
-        <a href="#roadmap">Roadmap</a>
+      <button className="nav-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu">
+        <span className={`hamburger-line ${menuOpen ? "open" : ""}`} />
+        <span className={`hamburger-line ${menuOpen ? "open" : ""}`} />
+        <span className={`hamburger-line ${menuOpen ? "open" : ""}`} />
+      </button>
+      <div className={`nav-links ${menuOpen ? "nav-links-open" : ""}`}>
+        <a href="#checkout" onClick={() => setMenuOpen(false)}>Token Sale</a>
+        <a href="#exchange" onClick={() => setMenuOpen(false)}>Exchange</a>
+        <a href="#portfolio" onClick={() => setMenuOpen(false)}>Portfolio</a>
+        <a href="#staking" onClick={() => setMenuOpen(false)}>Staking</a>
+        <a href="#vesting" onClick={() => setMenuOpen(false)}>Vesting</a>
+        <a href="#referral" onClick={() => setMenuOpen(false)}>Referral</a>
+        <a href="#tokenomics" onClick={() => setMenuOpen(false)}>Tokenomics</a>
+        <a href="#tiers" onClick={() => setMenuOpen(false)}>Tiers</a>
+        <a href="#exchanges" onClick={() => setMenuOpen(false)}>Listings</a>
+        <a href="#leaderboard" onClick={() => setMenuOpen(false)}>Leaderboard</a>
+        <a href="#roadmap" onClick={() => setMenuOpen(false)}>Roadmap</a>
         <a href="https://ex.unykorn.org" target="_blank" rel="noreferrer">Explorer</a>
         <a href="https://github.com/FTHTrading/UnyKorn-X402-aws/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">Whitepaper</a>
       </div>
@@ -650,6 +671,97 @@ function ExchangeReadiness({ liveReadiness, synced }: { liveReadiness: number | 
   );
 }
 
+function StakingSection() {
+  const [amount, setAmount] = useState(100000);
+  const [days, setDays] = useState(180);
+  const calc = useStakingCalc(amount, days);
+
+  const lockOptions = [
+    { days: 30, label: "30 Days", bonus: "+0%" },
+    { days: 90, label: "90 Days", bonus: "+2%" },
+    { days: 180, label: "180 Days", bonus: "+4%" },
+    { days: 365, label: "365 Days", bonus: "+6%" },
+  ];
+
+  return (
+    <section className="section" id="staking" style={{ background: "var(--bg)" }}>
+      <div className="container">
+        <div className="sec-header">
+          <h2>Stake & <span className="grad-text">Earn</span></h2>
+          <p>Earn real yield from x402 protocol revenue. Longer lock-ups unlock higher APY tiers.</p>
+        </div>
+
+        <div className="staking-grid">
+          {/* APY Tiers */}
+          <div className="glass-solid staking-tiers">
+            <h3 style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Yield Tiers</h3>
+            {lockOptions.map((opt) => (
+              <div
+                key={opt.days}
+                className={`staking-tier-row ${days === opt.days ? "staking-tier-active" : ""}`}
+                onClick={() => setDays(opt.days)}
+              >
+                <span className="staking-tier-label">{opt.label}</span>
+                <span className="staking-tier-apy grad-text">{(18 + parseInt(opt.bonus)).toFixed(0)}% APY</span>
+                <span className="staking-tier-bonus">{opt.bonus} lock bonus</span>
+              </div>
+            ))}
+            <div style={{ marginTop: 20, padding: "12px 16px", borderRadius: "var(--r-sm)", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Revenue Source</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>x402 Protocol Fees · Trade Commission · Agent Commerce</div>
+            </div>
+          </div>
+
+          {/* Calculator */}
+          <div className="glass-solid staking-calc">
+            <h3 style={{ marginBottom: 20, fontSize: 18, fontWeight: 700 }}>Rewards Calculator</h3>
+
+            <label className="sale-field">
+              <span>Stake Amount (UNY)</span>
+              <input type="number" value={amount} onChange={e => setAmount(Number(e.target.value) || 0)} min={0} step={10000} />
+            </label>
+
+            <div className="staking-calc-result">
+              <div className="staking-calc-row">
+                <span>Effective APY</span>
+                <strong className="grad-text">{(calc.effectiveApy * 100).toFixed(1)}%</strong>
+              </div>
+              <div className="staking-calc-row">
+                <span>Lock Period</span>
+                <strong>{days} days</strong>
+              </div>
+              <div className="staking-calc-row">
+                <span>Lock Bonus</span>
+                <strong style={{ color: "var(--green)" }}>+{(calc.lockBonus * 100).toFixed(0)}%</strong>
+              </div>
+              <div className="staking-calc-row">
+                <span>Daily Rate</span>
+                <strong>{(calc.dailyRate * 100).toFixed(4)}%</strong>
+              </div>
+              <div className="staking-calc-divider" />
+              <div className="staking-calc-row staking-calc-highlight">
+                <span>Projected Reward</span>
+                <strong className="grad-text">{calc.projectedReward.toLocaleString()} UNY</strong>
+              </div>
+              <div className="staking-calc-row staking-calc-highlight">
+                <span>Projected Value</span>
+                <strong>${calc.projectedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </div>
+            </div>
+
+            <button className="btn-primary" style={{ width: "100%", marginTop: 16 }} disabled>
+              Staking Launches Q3 2026
+            </button>
+          </div>
+        </div>
+
+        {/* Social Proof */}
+        <SocialProofFeed />
+      </div>
+    </section>
+  );
+}
+
 function Footer() {
   return (
     <footer className="footer">
@@ -676,25 +788,48 @@ export default function App() {
   const [, setTick] = useState(0);
   const live = useLiveStats();
 
+  // Keyboard shortcuts
+  const shortcuts = useMemo(() => ({
+    "ctrl+b": () => { const el = document.getElementById("checkout"); if (el) el.scrollIntoView({ behavior: "smooth" }); },
+    "ctrl+e": () => { const el = document.getElementById("exchange"); if (el) el.scrollIntoView({ behavior: "smooth" }); },
+    "ctrl+p": () => { const el = document.getElementById("portfolio"); if (el) el.scrollIntoView({ behavior: "smooth" }); },
+    "?": () => {
+      const existing = document.querySelector(".shortcut-modal");
+      if (existing) { existing.remove(); return; }
+      const m = document.createElement("div");
+      m.className = "shortcut-modal glass-solid";
+      m.innerHTML = `<h3 style='margin-bottom:16px'>Keyboard Shortcuts</h3>
+        <div class='shortcut-row'><kbd>Ctrl+B</kbd> Jump to Token Sale</div>
+        <div class='shortcut-row'><kbd>Ctrl+E</kbd> Jump to Exchange</div>
+        <div class='shortcut-row'><kbd>Ctrl+P</kbd> Jump to Portfolio</div>
+        <div class='shortcut-row'><kbd>?</kbd> Toggle this dialog</div>
+        <button class='btn-outline' onclick='this.parentElement.remove()' style='margin-top:16px;width:100%'>Close</button>`;
+      document.body.appendChild(m);
+    },
+  }), []);
+  useKeyboardShortcuts(shortcuts);
+
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
   return (
-    <>
+    <ToastProvider>
       {/* Animated background orbs */}
       <div className="bg-mesh" />
       <div className="bg-orb-1" />
       <div className="bg-orb-2" />
       <div className="bg-orb-3" />
 
+      <RiskBanner />
       <Nav />
       <MarketTicker />
       <Hero />
       <PurchaseFlow />
       <ExchangeTerminal />
       <PortfolioDashboard />
+      <StakingSection />
       <VestingPanel />
       <ReferralPanel />
       <Stats liveCredibility={live.credibility} liveReadiness={live.readiness} synced={live.synced} />
@@ -707,6 +842,7 @@ export default function App() {
       <Roadmap />
       <Contracts />
       <Footer />
-    </>
+      <BackToTop />
+    </ToastProvider>
   );
 }
