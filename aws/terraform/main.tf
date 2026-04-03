@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.40"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
+    }
   }
 
   # Uncomment after first apply to migrate state to S3
@@ -72,7 +76,7 @@ module "secrets" {
 
   project_name = var.project_name
   environment  = var.environment
-  kms_key_arn  = module.security.kms_key_arn
+  # kms_key_arn resolves automatically via alias lookup in the module
 }
 
 # ─── EC2 Chain Nodes ─────────────────────────────────────
@@ -134,6 +138,7 @@ module "observability" {
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_services_subnet_ids
   node_instance_ids  = module.compute.node_instance_ids
+  alb_arn_suffix     = module.load_balancing.alb_arn_suffix
 }
 
 # ─── WAF ─────────────────────────────────────────────────
@@ -143,4 +148,5 @@ module "waf" {
   project_name = var.project_name
   environment  = var.environment
   alb_arn      = module.load_balancing.alb_arn
+  vpc_cidr     = var.vpc_cidr
 }

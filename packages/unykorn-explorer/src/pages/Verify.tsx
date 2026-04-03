@@ -99,7 +99,7 @@ export default function Verify() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "var(--sov-space-md)" }}>
               <span style={{ fontSize: "1.3rem" }}>✅</span>
               <strong style={{ color: "#22c55e", fontSize: "1rem" }}>
-                Found: {lookupResult.type.toUpperCase()}
+                Found: {lookupResult.type?.toUpperCase()}
               </strong>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "var(--sov-space-md)", fontSize: "var(--sov-text-sm)" }}>

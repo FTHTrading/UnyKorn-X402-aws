@@ -1,0 +1,21 @@
+{
+  "name": "fth-x407-protocol",
+  "version": "1.0.0",
+  "description": "x407 — Monetization & Trust Operating Layer for AI-to-AI Systems",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "fth-x402-core": "0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.4.0",
+    "rimraf": "^5.0.0"
+  },
+  "license": "MIT"
+}

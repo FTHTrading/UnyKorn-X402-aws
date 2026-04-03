@@ -42,6 +42,7 @@ export default function Layout() {
           <NavLink to="/proof">Proof Center</NavLink>
           <NavLink to="/security">Security</NavLink>
           <NavLink to="/genesis">Genesis</NavLink>
+          <NavLink to="/pulse">Pulse</NavLink>
         </nav>
       </header>
 

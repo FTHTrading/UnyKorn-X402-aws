@@ -102,7 +102,7 @@ export class SentinelDaemon {
       await this.store.setDaemonState("sentinel", {
         status: "running",
         last_run_at: new Date().toISOString(),
-        success_count: (await this.store.getDaemonState("sentinel"))?.success_count ?? 0 + 1,
+        success_count: ((await this.store.getDaemonState("sentinel"))?.success_count ?? 0) + 1,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

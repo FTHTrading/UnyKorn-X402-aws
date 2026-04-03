@@ -1,0 +1,36 @@
+# Agent Gateway — Multi-stage Docker build
+# Central agent management, task routing, policy enforcement
+
+FROM node:22-slim AS builder
+
+WORKDIR /build
+
+COPY apps/agent-gateway/package.json .
+RUN npm install
+
+COPY apps/agent-gateway/tsconfig.json .
+COPY apps/agent-gateway/src ./src
+
+# Build
+RUN npx tsc
+
+# --- Production image ---
+FROM node:22-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /build/dist ./dist
+COPY --from=builder /build/package.json .
+COPY --from=builder /build/node_modules ./node_modules
+
+ENV NODE_ENV=production
+ENV PORT=4010
+
+EXPOSE 4010
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -sf http://localhost:${PORT}/health || exit 1
+
+CMD ["node", "--enable-source-maps", "dist/index.js"]

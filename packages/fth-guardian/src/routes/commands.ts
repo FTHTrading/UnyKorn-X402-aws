@@ -13,6 +13,16 @@ const ALLOWED_COMMANDS = new Set([
   "uptime",
 ]);
 
+// Events that may be emitted via the API — excludes dangerous system events
+// (node.down, system.halt, upgrade.trigger, etc. are reserved for internal daemon use only)
+const SAFE_EMIT_EVENTS = new Set([
+  "alert.acknowledge",
+  "config.reload",
+  "heartbeat",
+  "daemon.ping",
+  "metrics.flush",
+]);
+
 export async function commandRoutes(app: FastifyInstance): Promise<void> {
   const { eventBus: bus, store, audit, alerts } = (app as any).guardian;
   const { enforcer, upgrader, treasurer } = (app as any).daemons;
@@ -21,6 +31,10 @@ export async function commandRoutes(app: FastifyInstance): Promise<void> {
   app.post("/api/commands/emit", async (req) => {
     const { event, source, data } = req.body as { event: string; source: string; data?: Record<string, unknown> };
     if (!event) return { error: "event is required" };
+
+    if (!SAFE_EMIT_EVENTS.has(event)) {
+      return { error: "Event not in allowlist", allowed: [...SAFE_EMIT_EVENTS] };
+    }
 
     bus.emit(event, source ?? "api", data ?? {});
     audit.recordAction("api", "emit_event", event, "success", { source, data });

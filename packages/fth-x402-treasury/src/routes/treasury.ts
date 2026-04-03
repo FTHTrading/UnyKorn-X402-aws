@@ -35,11 +35,13 @@ export default async function treasuryRoutes(app: FastifyInstance): Promise<void
   app.get<{
     Querystring: { status?: string; namespace?: string; limit?: string; offset?: string };
   }>("/treasury/agents", async (req) => {
+    const rawLimit = parseInt(req.query.limit ?? '50', 10);
+    const rawOffset = parseInt(req.query.offset ?? '0', 10);
     return listAgents({
       status: req.query.status,
       namespace: req.query.namespace,
-      limit: req.query.limit ? parseInt(req.query.limit, 10) : 50,
-      offset: req.query.offset ? parseInt(req.query.offset, 10) : 0,
+      limit: Math.max(1, Math.min(200, Number.isNaN(rawLimit) ? 50 : rawLimit)),
+      offset: Math.max(0, Number.isNaN(rawOffset) ? 0 : rawOffset),
     });
   });
 
@@ -94,11 +96,13 @@ export default async function treasuryRoutes(app: FastifyInstance): Promise<void
   app.get<{
     Querystring: { status?: string; agent_id?: string; limit?: string; offset?: string };
   }>("/treasury/refills", async (req) => {
+    const rawLimit = parseInt(req.query.limit ?? '50', 10);
+    const rawOffset = parseInt(req.query.offset ?? '0', 10);
     return listRefills({
       status: req.query.status,
       agent_id: req.query.agent_id,
-      limit: req.query.limit ? parseInt(req.query.limit, 10) : 50,
-      offset: req.query.offset ? parseInt(req.query.offset, 10) : 0,
+      limit: Math.max(1, Math.min(200, Number.isNaN(rawLimit) ? 50 : rawLimit)),
+      offset: Math.max(0, Number.isNaN(rawOffset) ? 0 : rawOffset),
     });
   });
 

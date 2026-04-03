@@ -1117,3 +1117,107 @@ export async function getRecentSettlements(limit = 20): Promise<SettlementReceip
     return [];
   }
 }
+
+// ── Mesh Pulse ────────────────────────────────────────────
+
+const PULSE_URL =
+  import.meta.env.VITE_PULSE_URL ?? "http://98.91.89.169:3280";
+
+export const PULSE_WS_URL =
+  import.meta.env.VITE_PULSE_WS_URL ?? "ws://98.91.89.169:3280/pulse/stream";
+
+export interface PulseStatus {
+  ok: boolean;
+  state: string;
+  uptime_seconds: number;
+  live_ws_clients: number;
+  signal_stats: {
+    last_hour: { signal_type: string; count: string }[];
+    total_signals: number;
+    pending_propagation: number;
+  };
+  state_history: { from: string; to: string; at: string; reason: string }[];
+}
+
+export interface PulseSignal {
+  id: string;
+  signal_type: string;
+  source: string;
+  subject_id: string | null;
+  payload: Record<string, unknown>;
+  fired_at: string;
+  propagated: boolean;
+}
+
+export interface PulseTransaction {
+  trade_id: string;
+  offer_id: string;
+  counterparty_wallet: string;
+  settlement_usdf: string;
+  asset_a_old_value: string;
+  asset_a_new_value: string;
+  asset_b_new_value: string | null;
+  appreciation_pct: string;
+  status: string;
+  settled_at: string;
+  offerer_wallet: string;
+  offered_asset_id: string;
+  requested_asset_id: string | null;
+  offered_asset_name: string;
+  offered_asset_category: string;
+  signal_id: string | null;
+  signal_fired_at: string | null;
+  signal_propagated: boolean | null;
+}
+
+export interface PulseAssetScore {
+  asset_id: string;
+  name: string;
+  category: string;
+  demand_score: string;
+  trade_count: number;
+  last_trade: string | null;
+}
+
+export async function getPulseStatus(): Promise<PulseStatus | null> {
+  try {
+    const res = await fetch(`${PULSE_URL}/pulse/status`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getPulseSignals(limit = 50): Promise<PulseSignal[]> {
+  try {
+    const res = await fetch(`${PULSE_URL}/pulse/signals?limit=${limit}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.signals ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getPulseTransactions(limit = 20): Promise<PulseTransaction[]> {
+  try {
+    const res = await fetch(`${PULSE_URL}/pulse/transactions?limit=${limit}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.transactions ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getPulseNetwork(): Promise<PulseAssetScore[]> {
+  try {
+    const res = await fetch(`${PULSE_URL}/pulse/network`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.mesh?.activity_scores ?? [];
+  } catch {
+    return [];
+  }
+}

@@ -6,6 +6,22 @@
 variable "project_name" { type = string }
 variable "environment"  { type = string }
 variable "alb_arn"      { type = string }
+variable "vpc_cidr" {
+  type        = string
+  default     = "10.100.0.0/16"
+  description = "VPC CIDR — requests from this range are allowed before the rate limiter"
+}
+
+# ─── VPC IP Set (bypass rate limit for internal health checks) ────
+resource "aws_wafv2_ip_set" "vpc" {
+  name               = "${var.project_name}-${var.environment}-vpc-ips"
+  description        = "VPC CIDR — exempt from rate limiting"
+  scope              = "REGIONAL"
+  ip_address_version = "IPV4"
+  addresses          = [var.vpc_cidr]
+
+  tags = { Name = "${var.project_name}-${var.environment}-vpc-ips" }
+}
 
 # ─── Web ACL ──────────────────────────────────────────────
 resource "aws_wafv2_web_acl" "main" {
@@ -15,6 +31,28 @@ resource "aws_wafv2_web_acl" "main" {
 
   default_action {
     allow {}
+  }
+
+  # ── Rule 0: Allow VPC-internal IPs before rate limiter ──
+  rule {
+    name     = "AllowVPCIPs"
+    priority = 0
+
+    action {
+      allow {}
+    }
+
+    statement {
+      ip_set_reference_statement {
+        arn = aws_wafv2_ip_set.vpc.arn
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AllowVPCIPs"
+      sampled_requests_enabled   = true
+    }
   }
 
   # ── Rule 1: AWS Managed — Common Rule Set ───────────────
@@ -109,23 +147,24 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
-  # ── Rule 5: Geo Blocking (optional — compliance) ────────
-  # Uncomment to restrict by country
-  # rule {
-  #   name     = "GeoBlock"
-  #   priority = 5
-  #   action { block {} }
-  #   statement {
-  #     geo_match_statement {
-  #       country_codes = ["KP", "IR", "CU", "SY"]  # OFAC sanctioned
-  #     }
-  #   }
-  #   visibility_config {
-  #     cloudwatch_metrics_enabled = true
-  #     metric_name                = "GeoBlock"
-  #     sampled_requests_enabled   = true
-  #   }
-  # }
+  # ── Rule 5: Geo Blocking (OFAC compliance) ───────────────
+  rule {
+    name     = "GeoBlock"
+    priority = 5
+    action {
+      block {}
+    }
+    statement {
+      geo_match_statement {
+        country_codes = ["KP", "IR", "CU", "SY"]  # OFAC sanctioned
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "GeoBlock"
+      sampled_requests_enabled   = true
+    }
+  }
 
   visibility_config {
     cloudwatch_metrics_enabled = true

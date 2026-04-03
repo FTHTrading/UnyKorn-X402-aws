@@ -1,0 +1,310 @@
+# ==========================================================================
+# x402 Production Stack — docker-compose.x402-prod.yml
+# Runs alongside existing FTH Pay stack on AWS EC2
+# ==========================================================================
+# Deploy:   docker compose -f docker-compose.x402-prod.yml up -d
+# Logs:     docker compose -f docker-compose.x402-prod.yml logs -f
+# Status:   docker compose -f docker-compose.x402-prod.yml ps
+
+version: "3.9"
+
+x-common: &common
+  restart: unless-stopped
+  network_mode: host
+  env_file:
+    - .env.x402
+
+services:
+  # ─────────────────────────────────────────────────
+  # x402 Postgres (separate from FTH Pay postgres)
+  # ─────────────────────────────────────────────────
+  x402-db:
+    image: postgres:16-alpine
+    container_name: x402-db
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      POSTGRES_DB: fth_x402
+      POSTGRES_USER: fth_x402_app
+      POSTGRES_PASSWORD: ${X402_DB_PASSWORD}
+      PGPORT: "5442"
+    command: ["-p", "5442"]
+    volumes:
+      - x402_pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fth_x402_app -d fth_x402 -p 5442"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────
+  # x402 Facilitator — Payment Processing (port 3101)
+  # ─────────────────────────────────────────────────
+  x402-facilitator:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-facilitator
+    depends_on:
+      x402-db:
+        condition: service_healthy
+    environment:
+      PORT: "3101"
+      HOST: "0.0.0.0"
+    command: ["node", "--enable-source-maps", "packages/fth-x402-facilitator/dist/fth-x402-facilitator/src/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3101/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────
+  # x402 Treasury — Agent Fund Management (port 3200)
+  # ─────────────────────────────────────────────────
+  x402-treasury:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-treasury
+    depends_on:
+      x402-db:
+        condition: service_healthy
+    environment:
+      TREASURY_PORT: "3200"
+      TREASURY_HOST: "0.0.0.0"
+    command: ["node", "--enable-source-maps", "packages/fth-x402-treasury/dist/fth-x402-treasury/src/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3200/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────
+  # Guardian — Infrastructure Orchestration (port 3300)
+  # ─────────────────────────────────────────────────
+  x402-guardian:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-guardian
+    depends_on:
+      x402-db:
+        condition: service_healthy
+      x402-facilitator:
+        condition: service_healthy
+      x402-treasury:
+        condition: service_healthy
+    environment:
+      GUARDIAN_PORT: "3300"
+      GUARDIAN_HOST: "0.0.0.0"
+    command: ["node", "--enable-source-maps", "packages/fth-guardian/dist/fth-guardian/src/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3300/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────
+  # UNY Ledger — Settlement Ledger (port 4030)
+  # ─────────────────────────────────────────────────
+  x402-ledger:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-ledger
+    depends_on:
+      x402-db:
+        condition: service_healthy
+      x402-signer:
+        condition: service_healthy
+    environment:
+      PORT: "4030"
+      HOST: "0.0.0.0"
+      SIGNER_URL: http://127.0.0.1:4050
+    command: ["node", "--enable-source-maps", "apps/uny-ledger/dist/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:4030/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────
+  # Agent Gateway — Agent Management (port 4010)
+  # ─────────────────────────────────────────────────
+  x402-gateway:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-gateway
+    depends_on:
+      x402-db:
+        condition: service_healthy
+      x402-signer:
+        condition: service_healthy
+    environment:
+      PORT: "4010"
+      HOST: "0.0.0.0"
+      SIGNER_URL: http://127.0.0.1:4050
+      LEDGER_URL: http://127.0.0.1:4030
+    command: ["node", "--enable-source-maps", "apps/agent-gateway/dist/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:4010/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────
+  # A2A Router — Agent Discovery (port 4011)
+  # ─────────────────────────────────────────────────
+  x402-a2a-router:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-a2a-router
+    environment:
+      PORT: "4011"
+      HOST: "0.0.0.0"
+    command: ["node", "--enable-source-maps", "apps/a2a-router/dist/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:4011/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────
+  # Rust Signer — Key Custody (port 4050)
+  # ─────────────────────────────────────────────────
+  x402-signer:
+    image: ${ECR_REGISTRY}/fth-x402/signer:latest
+    container_name: x402-signer
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      SIGNER_HOST: "0.0.0.0"
+      SIGNER_PORT: "4050"
+      SIGNER_DB_PATH: /app/data/signer.db
+    volumes:
+      - x402_signer_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "true"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─────────────────────────────────────────────────
+  # Stellar Bridge — USDF Deposit/Withdraw (port 3250)
+  # ─────────────────────────────────────────────────
+  x402-stellar-bridge:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-stellar-bridge
+    depends_on:
+      x402-db:
+        condition: service_healthy
+    environment:
+      BRIDGE_PORT: "3250"
+      HOST: "0.0.0.0"
+    command: ["node", "--enable-source-maps", "packages/fth-x402-stellar-bridge/dist/fth-x402-stellar-bridge/src/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3250/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ─────────────────────────────────────────────────
+  # Asset Registry — Real-World Assets (port 3260)
+  # ─────────────────────────────────────────────────
+  x402-asset-registry:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-asset-registry
+    depends_on:
+      x402-db:
+        condition: service_healthy
+    environment:
+      REGISTRY_PORT: "3260"
+      HOST: "0.0.0.0"
+    command: ["node", "--enable-source-maps", "packages/fth-x402-asset-registry/dist/fth-x402-asset-registry/src/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3260/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────
+  # Barter Engine — Asset Trading (port 3270)
+  # ─────────────────────────────────────────────────
+  x402-barter:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-barter
+    depends_on:
+      x402-db:
+        condition: service_healthy
+    environment:
+      BARTER_PORT: "3270"
+      HOST: "0.0.0.0"
+    command: ["node", "--enable-source-maps", "packages/fth-x402-barter/dist/fth-x402-barter/src/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3270/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────
+  # Mesh Pulse — Neural Controller (port 3280)
+  # ─────────────────────────────────────────────────
+  x402-mesh-pulse:
+    <<: *common
+    image: ${ECR_REGISTRY}/fth-x402/platform:latest
+    container_name: x402-mesh-pulse
+    depends_on:
+      x402-db:
+        condition: service_healthy
+      x402-facilitator:
+        condition: service_healthy
+      x402-treasury:
+        condition: service_healthy
+      x402-barter:
+        condition: service_healthy
+      x402-asset-registry:
+        condition: service_healthy
+    environment:
+      PULSE_PORT: "3280"
+      HOST: "0.0.0.0"
+      DEMAND_THRESHOLD: "5.0"
+      DEMAND_MICRO_PCT: "0.5"
+    command: ["node", "--enable-source-maps", "packages/fth-x402-mesh-pulse/dist/fth-x402-mesh-pulse/src/index.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3280/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ─────────────────────────────────────────────────
+  # Apostle Chain — AI-to-AI Settlement (port 7332)
+  # ─────────────────────────────────────────────────
+  x402-apostle:
+    image: ${ECR_REGISTRY}/fth-x402/apostle:latest
+    container_name: x402-apostle
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      APOSTLE_BIND: "0.0.0.0:7332"
+    volumes:
+      - x402_apostle_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "true"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  x402_pgdata:
+  x402_signer_data:
+  x402_apostle_data:

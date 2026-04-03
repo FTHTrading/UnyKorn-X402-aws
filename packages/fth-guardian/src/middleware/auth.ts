@@ -39,8 +39,9 @@ export function registerAuthMiddleware(app: FastifyInstance): void {
     // Public routes — always pass
     if (PUBLIC_ROUTES.has(url)) return;
 
-    // Metrics — allow public read if explicitly exposed (Prometheus scrape)
-    if (METRICS_PREFIXES.some((p) => url.startsWith(p))) return;
+    // Metrics — allow public access only when METRICS_PUBLIC=true (e.g. for Prometheus scraping)
+    // Default: metrics require the same auth as all other routes.
+    if (process.env.METRICS_PUBLIC === "true" && METRICS_PREFIXES.some((p) => url.startsWith(p))) return;
 
     // Dev mode — no keys configured, skip auth
     if (!SIGNING_KEY && !ADMIN_TOKEN) return;

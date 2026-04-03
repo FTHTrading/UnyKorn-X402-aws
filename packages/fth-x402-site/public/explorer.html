@@ -88,11 +88,11 @@
                 <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
                     <div>
                         <label class="block text-sm text-slate-300 mb-2" for="gateway-url">Gateway base URL</label>
-                        <input id="gateway-url" class="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-slate-100 outline-none focus:border-accent" placeholder="https://api.fth.trading or http://127.0.0.1:8788" />
+                        <input id="gateway-url" class="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-slate-100 outline-none focus:border-accent" placeholder="https://gateway.unykorn.org or http://127.0.0.1:8788" />
                     </div>
                     <div>
                         <label class="block text-sm text-slate-300 mb-2" for="facilitator-url">Facilitator base URL</label>
-                        <input id="facilitator-url" class="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-slate-100 outline-none focus:border-accent" placeholder="https://facilitator.fth.trading or http://127.0.0.1:3100" />
+                        <input id="facilitator-url" class="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-slate-100 outline-none focus:border-accent" placeholder="https://x402api.unykorn.org or http://127.0.0.1:3100" />
                     </div>
                     <div>
                         <label class="block text-sm text-slate-300 mb-2" for="treasury-url">Treasury base URL</label>
@@ -295,8 +295,8 @@
         const usePublicStackButton = document.getElementById('use-public-stack');
         const useLocalStackButton = document.getElementById('use-local-stack');
         const normalModeEl = document.getElementById('normal-mode');
-        const publicFacilitatorBase = 'https://fri-immigration-butterfly-heroes.trycloudflare.com';
-        const publicGatewayBase = 'https://continent-anytime-auto-regular.trycloudflare.com';
+        const publicFacilitatorBase = 'https://x402api.unykorn.org';
+        const publicGatewayBase = 'https://gateway.unykorn.org';
         const publicTreasuryBase = '';
         const localFacilitatorBase = 'http://127.0.0.1:3100';
         const localGatewayBase = 'http://127.0.0.1:8788';

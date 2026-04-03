@@ -7,6 +7,8 @@ export interface IcoEnv {
 	UNYKORN_RPC_URL?: string;
 	BASE_RPC_URL?: string;
 	BASE_USDC_ADDRESS?: string;
+	FTH_PAY_API_URL?: string;
+	FTH_PAY_SERVICE_SECRET?: string;
 }
 
 type TierId = "seed" | "private" | "public";
@@ -83,6 +85,11 @@ interface AllocationRecord {
 	txHash: string;
 	status: "issued";
 	createdAt: string;
+	deliveryStatus: "pending" | "delivered" | "failed" | "manual_required";
+	deliveryChain?: string;
+	deliveryTxHash?: string;
+	deliveryError?: string;
+	deliveryAttemptedAt?: string;
 }
 
 interface CreateOrderBody {
@@ -474,6 +481,10 @@ async function confirmOrder(
 		receiptId,
 	};
 
+	// Determine delivery chain — UNY primary contract is on Avalanche
+	const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(payer);
+	const deliveryChain = isEvmAddress ? "AVALANCHE" : undefined;
+
 	const allocation: AllocationRecord = {
 		allocationId,
 		orderId: current.orderId,
@@ -491,6 +502,8 @@ async function confirmOrder(
 		txHash,
 		status: "issued",
 		createdAt: paidAt,
+		deliveryStatus: isEvmAddress ? "pending" : "manual_required",
+		deliveryChain: deliveryChain,
 	};
 
 	await env.STATE.put(orderKey(orderId), JSON.stringify(paidOrder));
@@ -510,7 +523,112 @@ async function confirmOrder(
 		country: request.headers.get("CF-IPCountry") ?? "unknown",
 	});
 
+	// ── Trigger on-chain UNY delivery via FTH Pay master issuance ────
+	if (isEvmAddress && deliveryChain) {
+		const delivery = await triggerTokenDelivery(env, {
+			orderId: current.orderId,
+			allocationId,
+			recipientAddress: payer,
+			totalUny: current.totalUny,
+			chain: deliveryChain,
+			buyerEmail: current.buyerEmail,
+			tierId: current.tierId,
+			paymentTxHash: txHash,
+		});
+
+		allocation.deliveryAttemptedAt = new Date().toISOString();
+
+		if (delivery.success) {
+			allocation.deliveryStatus = "delivered";
+			allocation.deliveryTxHash = delivery.txHash;
+			await auditLog(env, "token_delivery_success", {
+				orderId: current.orderId,
+				allocationId,
+				deliveryTxHash: delivery.txHash,
+				chain: deliveryChain,
+				totalUny: current.totalUny,
+			});
+		} else {
+			allocation.deliveryStatus = "failed";
+			allocation.deliveryError = delivery.error;
+			await auditLog(env, "token_delivery_failed", {
+				orderId: current.orderId,
+				allocationId,
+				error: delivery.error,
+				chain: deliveryChain,
+			});
+		}
+
+		// Persist updated delivery status
+		await env.STATE.put(allocationKey(allocationId), JSON.stringify(allocation));
+	}
+
 	return jsonResponse({ order: paidOrder, allocation }, 200);
+}
+
+// ── On-Chain Token Delivery ──────────────────────────────────────────
+
+interface DeliveryRequest {
+	orderId: string;
+	allocationId: string;
+	recipientAddress: string;
+	totalUny: string;
+	chain: string;
+	buyerEmail: string;
+	tierId: string;
+	paymentTxHash: string;
+}
+
+interface DeliveryResult {
+	success: boolean;
+	txHash?: string;
+	error?: string;
+}
+
+async function triggerTokenDelivery(
+	env: IcoEnv,
+	req: DeliveryRequest,
+): Promise<DeliveryResult> {
+	const apiUrl = env.FTH_PAY_API_URL;
+	const serviceSecret = env.FTH_PAY_SERVICE_SECRET;
+
+	if (!apiUrl || !serviceSecret) {
+		return { success: false, error: "Token delivery service not configured" };
+	}
+
+	try {
+		const response = await fetch(`${apiUrl}/api/v1/internal/ico-issuance`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Service-Secret": serviceSecret,
+			},
+			body: JSON.stringify({
+				orderId: req.orderId,
+				allocationId: req.allocationId,
+				recipientAddress: req.recipientAddress,
+				totalUny: req.totalUny,
+				chain: req.chain,
+				buyerEmail: req.buyerEmail,
+				tierId: req.tierId,
+				paymentTxHash: req.paymentTxHash,
+			}),
+		});
+
+		if (!response.ok) {
+			const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` })) as { error?: string };
+			return { success: false, error: errorBody.error ?? `Delivery failed (${response.status})` };
+		}
+
+		const result = await response.json() as { success: boolean; data?: { txHash?: string } };
+		if (result.success && result.data?.txHash) {
+			return { success: true, txHash: result.data.txHash };
+		}
+		return { success: false, error: "Delivery response missing transaction hash" };
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		return { success: false, error: `Delivery request failed: ${message}` };
+	}
 }
 
 async function getAllocationsByWallet(wallet: string, env: IcoEnv, jsonResponse: JsonResponse): Promise<Response> {

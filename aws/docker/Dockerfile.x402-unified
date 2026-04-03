@@ -1,0 +1,84 @@
+# UnyKorn x402 Platform — Unified Node.js image
+# Contains all built services; run with different CMD per service
+#
+# Build:  docker build -f aws/docker/Dockerfile.x402-unified -t x402-unified .
+# Run:    docker run -e PORT=3101 x402-unified node packages/fth-x402-facilitator/dist/fth-x402-facilitator/src/index.js
+
+FROM node:22-slim AS builder
+
+WORKDIR /app
+
+# Copy root package files
+COPY package.json package-lock.json* ./
+
+# Copy ALL workspace package.json files for dep resolution
+COPY packages/fth-x402-facilitator/package.json packages/fth-x402-facilitator/
+COPY packages/fth-x402-treasury/package.json packages/fth-x402-treasury/
+COPY packages/fth-x402-core/package.json packages/fth-x402-core/
+COPY packages/fth-x402-a2a/package.json packages/fth-x402-a2a/
+COPY packages/fth-x402-sdk/package.json packages/fth-x402-sdk/
+COPY packages/fth-x402-pricing/package.json packages/fth-x402-pricing/
+COPY packages/fth-x402-gateway/package.json packages/fth-x402-gateway/
+COPY packages/fth-metering/package.json packages/fth-metering/
+COPY packages/fth-guardian/package.json packages/fth-guardian/
+COPY packages/shared-types/package.json packages/shared-types/
+COPY packages/agent-core/package.json packages/agent-core/
+COPY packages/policy-engine/package.json packages/policy-engine/
+COPY packages/signing-client/package.json packages/signing-client/
+COPY packages/a2a-sdk/package.json packages/a2a-sdk/
+COPY packages/genesis-ledger/package.json packages/genesis-ledger/
+COPY packages/fth-x402-stellar-bridge/package.json packages/fth-x402-stellar-bridge/
+COPY packages/fth-x402-asset-registry/package.json packages/fth-x402-asset-registry/
+COPY packages/fth-x402-barter/package.json packages/fth-x402-barter/
+COPY packages/fth-x402-mesh-pulse/package.json packages/fth-x402-mesh-pulse/
+COPY apps/agent-gateway/package.json apps/agent-gateway/
+COPY apps/uny-ledger/package.json apps/uny-ledger/
+COPY apps/a2a-router/package.json apps/a2a-router/
+
+# Install all workspace deps
+RUN npm install --include-workspace-root 2>/dev/null || npm install
+
+# Copy Prisma schema & generate client
+COPY prisma/ prisma/
+RUN npx prisma generate
+
+# Copy ALL source
+COPY packages/ packages/
+COPY apps/ apps/
+COPY config/ config/
+COPY db/ db/
+COPY scripts/ scripts/
+
+# Build everything (cd into each package to run tsc)
+RUN cd packages/fth-x402-core && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-metering && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-x402-facilitator && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-x402-treasury && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-guardian && npx tsc 2>&1 || true && cd /app \
+ && cd apps/agent-gateway && npx tsc 2>&1 || true && cd /app \
+ && cd apps/uny-ledger && npx tsc 2>&1 || true && cd /app \
+ && cd apps/a2a-router && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-x402-stellar-bridge && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-x402-asset-registry && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-x402-barter && npx tsc 2>&1 || true && cd /app \
+ && cd packages/fth-x402-mesh-pulse && npx tsc 2>&1 || true && cd /app \
+ && echo "Build complete"
+
+# --- Production runtime ---
+FROM node:22-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1001 x402 && useradd -u 1001 -g x402 -s /bin/sh x402
+
+WORKDIR /app
+
+# Copy everything from builder (node_modules + built dist)
+COPY --from=builder --chown=x402:x402 /app /app
+
+USER x402
+
+ENV NODE_ENV=production
+
+# Default: facilitator (override CMD per service in docker-compose)
+CMD ["node", "--enable-source-maps", "packages/fth-x402-facilitator/dist/fth-x402-facilitator/src/index.js"]

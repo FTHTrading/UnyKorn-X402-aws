@@ -192,12 +192,12 @@ export interface SettlementResult {
 
 export interface InvoiceCreateBody {
   resource: string;
-  namespace: string;
+  namespace?: string;
   asset: AssetSymbol;
   amount: string;
   receiver: string;
-  memo: string;
-  policy: RoutePolicy;
+  memo?: string;
+  policy?: RoutePolicy;
   rail?: Rail;
   ttl_seconds?: number;
 }

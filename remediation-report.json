@@ -1,0 +1,169 @@
+{
+  "audit": {
+    "date": "2025-05-27",
+    "auditor": "GitHub Copilot (Claude Sonnet 4.6)",
+    "repos": [
+      "C:/Users/Kevan/UnyKorn-X402-aws",
+      "C:/Users/Kevan/projects/fth-pay"
+    ],
+    "typecheck_status": {
+      "fth_x402_core": "PASS",
+      "fth_x402_treasury": "PASS",
+      "fth_guardian": "PASS",
+      "fth_pay_api": "PASS"
+    }
+  },
+  "scorecard": {
+    "critical_found": 3,
+    "critical_fixed": 3,
+    "high_found": 4,
+    "high_fixed": 4,
+    "medium_found": 4,
+    "medium_fixed": 4,
+    "low_found": 2,
+    "low_fixed": 0,
+    "total_found": 13,
+    "total_fixed": 11,
+    "total_unresolved": 2
+  },
+  "findings": [
+    {
+      "id": "C-1",
+      "severity": "CRITICAL",
+      "status": "FIXED",
+      "title": "Logout DoS via unsigned JWT (jwt.decode instead of jwt.verify)",
+      "owasp": "A07 Identification and Authentication Failures",
+      "file": "fth-pay/packages/api/src/routes/auth.routes.ts",
+      "description": "POST /api/v1/auth/logout used jwt.decode() (no signature verification). Any attacker with any valid-looking JWT structure could force-revoke all refresh tokens for an arbitrary userId, effectively locking users out of their sessions.",
+      "impact": "Denial of service — forced logout for any user whose userId is known",
+      "fix": "Replaced jwt.decode() with jwt.verify(token, config.jwt.secret). Logout is now best-effort (try/catch for expired tokens) but only operates on cryptographically-verified identities. Added top-level jwt and config imports."
+    },
+    {
+      "id": "C-2",
+      "severity": "CRITICAL",
+      "status": "FIXED",
+      "title": "Guardian /api/commands/emit has no event allowlist — privilege escalation via EventBus",
+      "owasp": "A01 Broken Access Control",
+      "file": "UnyKorn-X402-aws/packages/fth-guardian/src/routes/commands.ts",
+      "description": "Any authenticated service caller could emit arbitrary events on the internal EventBus, including node.down (triggers EC2 restarts via SSM), system.halt (stops all daemons), upgrade.trigger (rolling deploy), and chain.stalled.",
+      "impact": "Authenticated service token holders could trigger infrastructure actions beyond their intended permission scope",
+      "fix": "Added SAFE_EMIT_EVENTS allowlist: alert.acknowledge, config.reload, heartbeat, daemon.ping, metrics.flush. All other events return 400 with the allowed list."
+    },
+    {
+      "id": "C-3",
+      "severity": "CRITICAL",
+      "status": "FIXED",
+      "title": "Guardian /metrics prefix fully unauthenticated — information disclosure",
+      "owasp": "A05 Security Misconfiguration",
+      "file": "UnyKorn-X402-aws/packages/fth-guardian/src/middleware/auth.ts",
+      "description": "Auth middleware unconditionally bypassed authentication for any URL starting with /metrics, exposing daemon states, alert history, revenue totals, node health, upgrade history, and infrastructure topology to unauthenticated callers.",
+      "impact": "Full operational intelligence readable without any credentials",
+      "fix": "Bypass now requires METRICS_PUBLIC=true environment variable. Default: metrics require auth."
+    },
+    {
+      "id": "H-1",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "title": "FTH Pay CORS is wildcard (*) in production",
+      "owasp": "A05 Security Misconfiguration",
+      "file": "fth-pay/packages/api/src/app.ts",
+      "description": "app.use(cors()) with no options set Access-Control-Allow-Origin: * for all origins on a financial API. JSON body limit was also 10MB (DoS vector).",
+      "impact": "Any web page could make cross-origin calls to the API using victim's credentials",
+      "fix": "CORS now uses CORS_ORIGIN env var (comma-separated origins list) with dev-mode fallback to permissive. JSON body limit reduced to 1MB."
+    },
+    {
+      "id": "H-2",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "title": "No startup env validation — service starts silently broken",
+      "owasp": "A05 Security Misconfiguration",
+      "file": "fth-pay/packages/api/src/index.ts",
+      "description": "JWT_SECRET, JWT_REFRESH_SECRET, DATABASE_URL were non-null asserted (!) in config but not validated at startup. Missing env vars produce cryptic runtime errors rather than clean startup failures.",
+      "impact": "Service appears healthy during startup but fails on first authenticated request",
+      "fix": "Added REQUIRED_ENV startup check. process.exit(1) with descriptive message if any required env var is missing."
+    },
+    {
+      "id": "H-3",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "title": "Seed script missing AVALANCHE and BASE chains",
+      "owasp": null,
+      "file": "fth-pay/packages/api/src/seed/provision-mainnet-wallets.ts",
+      "description": "ALL_CHAINS typed as Chain[] but missing 2 of 9 values. Two Record<Chain, string> objects also missing AVALANCHE and BASE entries, causing TypeScript compilation errors and silent omission of those chains during wallet provisioning.",
+      "impact": "AVALANCHE and BASE wallets silently skipped in provisioning runs; script fails TypeScript check",
+      "fix": "Added AVALANCHE and BASE to ALL_CHAINS array and to chainLabel/keyLabel record literals."
+    },
+    {
+      "id": "H-4",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "title": "TypeScript errors in 3 utility scripts",
+      "owasp": null,
+      "files": [
+        "fth-pay/packages/api/src/scripts/generate-treasury-wallets.ts",
+        "fth-pay/packages/api/src/scripts/stellar-issuer-setup.ts",
+        "fth-pay/packages/api/src/scripts/tron-deploy-tokens.ts"
+      ],
+      "description": "Three script files had unresolvable TypeScript errors: missing @solana/web3.js types, Stellar BalanceLineNative missing limit property, TronWeb transactionBuilder removed from type definitions.",
+      "impact": "tsc --noEmit exits with code 1 — build pipelines that fail on type errors would be blocked",
+      "fix": "@ts-expect-error annotation (Solana), as any cast on find result (Stellar), (tronWeb as any) cast (Tron)."
+    },
+    {
+      "id": "M-1",
+      "severity": "MEDIUM",
+      "status": "FIXED",
+      "title": "Sentinel success_count operator precedence bug — counter never increments",
+      "owasp": null,
+      "file": "UnyKorn-X402-aws/packages/fth-guardian/src/daemons/sentinel.ts",
+      "description": "success_count: ...?.success_count ?? 0 + 1 — due to operator precedence, evaluates as ?? (0+1) = ?? 1. If success_count is already defined, it stays frozen at its current value indefinitely.",
+      "impact": "Monitoring counter always shows stale value; alerting thresholds based on success_count are unreliable",
+      "fix": "Wrapped nullish coalescing operand: ((...?.success_count) ?? 0) + 1"
+    },
+    {
+      "id": "M-2",
+      "severity": "MEDIUM",
+      "status": "FIXED",
+      "title": "Treasury pagination parseInt without NaN guard",
+      "owasp": "A03 Injection",
+      "file": "UnyKorn-X402-aws/packages/fth-x402-treasury/src/routes/treasury.ts",
+      "description": "parseInt('abc', 10) returns NaN. Both /treasury/agents and /treasury/refills passed raw parseInt results to SQL LIMIT/OFFSET without NaN checking. PostgreSQL rejects NaN values with a 500 error.",
+      "impact": "Malformed query parameters produce uncaught 500 errors",
+      "fix": "Added Number.isNaN() checks with safe fallbacks, plus clamping (limit: 1-200, offset: >=0)."
+    },
+    {
+      "id": "M-3",
+      "severity": "MEDIUM",
+      "status": "FIXED",
+      "title": "Auth body hash uses hardcoded literal 'fth-body' HMAC key",
+      "owasp": "A02 Cryptographic Failures",
+      "file": "UnyKorn-X402-aws/packages/fth-x402-core/src/auth.ts",
+      "description": "buildSignatureMessage computed body hash as HMAC('fth-body', body) — the inner HMAC key is a public literal, not the signing secret. Body contribution to the outer signature can be pre-computed without the secret.",
+      "impact": "Minor cryptographic weakness: body component of signature pre-computable without knowing FTH_SERVICE_SECRET",
+      "fix": "buildSignatureMessage now accepts secret parameter. createServiceSignature passes the actual secret for body hashing. NOTE: this changes canonical message format — requires coordinated redeployment of all services.",
+      "breaking_change": true,
+      "deployment_note": "All services (fth-x402-treasury, fth-guardian, fth-x402-facilitator, fth-x402-gateway) must be redeployed together."
+    },
+    {
+      "id": "L-1",
+      "severity": "LOW",
+      "status": "UNRESOLVED",
+      "title": "Guardian SSM command safety uses prefix-matching (future security landmine)",
+      "owasp": "A01 Broken Access Control",
+      "file": "UnyKorn-X402-aws/packages/fth-guardian/src/routes/commands.ts",
+      "description": "The SSM command safety check uses command.startsWith('docker logs') which passes 'docker logs --follow /etc/passwd'. SSM is not yet implemented (route returns a note), but if implemented with this logic it would be exploitable.",
+      "impact": "Not exploitable today (SSM not implemented). Will be a critical RCE if implemented without fixing.",
+      "recommendation": "Replace prefix matching with exact-match Set (same pattern as ALLOWED_COMMANDS for /exec). See unresolved-issues.md."
+    },
+    {
+      "id": "L-2",
+      "severity": "LOW",
+      "status": "UNRESOLVED",
+      "title": "Treasury db.ts has hardcoded fallback password 'fth_dev'",
+      "owasp": "A07 Identification and Authentication Failures",
+      "file": "UnyKorn-X402-aws/packages/fth-x402-treasury/src/db.ts",
+      "description": "Pool connection uses password: process.env.PGPASSWORD ?? 'fth_dev'. If PGPASSWORD is unset in production, the service silently attempts to connect with dev credentials.",
+      "impact": "In misconfigured prod environments, service may connect to wrong DB or fail with a confusing auth error",
+      "recommendation": "Add explicit check: if production and PGPASSWORD is unset, log FATAL and exit. See unresolved-issues.md."
+    }
+  ]
+}

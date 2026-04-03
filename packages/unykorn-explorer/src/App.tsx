@@ -13,6 +13,7 @@ import Listing from "./pages/Listing";
 import Genesis from "./pages/Genesis";
 import ProofCenter from "./pages/ProofCenter";
 import Security from "./pages/Security";
+import Pulse from "./pages/Pulse";
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="proof" element={<ProofCenter />} />
         <Route path="security" element={<Security />} />
         <Route path="genesis" element={<Genesis />} />
+        <Route path="pulse" element={<Pulse />} />
       </Route>
     </Routes>
   );

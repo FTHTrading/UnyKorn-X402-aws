@@ -17,6 +17,7 @@ export async function createInvoice(body: InvoiceCreateBody) {
   const nonce = `n_${nanoid(12)}`;
   const ttl = body.ttl_seconds ?? 300;
   const expires_at = new Date(Date.now() + ttl * 1000);
+  const namespace = body.namespace ?? "default";
 
   await pool.query(
     `INSERT INTO invoices
@@ -26,7 +27,7 @@ export async function createInvoice(body: InvoiceCreateBody) {
       invoice_id,
       nonce,
       body.resource,
-      body.namespace,
+      namespace,
       body.asset,
       body.amount,
       body.receiver,

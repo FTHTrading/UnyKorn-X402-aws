@@ -2,7 +2,7 @@
 # rust-signer — Multi-stage build
 # ===========================================================================
 # Stage 1: Build the binary
-FROM rust:1.82-slim-bookworm AS builder
+FROM rust:1.85-slim-bookworm AS builder
 
 WORKDIR /build
 COPY Cargo.toml Cargo.lock ./

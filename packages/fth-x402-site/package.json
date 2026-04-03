@@ -5,8 +5,8 @@
   "description": "Information site for x402.unykorn.org",
   "scripts": {
     "deploy": "npm run deploy:preview",
-    "deploy:preview": "npx wrangler pages deploy public --project-name x402-site",
-    "deploy:production": "npx wrangler pages deploy public --project-name x402-site --branch main"
+    "deploy:preview": "npx wrangler pages deploy public --project-name x402-site --commit-dirty true",
+    "deploy:production": "npx wrangler pages deploy public --project-name x402-site --branch main --commit-dirty true"
   },
   "dependencies": {}
 }

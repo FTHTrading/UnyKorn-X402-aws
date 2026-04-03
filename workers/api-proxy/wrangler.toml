@@ -13,6 +13,10 @@ UNYKORN_RPC_URL = "https://rpc.l1.unykorn.org"
 BASE_RPC_URL = "https://mainnet.base.org"
 BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 
+# Token delivery: FTH Pay master issuance integration
+# Set these with: npx wrangler secret put FTH_PAY_API_URL
+#                 npx wrangler secret put FTH_PAY_SERVICE_SECRET
+
 # Set the sync secret with:  npx wrangler secret put SYNC_SECRET
 # Set it to match the FTH_SERVICE_SECRET from .env
 

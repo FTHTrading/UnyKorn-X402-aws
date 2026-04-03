@@ -54,15 +54,17 @@ export const MAX_REQUEST_AGE_MS = 300_000; // 5 minutes
  *
  *   METHOD|PATH|TIMESTAMP|SHA256(BODY)
  *
- * Body is hashed separately to keep the message compact for large payloads.
+ * Body is hashed with the signing secret (not a static key) to bind the
+ * body to the secret and prevent pre-computation of the body contribution.
  */
 function buildSignatureMessage(
   method: string,
   path: string,
   timestamp: string,
   body: string,
+  secret: string,
 ): string {
-  const bodyHash = createHmac("sha256", "fth-body")
+  const bodyHash = createHmac("sha256", secret)
     .update(body || "")
     .digest("hex");
   return `${method.toUpperCase()}|${path}|${timestamp}|${bodyHash}`;
@@ -85,7 +87,7 @@ export function createServiceSignature(
   timestamp: string,
   body: string,
 ): string {
-  const message = buildSignatureMessage(method, path, timestamp, body);
+  const message = buildSignatureMessage(method, path, timestamp, body, secret);
   return createHmac("sha256", secret).update(message).digest("hex");
 }
 

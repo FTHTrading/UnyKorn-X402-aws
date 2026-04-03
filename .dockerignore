@@ -12,13 +12,11 @@ coverage
 *.tgz
 
 # Heavy monorepo dirs not needed by x402 Dockerfiles
-apps/
 contracts/
 docs/
 test/
 tests/
 tools/
-aws/docker/
 .github/
 .vscode/
 

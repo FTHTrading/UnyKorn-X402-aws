@@ -185,6 +185,19 @@ server.post<{
   const body = request.body;
 
   try {
+    // Auto-provision Genesis accounts for agents that don't have one yet
+    for (const agentId of [body.fromAgentId, body.toAgentId]) {
+      if (!ledger.getAccountByAgent(agentId)) {
+        const orgId = "org:external";
+        ledger.createAccount(agentId, orgId);
+        const acct = ledger.getAccountByAgent(agentId)!;
+        await prisma.genesisAccount.create({
+          data: { id: acct.accountId, agentId, orgId, status: "active" },
+        }).catch(() => {}); // dedup
+        server.log.info(`[TRANSFER] Auto-provisioned Genesis account for ${agentId}`);
+      }
+    }
+
     const entry = ledger.transfer({
       fromAgentId: body.fromAgentId,
       toAgentId: body.toAgentId,

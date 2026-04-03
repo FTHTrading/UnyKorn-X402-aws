@@ -92,13 +92,13 @@ resource "aws_lb_target_group" "dashboard" {
   vpc_id   = var.vpc_id
 
   health_check {
-    path                = "/"
+    path                = "/health"
     port                = "traffic-port"
     healthy_threshold   = 2
     unhealthy_threshold = 3
-    timeout             = 5
-    interval            = 15
-    matcher             = "200"
+    timeout             = 10
+    interval            = 30
+    matcher             = "200,302"
   }
 
   tags = { Name = "${var.project_name}-${var.environment}-tg-dashboard" }
@@ -119,13 +119,13 @@ resource "aws_lb_target_group" "api" {
   vpc_id   = var.vpc_id
 
   health_check {
-    path                = "/"
+    path                = "/health"
     port                = "traffic-port"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     timeout             = 5
     interval            = 15
-    matcher             = "200"
+    matcher             = "200,404"
   }
 
   tags = { Name = "${var.project_name}-${var.environment}-tg-api" }
@@ -289,6 +289,10 @@ resource "aws_lb_target_group_attachment" "rpc" {
 # ─── Outputs ───────────────────────────────────────────────
 output "alb_arn" {
   value = aws_lb.web.arn
+}
+
+output "alb_arn_suffix" {
+  value = aws_lb.web.arn_suffix
 }
 
 output "alb_dns_name" {

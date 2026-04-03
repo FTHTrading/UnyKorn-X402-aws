@@ -34,13 +34,13 @@ UNYKORN_TREASURY_ADDRESS = "uny1_755098bacf6f6d9ef9d0f391a8e7c467e7db7190"
 [env.production]
 name = "fth-x402-gateway"
 workers_dev = true
-# Custom domain routes (enable after fth.trading is proxied through Cloudflare):
+# Custom domain routes (fth.trading — enable after proxied through Cloudflare):
 # routes = [
 #   { pattern = "api.fth.trading/api/*", zone_name = "fth.trading" },
 # ]
 
 [env.production.vars]
-FACILITATOR_URL = "https://facilitator.l1.unykorn.org"
+FACILITATOR_URL = "https://x402api.unykorn.org"
 ENVIRONMENT = "production"
 UNYKORN_TREASURY_ADDRESS = "uny1_755098bacf6f6d9ef9d0f391a8e7c467e7db7190"
 

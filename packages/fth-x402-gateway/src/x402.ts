@@ -72,7 +72,8 @@ export async function build402Response(
     });
 
     if (!res.ok) {
-      console.error("Facilitator invoice creation failed:", res.status);
+      const errBody = await res.text().catch(() => "(unreadable)");
+      console.error("Facilitator invoice creation failed:", res.status, errBody);
       return new Response("Internal payment error", { status: 500 });
     }
 
