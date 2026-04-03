@@ -1,5 +1,10 @@
 import { Pool } from "pg";
 
+if (!process.env.PGPASSWORD && process.env.NODE_ENV === "production") {
+  console.error("[Treasury DB] FATAL: PGPASSWORD is required in production");
+  process.exit(1);
+}
+
 const pool = new Pool({
   host: process.env.PGHOST ?? "localhost",
   port: Number(process.env.PGPORT ?? 5432),

@@ -119,11 +119,27 @@ export async function commandRoutes(app: FastifyInstance): Promise<void> {
 
     audit.recordAction("api", "ssm_command", instance_id, "submitted", { command });
 
-    // For safety, only allow certain commands
-    const safeCommands = ["docker restart", "docker logs", "systemctl status", "systemctl restart", "cat /var/log"];
-    const isSafe = safeCommands.some((prefix: string) => command.startsWith(prefix));
-    if (!isSafe) {
-      return { error: "Command not in allowlist", allowed_prefixes: safeCommands };
+    // Exact-match allowlist — NO prefix matching (prevents injection via "docker logs; rm -rf /")
+    const SAFE_SSM_COMMANDS = new Set([
+      "docker ps",
+      "docker stats --no-stream",
+      "docker logs x402-facilitator --tail 100",
+      "docker logs x402-treasury --tail 100",
+      "docker logs x402-guardian --tail 100",
+      "docker logs x402-gateway --tail 100",
+      "docker logs x402-ledger --tail 100",
+      "docker logs x402-stellar-bridge --tail 100",
+      "docker logs x402-asset-registry --tail 100",
+      "docker logs x402-barter --tail 100",
+      "docker logs x402-mesh-pulse --tail 100",
+      "docker logs x402-apostle --tail 100",
+      "docker logs x402-signer --tail 100",
+      "docker logs x402-a2a-router --tail 100",
+      "systemctl status docker",
+      "systemctl status fth-guardian",
+    ]);
+    if (!SAFE_SSM_COMMANDS.has(command)) {
+      return { error: "Command not in allowlist", allowed: [...SAFE_SSM_COMMANDS] };
     }
 
     return { ok: true, instance_id, command, note: "SSM execution will be implemented via AWS SDK" };
