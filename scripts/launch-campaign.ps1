@@ -1,4 +1,4 @@
-# Launch Campaign — x402 + FTH EDU
+﻿# Launch Campaign — x402 + FTH EDU
 # Opens all posting interfaces with content pre-staged in your clipboard
 # Run from PowerShell: .\scripts\launch-campaign.ps1
 
