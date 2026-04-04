@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>x402 Apostle Chain — Digital Twin</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #050a12; color: #e0e8ff; font-family: 'Courier New', monospace; overflow: hidden; }
+
+#canvas-container { position: fixed; inset: 0; }
+
+/* HUD panels */
+#hud { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 10; }
+
+#stats {
+  position: fixed; top: 20px; left: 20px;
+  background: rgba(5,10,18,0.85); border: 1px solid #1a3060;
+  border-radius: 8px; padding: 14px 18px; min-width: 260px;
+  backdrop-filter: blur(6px);
+}
+#stats h2 { color: #00cfff; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; }
+.stat-row { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 5px; font-size: 12px; }
+.stat-label { color: #4a7aad; }
+.stat-value { color: #e0e8ff; font-weight: bold; }
+.stat-value.ok { color: #00ff9f; }
+.stat-value.warn { color: #ffb800; }
+
+#tx-feed {
+  position: fixed; bottom: 20px; left: 20px;
+  background: rgba(5,10,18,0.85); border: 1px solid #1a3060;
+  border-radius: 8px; padding: 14px 18px; width: 380px; max-height: 260px; overflow: hidden;
+  backdrop-filter: blur(6px);
+}
+#tx-feed h2 { color: #00cfff; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+#tx-list { font-size: 11px; line-height: 1.7; }
+.tx-entry { opacity: 1; transition: opacity 2s; }
+.tx-entry.fade { opacity: 0; }
+
+#receipt-feed {
+  position: fixed; bottom: 20px; left: 420px;
+  background: rgba(5,10,18,0.85); border: 1px solid #1a3060;
+  border-radius: 8px; padding: 14px 18px; width: 320px; max-height: 200px; overflow: hidden;
+  backdrop-filter: blur(6px);
+}
+#receipt-feed h2 { color: #9B59B6; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+#receipt-list { font-size: 10px; line-height: 1.7; color: #5a7aad; }
+
+#legend {
+  position: fixed; top: 20px; right: 20px;
+  background: rgba(5,10,18,0.85); border: 1px solid #1a3060;
+  border-radius: 8px; padding: 14px 18px; min-width: 200px;
+  backdrop-filter: blur(6px);
+}
+#legend h2 { color: #00cfff; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; }
+.legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 12px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+#node-tooltip {
+  position: fixed; display: none;
+  background: rgba(5,10,18,0.95); border: 1px solid #00cfff;
+  border-radius: 6px; padding: 10px 14px; font-size: 12px;
+  z-index: 20; pointer-events: none; min-width: 200px;
+}
+.tt-label { color: #00cfff; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+.tt-row { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 2px; color: #8ab0d0; }
+.tt-row span:last-child { color: #e0e8ff; }
+
+#connection-status {
+  position: fixed; bottom: 20px; right: 20px;
+  font-size: 11px; color: #4a7aad;
+  background: rgba(5,10,18,0.85); border: 1px solid #1a3060;
+  border-radius: 6px; padding: 8px 14px;
+}
+#connection-status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.dot-ok { background: #00ff9f; box-shadow: 0 0 6px #00ff9f; }
+.dot-err { background: #ff4060; box-shadow: 0 0 6px #ff4060; }
+.dot-wait { background: #ffb800; box-shadow: 0 0 6px #ffb800; }
+
+#title-bar {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  text-align: center; pointer-events: none;
+}
+#title-bar h1 { font-size: 16px; letter-spacing: 4px; color: #00cfff; text-transform: uppercase; }
+#title-bar p { font-size: 10px; letter-spacing: 2px; color: #2a5080; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+
+<div id="hud">
+  <div id="title-bar">
+    <h1>x402 Apostle Chain</h1>
+    <p>Digital Twin — Sovereign AI Commerce Network</p>
+  </div>
+
+  <div id="stats">
+    <h2>Chain Status</h2>
+    <div class="stat-row"><span class="stat-label">Height</span><span class="stat-value" id="s-height">—</span></div>
+    <div class="stat-row"><span class="stat-label">Agents</span><span class="stat-value" id="s-agents">—</span></div>
+    <div class="stat-row"><span class="stat-label">TX / min</span><span class="stat-value" id="s-txrate">0</span></div>
+    <div class="stat-row"><span class="stat-label">Live TXs</span><span class="stat-value ok" id="s-total">0</span></div>
+    <div class="stat-row"><span class="stat-label">ATP Circulating</span><span class="stat-value" id="s-atp">—</span></div>
+    <div class="stat-row"><span class="stat-label">Chain ID</span><span class="stat-value">7332</span></div>
+    <div class="stat-row"><span class="stat-label">Asset</span><span class="stat-value">ATP</span></div>
+    <div class="stat-row"><span class="stat-label">Network</span><span class="stat-value ok">APOSTLE</span></div>
+  </div>
+
+  <div id="legend">
+    <h2>Agent Tiers</h2>
+    <div class="legend-row"><div class="legend-dot" style="background:#FFD700;box-shadow:0 0 8px #FFD700"></div><span>Operator</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:#ff4500;box-shadow:0 0 8px #ff4500"></div><span>Control</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:#00FFFF;box-shadow:0 0 8px #00FFFF"></div><span>Execution</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:#9B59B6;box-shadow:0 0 8px #9B59B6"></div><span>Intelligence</span></div>
+    <div class="legend-row"><div class="legend-dot" style="background:#ECEFF4;box-shadow:0 0 8px #aaa"></div><span>Interface</span></div>
+  </div>
+
+  <div id="tx-feed">
+    <h2>Live Transactions</h2>
+    <div id="tx-list"></div>
+  </div>
+
+  <div id="receipt-feed">
+    <h2>Settled Receipts</h2>
+    <div id="receipt-list"></div>
+  </div>
+
+  <div id="node-tooltip">
+    <div class="tt-label" id="tt-label">—</div>
+    <div class="tt-row"><span>ID</span><span id="tt-id">—</span></div>
+    <div class="tt-row"><span>Tier</span><span id="tt-tier">—</span></div>
+    <div class="tt-row"><span>Balance</span><span id="tt-balance">—</span></div>
+    <div class="tt-row"><span>Nonce</span><span id="tt-nonce">—</span></div>
+  </div>
+
+  <div id="connection-status">
+    <span class="dot dot-wait" id="ws-dot"></span>
+    <span id="ws-label">Connecting…</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────────
+const ATP_SCALE = BigInt("1000000000000000000"); // 10^18
+
+const TIER_COLORS = {
+  operator:     0xFFD700,
+  control:      0xFF4500,
+  execution:    0x00FFFF,
+  intelligence: 0x9B59B6,
+  interface:    0xECEFF4,
+};
+
+const TIER_EMISSIVE = {
+  operator:     0x604200,
+  control:      0x601500,
+  execution:    0x004040,
+  intelligence: 0x2a0050,
+  interface:    0x303030,
+};
+
+// Static agent roster — populated by /api/agents
+const AGENT_DEFS = [
+  // Operators
+  { label: "kevan-burns-chairman",  tier: "operator"     },
+  { label: "genesis-treasury",      tier: "operator"     },
+  { label: "unykorn-operator",      tier: "operator"     },
+  { label: "x402-credit-pool",      tier: "operator"     },
+  { label: "mesh-pay-reserve",      tier: "operator"     },
+  // Control
+  { label: "treasury",              tier: "control"      },
+  { label: "compliance",            tier: "control"      },
+  { label: "policy",                tier: "control"      },
+  { label: "risk",                  tier: "control"      },
+  // Execution
+  { label: "settlement",            tier: "execution"    },
+  { label: "exchange-listing",      tier: "execution"    },
+  { label: "onboarding",            tier: "execution"    },
+  { label: "market-monitor",        tier: "execution"    },
+  { label: "wallet-ops",            tier: "execution"    },
+  { label: "reconciliation",        tier: "execution"    },
+  { label: "incident-response",     tier: "execution"    },
+  { label: "listing-packet",        tier: "execution"    },
+  // Intelligence
+  { label: "intelligence",          tier: "intelligence" },
+  { label: "documentation",         tier: "intelligence" },
+  // Interface
+  { label: "customer-desk",         tier: "interface"    },
+];
+
+// Commerce edges (from → to label pairs)
+const COMMERCE_EDGES = [
+  ["settlement","treasury"],["settlement","genesis-treasury"],
+  ["exchange-listing","intelligence"],["exchange-listing","market-monitor"],
+  ["onboarding","documentation"],["onboarding","compliance"],
+  ["market-monitor","exchange-listing"],["market-monitor","intelligence"],
+  ["wallet-ops","compliance"],["wallet-ops","treasury"],
+  ["reconciliation","settlement"],["reconciliation","treasury"],
+  ["incident-response","risk"],["incident-response","compliance"],
+  ["listing-packet","settlement"],["listing-packet","exchange-listing"],
+  ["customer-desk","onboarding"],["customer-desk","documentation"],
+  ["compliance","policy"],["compliance","risk"],
+  ["risk","compliance"],["risk","policy"],
+  ["policy","treasury"],["policy","genesis-treasury"],
+  ["treasury","genesis-treasury"],["treasury","x402-credit-pool"],
+  ["intelligence","market-monitor"],["intelligence","exchange-listing"],
+  ["documentation","listing-packet"],["documentation","onboarding"],
+  ["kevan-burns-chairman","treasury"],["kevan-burns-chairman","settlement"],
+  ["unykorn-operator","x402-credit-pool"],["unykorn-operator","wallet-ops"],
+];
+
+// ── Three.js setup ────────────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 3000);
+camera.position.set(0, 0, 420);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Particles background
+const starGeo = new THREE.BufferGeometry();
+const starCount = 2000;
+const starPos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount * 3; i++) starPos[i] = (Math.random() - 0.5) * 2000;
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+const starMat = new THREE.PointsMaterial({ color: 0x3060a0, size: 0.6, transparent: true, opacity: 0.6 });
+scene.add(new THREE.Points(starGeo, starMat));
+
+// Ambient + point lights
+scene.add(new THREE.AmbientLight(0x112244, 1.5));
+const pl1 = new THREE.PointLight(0x0080ff, 2, 800); pl1.position.set(0, 200, 200); scene.add(pl1);
+const pl2 = new THREE.PointLight(0xffa000, 1, 600); pl2.position.set(-200, -100, 100); scene.add(pl2);
+
+// ── Agent nodes ───────────────────────────────────────────────────────────────
+const nodeMap = {};   // label → { mesh, label, tier, agent_id, balance, nonce }
+
+function tierRadius(tier) {
+  return { operator: 220, control: 160, execution: 100, intelligence: 60, interface: 20 }[tier] || 100;
+}
+
+function createGlowedSphere(color, emissive, size) {
+  const geo = new THREE.SphereGeometry(size, 24, 24);
+  const mat = new THREE.MeshStandardMaterial({
+    color, emissive, emissiveIntensity: 1.2,
+    metalness: 0.4, roughness: 0.2,
+    transparent: true, opacity: 0.92,
+  });
+  return new THREE.Mesh(geo, mat);
+}
+
+function initNodes() {
+  const tierAngles = { operator: 0, control: 0, execution: 0, intelligence: 0, interface: 0 };
+  const tierCounts = {};
+  AGENT_DEFS.forEach(d => { tierCounts[d.tier] = (tierCounts[d.tier] || 0) + 1; });
+
+  AGENT_DEFS.forEach((def) => {
+    const color = TIER_COLORS[def.tier] || 0xffffff;
+    const emissive = TIER_EMISSIVE[def.tier] || 0x111111;
+    const r = tierRadius(def.tier);
+    const count = tierCounts[def.tier];
+    const idx = tierAngles[def.tier];
+    tierAngles[def.tier]++;
+    const angle = (idx / count) * Math.PI * 2;
+    // Tilt operators / interface a bit for 3D layering
+    const yOff = { operator: 60, control: 30, execution: 0, intelligence: -40, interface: -70 }[def.tier] || 0;
+
+    const mesh = createGlowedSphere(color, emissive, 8);
+    mesh.position.set(
+      Math.cos(angle) * r,
+      yOff + Math.sin(angle * 0.3) * 20,
+      Math.sin(angle) * r * 0.6,
+    );
+    mesh.userData = { label: def.label, tier: def.tier };
+    scene.add(mesh);
+    nodeMap[def.label] = { mesh, label: def.label, tier: def.tier, agent_id: null, balance: "0", nonce: 0 };
+  });
+}
+
+// ── Commerce edges ─────────────────────────────────────────────────────────────
+function drawEdges() {
+  COMMERCE_EDGES.forEach(([from, to]) => {
+    const a = nodeMap[from], b = nodeMap[to];
+    if (!a || !b) return;
+    const points = [a.mesh.position.clone(), b.mesh.position.clone()];
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({ color: 0x1a3a6a, transparent: true, opacity: 0.25 });
+    scene.add(new THREE.Line(geo, mat));
+  });
+}
+
+// ── Transaction particles ─────────────────────────────────────────────────────
+const activeTxParticles = [];
+
+function spawnTxParticle(fromLabel, toLabel, tier) {
+  const a = nodeMap[fromLabel], b = nodeMap[toLabel];
+  if (!a || !b) return;
+  const color = TIER_COLORS[tier] || 0xffffff;
+  const geo = new THREE.SphereGeometry(3, 8, 8);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1.0 });
+  const particle = new THREE.Mesh(geo, mat);
+  particle.position.copy(a.mesh.position);
+  scene.add(particle);
+  activeTxParticles.push({
+    mesh: particle,
+    from: a.mesh.position.clone(),
+    to: b.mesh.position.clone(),
+    t: 0,
+    speed: 0.012 + Math.random() * 0.008,
+  });
+  // Pulse the sender node
+  const orig = a.mesh.scale.clone();
+  a.mesh.scale.setScalar(1.5);
+  setTimeout(() => a.mesh.scale.copy(orig), 300);
+}
+
+function updateParticles() {
+  for (let i = activeTxParticles.length - 1; i >= 0; i--) {
+    const p = activeTxParticles[i];
+    p.t += p.speed;
+    if (p.t >= 1) {
+      scene.remove(p.mesh);
+      p.mesh.geometry.dispose();
+      p.mesh.material.dispose();
+      activeTxParticles.splice(i, 1);
+      continue;
+    }
+    p.mesh.position.lerpVectors(p.from, p.to, p.t);
+    p.mesh.material.opacity = Math.sin(p.t * Math.PI);
+  }
+}
+
+// ── Camera orbit ──────────────────────────────────────────────────────────────
+let camAngle = 0;
+const RAD = 460;
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let camPhi = 0.15;
+
+renderer.domElement.addEventListener('mousedown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => {
+  if (isDragging) {
+    camAngle += (e.clientX - prevMouse.x) * 0.003;
+    camPhi   += (e.clientY - prevMouse.y) * 0.003;
+    camPhi    = Math.max(-1.2, Math.min(1.2, camPhi));
+    prevMouse = { x: e.clientX, y: e.clientY };
+  }
+});
+
+// ── Raycasting for hover tooltip ──────────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse2d = new THREE.Vector2();
+const tooltip = document.getElementById('node-tooltip');
+let hoveredLabel = null;
+
+window.addEventListener('mousemove', e => {
+  mouse2d.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse2d.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse2d, camera);
+  const meshes = Object.values(nodeMap).map(n => n.mesh);
+  const hits = raycaster.intersectObjects(meshes);
+  if (hits.length > 0) {
+    const label = hits[0].object.userData.label;
+    if (label !== hoveredLabel) {
+      hoveredLabel = label;
+      const node = nodeMap[label];
+      document.getElementById('tt-label').textContent = label;
+      document.getElementById('tt-id').textContent = node.agent_id ? node.agent_id.slice(0, 8) + '…' : '—';
+      document.getElementById('tt-tier').textContent = node.tier;
+      document.getElementById('tt-balance').textContent = formatATP(node.balance) + ' ATP';
+      document.getElementById('tt-nonce').textContent = node.nonce;
+    }
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 16) + 'px';
+    tooltip.style.top  = (e.clientY - 10) + 'px';
+  } else {
+    tooltip.style.display = 'none';
+    hoveredLabel = null;
+  }
+});
+
+// ── Receipt feed ─────────────────────────────────────────────────────────────
+const receiptList = document.getElementById('receipt-list');
+const RECEIPT_KEEP = 8;
+
+function addReceiptEntry(rec) {
+  const entry = document.createElement('div');
+  const hash = (rec.tx_hash || rec.hash || '').slice(0, 8);
+  const from = rec.from_label || rec.from || '?';
+  const to   = rec.to_label   || rec.to   || '?';
+  const amt  = rec.amount ? formatATP(rec.amount.toString()) : '?';
+  entry.innerHTML = `<span style="color:#9B59B6">[${hash}]</span> <span style="color:#aaa">${from} → ${to}</span> <span style="color:#4ac">${amt} ATP</span>`;
+  receiptList.insertBefore(entry, receiptList.firstChild);
+  while (receiptList.children.length > RECEIPT_KEEP) receiptList.lastChild.remove();
+}
+
+// Seed receipt feed on load
+async function seedReceipts() {
+  try {
+    const r = await fetch('/api/receipts?limit=8');
+    const d = await r.json();
+    (d.receipts || []).reverse().forEach(addReceiptEntry);
+  } catch {}
+}
+seedReceipts();
+
+// ── Stats + TX Feed ───────────────────────────────────────────────────────────
+let totalTxs = 0;
+const txTimestamps = [];
+const txList = document.getElementById('tx-list');
+const TX_KEEP = 12;
+
+function formatATP(balStr) {
+  try {
+    const v = BigInt(balStr || "0");
+    const whole = v / ATP_SCALE;
+    const frac  = (v % ATP_SCALE) / BigInt(10**15); // 3 decimals
+    return whole.toString() + '.' + frac.toString().padStart(3,'0');
+  } catch { return '0.000'; }
+}
+
+function tierColor(tier) {
+  const map = { operator: '#FFD700', control: '#FF4500', execution: '#00FFFF', intelligence: '#9B59B6', interface: '#ECEFF4' };
+  return map[tier] || '#8ab0d0';
+}
+
+function addTxEntry(from, to, amount, tier) {
+  totalTxs++;
+  txTimestamps.push(Date.now());
+  document.getElementById('s-total').textContent = totalTxs;
+
+  // TX/min
+  const cutoff = Date.now() - 60000;
+  while (txTimestamps.length && txTimestamps[0] < cutoff) txTimestamps.shift();
+  document.getElementById('s-txrate').textContent = txTimestamps.length;
+
+  const entry = document.createElement('div');
+  entry.className = 'tx-entry';
+  const amtStr = formatATP(amount);
+  entry.innerHTML = `<span style="color:${tierColor(tier)}">[${from}]</span> → <span style="color:#00cfff">${to}</span> <span style="color:#ff9f00">${amtStr} ATP</span>`;
+  txList.insertBefore(entry, txList.firstChild);
+
+  // Keep only TX_KEEP entries
+  while (txList.children.length > TX_KEEP) {
+    const last = txList.lastChild;
+    last.classList.add('fade');
+    setTimeout(() => last.remove(), 2000);
+  }
+}
+
+// ── Chain polling ─────────────────────────────────────────────────────────────
+async function pollChain() {
+  try {
+    const r = await fetch('/api/chain');
+    const d = await r.json();
+    document.getElementById('s-height').textContent = d.height || '—';
+    document.getElementById('s-agents').textContent = d.agents || '—';
+  } catch {}
+}
+
+async function pollAgents() {
+  try {
+    const r = await fetch('/api/agents');
+    const d = await r.json();
+    let total = BigInt(0);
+    (d.agents || []).forEach(a => {
+      const node = nodeMap[a.label];
+      if (node) {
+        node.agent_id = a.agent_id;
+        node.balance  = a.balance;
+        node.nonce    = a.nonce;
+        // Resize sphere based on log(balance)
+        const units = Math.max(1, Number(BigInt(a.balance || "0") / BigInt(10**15)));
+        const scale = 0.8 + Math.log10(units) * 0.18;
+        node.mesh.scale.setScalar(Math.min(scale, 2.5));
+      }
+      try { total += BigInt(a.balance || "0"); } catch {}
+    });
+    // Update circulating supply display
+    const totalWhole = total / ATP_SCALE;
+    document.getElementById('s-atp').textContent = Number(totalWhole).toLocaleString() + ' ATP';
+  } catch {}
+}
+
+setInterval(pollChain, 5000);
+setInterval(pollAgents, 15000);
+pollChain();
+pollAgents();
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+let ws;
+
+function connectWS() {
+  const host = window.location.host;
+  const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${wsProto}://${host}/ws`);
+
+  ws.onopen = () => {
+    document.getElementById('ws-dot').className = 'dot dot-ok';
+    document.getElementById('ws-label').textContent = 'Live';
+  };
+  ws.onclose = ws.onerror = () => {
+    document.getElementById('ws-dot').className = 'dot dot-err';
+    document.getElementById('ws-label').textContent = 'Reconnecting…';
+    setTimeout(connectWS, 4000);
+  };
+  ws.onmessage = e => {
+    let evt;
+    try { evt = JSON.parse(e.data); } catch { return; }
+
+    if (evt.event === 'x402_transaction') {
+      spawnTxParticle(evt.from, evt.to, evt.tier);
+      addTxEntry(evt.from, evt.to, evt.amount, evt.tier);
+    } else if (evt.event === 'block') {
+      document.getElementById('s-height').textContent = evt.height;
+    } else if (evt.event === 'receipt') {
+      addReceiptEntry(evt);
+    }
+  };
+}
+
+connectWS();
+
+// ── Render loop ───────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  // Auto-orbit (slow) unless dragging
+  if (!isDragging) camAngle += 0.0008;
+
+  camera.position.set(
+    Math.sin(camAngle) * Math.cos(camPhi) * RAD,
+    Math.sin(camPhi) * RAD * 0.6,
+    Math.cos(camAngle) * Math.cos(camPhi) * RAD,
+  );
+  camera.lookAt(0, 0, 0);
+
+  // Node idle pulse
+  Object.values(nodeMap).forEach(n => {
+    const s = 1 + Math.sin(t * 1.5 + n.mesh.position.x * 0.03) * 0.04;
+    const base = n.mesh.userData._baseScale || 1;
+    n.mesh.material.emissiveIntensity = 0.8 + Math.sin(t * 2 + n.mesh.position.y * 0.05) * 0.4;
+    // Only apply idle pulse if not currently scaled up from tx
+    if (Math.abs(n.mesh.scale.x - base) < 0.1) n.mesh.scale.setScalar(base * s);
+  });
+
+  updateParticles();
+  renderer.render(scene, camera);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initNodes();
+drawEdges();
+
+// Store base scale for idle pulse reference
+Object.values(nodeMap).forEach(n => { n.mesh.userData._baseScale = 1; });
+
+animate();
+</script>
+</body>
+</html>

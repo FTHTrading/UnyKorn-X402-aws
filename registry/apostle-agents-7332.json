@@ -1,0 +1,129 @@
+{
+  "chain_id": 7332,
+  "created": "2026-04-03T14:53:00Z",
+  "description": "UnyKorn x402 Agent Collective \u00e2\u20ac\u201d Apostle Chain 7332",
+  "operators": {
+    "kevan-burns-chairman": {
+      "agent_id": "87724c76-da93-4b1a-9fa6-271ba856338e",
+      "atp_balance": "500000000000000000000000",
+      "role": "chairman",
+      "public_key": "594086e437e02d3a35dc906b8124b78b2b477c4a376f93cd6ff4570c51c366c9"
+    },
+    "genesis-treasury": {
+      "agent_id": "caf9cf0c-1d11-4632-a7c1-188c7fd95ebd",
+      "atp_balance": "1000000000000000000000000",
+      "role": "genesis-treasury",
+      "public_key": "f0615aaa3b40ed7f7c6a6b1b655b80c8a9c3760a84da95052a18c188aa3775db"
+    },
+    "unykorn-operator": {
+      "agent_id": "d55c60a0-5087-434c-9860-35fcd519eca4",
+      "atp_balance": "250000000000000000000000",
+      "role": "operator",
+      "public_key": "9a9951e5ccc70a2e25901dcec482ddad3b6593ca6d85b72007987f3fc30b368e"
+    },
+    "x402-credit-pool": {
+      "agent_id": "7f0d2538-c09b-46f6-93ef-7be0cc5feab5",
+      "atp_balance": "500000000000000000000000",
+      "role": "x402-credit",
+      "public_key": "451f54cda9af9d1868228e8af6d23d9769059063b1e41a69fbac4b5686250538"
+    },
+    "mesh-pay-reserve": {
+      "agent_id": "adf01234-e3f3-40f7-a59c-a9d6c7592c1a",
+      "atp_balance": "200000000000000000000000",
+      "role": "mesh-reserve",
+      "public_key": "cea53de3dee160b4dcbe1af1fdd7265df05cf3f2bc57ea65083bd5cab3c427da"
+    }
+  },
+  "mesh_agents": {
+    "treasury": {
+      "agent_id": "2e5d78c2-1e58-4cf7-88eb-a139c6c620ef",
+      "tier": "control",
+      "atp_balance": "100000000000000000000000",
+      "public_key": "0ba1ba4230cf0f3181d116c2c152529fc785a32d50a8094f0aa1f5111ef9dff0"
+    },
+    "compliance": {
+      "agent_id": "164d75a7-87d5-425b-a051-417bb8d99836",
+      "tier": "control",
+      "atp_balance": "50000000000000000000000",
+      "public_key": "d837c996c7e73e936fab19c32cb42f19646fade4cc9b928d7d3f2a1e032fae90"
+    },
+    "policy": {
+      "agent_id": "867c0d41-3e01-4028-97f9-cd8f6e5f6214",
+      "tier": "control",
+      "atp_balance": "20000000000000000000000",
+      "public_key": "04d0a2e121c48b47fc2a9f1aa9ca689c5f505801a7f94a51d7eaac90811ebe18"
+    },
+    "risk": {
+      "agent_id": "87e76b9e-8482-436c-823b-980068dff480",
+      "tier": "control",
+      "atp_balance": "30000000000000000000000",
+      "public_key": "fd2f156bc3028ef41d7a58ffb9f79e98b80c0ff7eabac662ad405f5a28ad41e3"
+    },
+    "exchange-listing": {
+      "agent_id": "07c62dc1-0f4f-4633-adff-3fa684611502",
+      "tier": "execution",
+      "atp_balance": "20000000000000000000000",
+      "public_key": "6cb26a591b40a6cc354d830c29790140f35f069aa263bf8665134792996bf917"
+    },
+    "listing-packet": {
+      "agent_id": "3268af3d-016f-426f-a849-5ff366ce3efe",
+      "tier": "execution",
+      "atp_balance": "15000000000000000000000",
+      "public_key": "6eb9fd228ac1299348c821703e81177d274612058ba1a28e892943d00b3249f3"
+    },
+    "onboarding": {
+      "agent_id": "3b76ff5a-b426-4506-b94c-d09e467febb5",
+      "tier": "execution",
+      "atp_balance": "10000000000000000000000",
+      "public_key": "f54ccbf539f9a67a6fd7dfe8880814152593b9234600bb62b4ea27c1d2bcc86d"
+    },
+    "wallet-ops": {
+      "agent_id": "7bb4032b-a446-4a24-ae0e-0da9b3712c3d",
+      "tier": "execution",
+      "atp_balance": "50000000000000000000000",
+      "public_key": "9538ce1b68270dc28ed0ff74ed88dacc145661c7eff87aaeeac1b84e46fd795d"
+    },
+    "reconciliation": {
+      "agent_id": "58216231-2d7d-4236-bb3a-1ca0679075be",
+      "tier": "execution",
+      "atp_balance": "5000000000000000000000",
+      "public_key": "bf9655cea238a2c4ef38aa76bf668e26907da10a08a72e57a91c44fa251ef4e5"
+    },
+    "market-monitor": {
+      "agent_id": "7162580d-e519-4162-b18b-bee69b063fa0",
+      "tier": "intelligence",
+      "atp_balance": "5000000000000000000000",
+      "public_key": "17f53fa07a1f50183d06a057bcacf3b2518a439b249f21e7b429c049c362835f"
+    },
+    "intelligence": {
+      "agent_id": "b1859b36-fb49-4e11-bf5f-a544097495b1",
+      "tier": "intelligence",
+      "atp_balance": "8000000000000000000000",
+      "public_key": "2cbddf121edaec8886f20c7aa836b9f1b9d7011071d7ed97b845a2c34d0a1b78"
+    },
+    "incident-response": {
+      "agent_id": "2a3523f6-0778-46cc-ba8e-79afb6905a2c",
+      "tier": "execution",
+      "atp_balance": "10000000000000000000000",
+      "public_key": "d86be530ba34886b999eb6c2efdc21e1b5f6acd63fc9f72fac6422c5f95175fb"
+    },
+    "customer-desk": {
+      "agent_id": "a15174da-264f-4784-b5a0-3fb171a93f81",
+      "tier": "interface",
+      "atp_balance": "2000000000000000000000",
+      "public_key": "351cd0845c35f56caf2a166701c971df07fa289cf226b02d29dbf4fbe6a8f380"
+    },
+    "documentation": {
+      "agent_id": "3f621911-3a00-469c-b186-fd3c46d009bc",
+      "tier": "execution",
+      "atp_balance": "5000000000000000000000",
+      "public_key": "d58806a5c5f9f8a411e4856a390f2afadd0ae16c65970ceb0a7862ef938d82b2"
+    },
+    "settlement": {
+      "agent_id": "73a8658a-3cde-4b50-8720-97611d577209",
+      "tier": "execution",
+      "atp_balance": "80000000000000000000000",
+      "public_key": "3976b410f087faf24e77e5464ea5858f4c204f029530ae9ffd0f32173826b13f"
+    }
+  }
+}
