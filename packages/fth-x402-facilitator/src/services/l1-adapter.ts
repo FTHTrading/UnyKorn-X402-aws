@@ -360,12 +360,23 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Strip /rpc suffix to get the base HTTP origin for health/status endpoints. */
+function baseUrl(rpcUrl: string): string {
+  try {
+    const u = new URL(rpcUrl);
+    u.pathname = "";
+    return u.origin;
+  } catch {
+    return rpcUrl.replace(/\/rpc\/?$/, "");
+  }
+}
+
 async function fetchHttpHealth(): Promise<{ status: string }> {
   const endpoints = [L1_RPC_URL];
   if (L1_RPC_FALLBACK_URL) endpoints.push(L1_RPC_FALLBACK_URL);
 
   for (const endpoint of endpoints) {
-    const res = await fetch(`${endpoint.replace(/\/$/, "")}/health`, {
+    const res = await fetch(`${baseUrl(endpoint)}/health`, {
       method: "GET",
       headers: { Accept: "text/plain" },
     });
@@ -383,7 +394,7 @@ async function fetchHttpStatus(): Promise<{ blockHeight: number; chainId?: numbe
   if (L1_RPC_FALLBACK_URL) endpoints.push(L1_RPC_FALLBACK_URL);
 
   for (const endpoint of endpoints) {
-    const res = await fetch(`${endpoint.replace(/\/$/, "")}/status`, {
+    const res = await fetch(`${baseUrl(endpoint)}/status`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
