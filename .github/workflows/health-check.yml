@@ -1,0 +1,189 @@
+name: Health Check — x402 Ecosystem
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # every 15 minutes
+  workflow_dispatch:           # manual trigger
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  # ── 1. Probe all endpoints ──────────────────────────────────────────────────
+  probe:
+    name: Probe services
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      healthy:      ${{ steps.verdict.outputs.healthy }}
+      twin_status:  ${{ steps.twin.outputs.status }}
+      twin_height:  ${{ steps.twin.outputs.height }}
+      twin_agents:  ${{ steps.twin.outputs.agents }}
+      fthedu_code:  ${{ steps.fthedu.outputs.code }}
+      summary:      ${{ steps.verdict.outputs.summary }}
+
+    steps:
+      # ── twin.unykorn.org ──────────────────────────────────────────────────
+      - name: Check twin.unykorn.org/api/stats
+        id: twin
+        continue-on-error: true
+        run: |
+          RESP=$(curl -sf --max-time 10 https://twin.unykorn.org/api/stats 2>/dev/null || echo '{}')
+          HEIGHT=$(echo "$RESP" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('chain',{}).get('height',0))" 2>/dev/null || echo "0")
+          AGENTS=$(echo "$RESP" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('chain',{}).get('agents',0))" 2>/dev/null || echo "0")
+          echo "height=${HEIGHT}" >> $GITHUB_OUTPUT
+          echo "agents=${AGENTS}" >> $GITHUB_OUTPUT
+          if [ "$HEIGHT" -gt 0 ]; then
+            echo "status=ok" >> $GITHUB_OUTPUT
+          else
+            echo "status=down" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      # ── fthedu.unykorn.org ────────────────────────────────────────────────
+      - name: Check fthedu.unykorn.org
+        id: fthedu
+        continue-on-error: true
+        run: |
+          CODE=$(curl -sf -o /dev/null -w "%{http_code}" --max-time 10 https://fthedu.unykorn.org 2>/dev/null || echo "000")
+          echo "code=${CODE}" >> $GITHUB_OUTPUT
+          [ "$CODE" = "200" ] || exit 1
+
+      # ── Verdict ───────────────────────────────────────────────────────────
+      - name: Compile verdict
+        id: verdict
+        run: |
+          HEALTHY="true"
+          LINES=""
+
+          if [ "${{ steps.twin.outputs.status }}" = "ok" ]; then
+            LINES="${LINES}\n- ✅ twin.unykorn.org — height=${{ steps.twin.outputs.height }} agents=${{ steps.twin.outputs.agents }}"
+          else
+            LINES="${LINES}\n- ❌ twin.unykorn.org — DOWN (height=${{ steps.twin.outputs.height }})"
+            HEALTHY="false"
+          fi
+
+          if [ "${{ steps.fthedu.outputs.code }}" = "200" ]; then
+            LINES="${LINES}\n- ✅ fthedu.unykorn.org — HTTP 200"
+          else
+            LINES="${LINES}\n- ❌ fthedu.unykorn.org — HTTP ${{ steps.fthedu.outputs.code }}"
+            HEALTHY="false"
+          fi
+
+          echo "healthy=${HEALTHY}" >> $GITHUB_OUTPUT
+          # Multiline output
+          {
+            echo "summary<<SUMMARY_EOF"
+            printf "%b" "$LINES"
+            echo ""
+            echo "SUMMARY_EOF"
+          } >> $GITHUB_OUTPUT
+
+      # ── Step summary ──────────────────────────────────────────────────────
+      - name: Write step summary
+        if: always()
+        run: |
+          STATUS="${{ steps.verdict.outputs.healthy == 'true' && '✅ All healthy' || '❌ INCIDENT' }}"
+          echo "## $STATUS — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status | Detail |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| twin.unykorn.org | ${{ steps.twin.outputs.status == 'ok' && '✅' || '❌' }} | height=${{ steps.twin.outputs.height }} agents=${{ steps.twin.outputs.agents }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| fthedu.unykorn.org | ${{ steps.fthedu.outputs.code == '200' && '✅' || '❌' }} | HTTP ${{ steps.fthedu.outputs.code }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ── 2. Open/update incident issue if unhealthy ──────────────────────────────
+  open-incident:
+    name: Open incident issue
+    needs: probe
+    if: needs.probe.outputs.healthy == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Create or update incident issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'incident';
+            const title = '[Incident] x402 ecosystem health check failed';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `## Health check failed — ${new Date().toUTCString()}`,
+              '',
+              '${{ needs.probe.outputs.summary }}',
+              '',
+              `**Workflow run:** ${runUrl}`,
+            ].join('\n');
+
+            // Ensure 'incident' label exists
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner, repo: context.repo.repo, name: label,
+              });
+            } catch {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner, repo: context.repo.repo,
+                name: label, color: 'd73a4a', description: 'Production incident',
+              });
+            }
+
+            // Find existing open incident
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              labels: label, state: 'open', per_page: 5,
+            });
+
+            if (open.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: open[0].number, body,
+              });
+              console.log(`Updated incident #${open[0].number}`);
+            } else {
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: [label],
+              });
+              console.log(`Opened incident #${issue.number}`);
+            }
+
+  # ── 3. Close incident issue when healthy ───────────────────────────────────
+  close-incident:
+    name: Close resolved incident
+    needs: probe
+    if: needs.probe.outputs.healthy == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Close open incident issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              labels: 'incident', state: 'open', per_page: 10,
+            });
+
+            for (const issue of open) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  `## Resolved — ${new Date().toUTCString()}`,
+                  '',
+                  'All services healthy.',
+                  `- twin.unykorn.org: height=${{ needs.probe.outputs.twin_height }} agents=${{ needs.probe.outputs.twin_agents }}`,
+                  `- fthedu.unykorn.org: HTTP ${{ needs.probe.outputs.fthedu_code }}`,
+                ].join('\n'),
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number, state: 'closed',
+              });
+              console.log(`Closed incident #${issue.number}`);
+            }

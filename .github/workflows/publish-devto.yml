@@ -1,0 +1,105 @@
+name: Publish Blog → dev.to
+
+on:
+  workflow_dispatch:
+    inputs:
+      post_number:
+        description: 'Post number (01–12, or "all" to queue all as drafts)'
+        required: true
+        default: '01'
+      published:
+        description: 'Publish immediately? (false = save as draft)'
+        required: false
+        default: 'true'
+        type: boolean
+  push:
+    branches: [main]
+    paths:
+      - 'docs/blog/*.md'
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Manual: publish one post ─────────────────────────────────────────────────
+  publish-one:
+    name: Publish post ${{ github.event.inputs.post_number }}
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.post_number != 'all'
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to dev.to
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+        run: |
+          FILE=$(ls docs/blog/${{ github.event.inputs.post_number }}-*.md 2>/dev/null | head -1)
+          if [ -z "$FILE" ]; then
+            echo "No file found matching docs/blog/${{ github.event.inputs.post_number }}-*.md"
+            exit 1
+          fi
+          echo "Publishing: $FILE"
+          python3 scripts/publish-devto.py "$FILE" \
+            ${{ github.event.inputs.published == 'true' && '--published' || '' }}
+
+  # ── Manual: queue all posts as drafts ────────────────────────────────────────
+  publish-all-drafts:
+    name: Queue all posts as drafts
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.post_number == 'all'
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish all docs/blog/*.md as drafts
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+        run: |
+          for FILE in docs/blog/*.md; do
+            echo "Publishing draft: $FILE"
+            python3 scripts/publish-devto.py "$FILE" || true
+            sleep 2   # rate-limit: dev.to allows ~1 req/s
+          done
+
+  # ── Push trigger: publish only changed files ─────────────────────────────────
+  publish-changed:
+    name: Publish changed blog posts
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Find modified blog posts
+        id: changed
+        run: |
+          FILES=$(git diff --name-only HEAD~1 HEAD -- 'docs/blog/*.md')
+          echo "Changed: $FILES"
+          # Write to file to handle spaces/newlines safely
+          echo "$FILES" > /tmp/changed_blogs.txt
+          COUNT=$(echo "$FILES" | grep -c '\.md$' || echo 0)
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Publish each modified post
+        if: steps.changed.outputs.count != '0'
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+        run: |
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+            [ -f "$FILE" ] || continue
+            echo "Publishing: $FILE"
+            python3 scripts/publish-devto.py "$FILE" --published || true
+            sleep 2
+          done < /tmp/changed_blogs.txt
+
+# ── Required GitHub Secret ────────────────────────────────────────────────────
+# DEVTO_API_KEY — Get from https://dev.to/settings/extensions
+#   "DEV Community API Keys" section → Generate API Key
+#   Settings → Secrets and variables → Actions → New repository secret

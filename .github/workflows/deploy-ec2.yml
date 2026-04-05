@@ -1,0 +1,108 @@
+name: Deploy → EC2 (Agent Ecosystem)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/x402-agent-ecosystem/**'
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: 'Re-airdrop all agents (first time only — destructive)'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  EC2_HOST: ec2-user@98.91.89.169
+  REMOTE_DIR: $HOME/apps/x402-agent-ecosystem
+
+jobs:
+  deploy:
+    name: Sync & Restart on EC2
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── SSH key setup ─────────────────────────────────────────────────────
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 98.91.89.169 >> ~/.ssh/known_hosts 2>/dev/null
+
+      # ── Sync source ───────────────────────────────────────────────────────
+      - name: Sync package to EC2
+        run: |
+          rsync -avz --delete \
+            --exclude '__pycache__' \
+            --exclude '*.pyc' \
+            --exclude 'keys/' \
+            --exclude 'logs/' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            packages/x402-agent-ecosystem/ \
+            ${{ env.EC2_HOST }}:${{ env.REMOTE_DIR }}/
+
+      # ── Python deps ───────────────────────────────────────────────────────
+      - name: Install Python deps on EC2
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.EC2_HOST }} \
+            "cd ${{ env.REMOTE_DIR }} && pip3 install --quiet -r requirements.txt"
+
+      # ── Bootstrap (optional) ──────────────────────────────────────────────
+      - name: Bootstrap agents (re-airdrop)
+        if: ${{ github.event.inputs.bootstrap == 'true' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.EC2_HOST }} \
+            "cd ${{ env.REMOTE_DIR }} && mkdir -p keys && \
+             APOSTLE_URL=http://localhost:7332 python3 src/bootstrap.py"
+
+      # ── Restart processes ─────────────────────────────────────────────────
+      - name: Restart agent-runner + digital-twin
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.EC2_HOST }} \
+            "bash ${{ env.REMOTE_DIR }}/restart.sh"
+
+      # ── Health check ──────────────────────────────────────────────────────
+      - name: Wait for startup (30s)
+        run: sleep 30
+
+      - name: Verify digital-twin API
+        id: health
+        run: |
+          RESP=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.EC2_HOST }} \
+            "curl -sf --max-time 10 http://localhost:8402/api/stats 2>/dev/null || echo '{}'")
+          HEIGHT=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('chain',{}).get('height',0))" 2>/dev/null || echo "0")
+          AGENTS=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('chain',{}).get('agents',0))" 2>/dev/null || echo "0")
+          echo "height=${HEIGHT}" >> $GITHUB_OUTPUT
+          echo "agents=${AGENTS}" >> $GITHUB_OUTPUT
+          echo "Twin: height=${HEIGHT} agents=${AGENTS}"
+          [ "$HEIGHT" -gt 0 ] || { echo "::warning::Twin returned height=0 — may still be warming up"; exit 0; }
+
+      # ── Summary ───────────────────────────────────────────────────────────
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "## EC2 Deploy — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Host | \`98.91.89.169\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bootstrap | \`${{ github.event.inputs.bootstrap || 'false' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Chain height | \`${{ steps.health.outputs.height }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Agents | \`${{ steps.health.outputs.agents }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 [twin.unykorn.org](https://twin.unykorn.org)" >> $GITHUB_STEP_SUMMARY
+
+# ── Required GitHub Secrets ────────────────────────────────────────────────────
+# EC2_SSH_KEY — contents of unykorn-devnet-key.pem (the full PEM, including
+#   -----BEGIN RSA PRIVATE KEY----- and -----END RSA PRIVATE KEY----- lines)
+#   Settings → Secrets and variables → Actions → New repository secret
