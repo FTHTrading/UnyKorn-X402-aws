@@ -215,6 +215,7 @@ async def pulse_proxy():
 async def chain_poller():
     """Polls /status and /v1/receipts every 5s, pushes synthetic events."""
     last_height = 0
+    seen_hashes: set[str] = set()
     async with aiohttp.ClientSession() as session:
         while True:
             await asyncio.sleep(5.0)
@@ -237,8 +238,14 @@ async def chain_poller():
                     timeout=aiohttp.ClientTimeout(total=5),
                 ) as r:
                     receipts = await r.json()
-                for rec in receipts.get("receipts", [])[-5:]:
-                    await _event_queue.put({"event": "receipt", **rec})
+                for rec in receipts.get("receipts", []):
+                    h = rec.get("tx_hash") or rec.get("hash") or str(rec)
+                    if h not in seen_hashes:
+                        seen_hashes.add(h)
+                        await _event_queue.put({"event": "receipt", **rec})
+                # Bound the seen set to avoid unbounded memory growth
+                if len(seen_hashes) > 10_000:
+                    seen_hashes.clear()
             except Exception:
                 pass
 
