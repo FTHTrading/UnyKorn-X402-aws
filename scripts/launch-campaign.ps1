@@ -86,7 +86,7 @@ Your existing endpoint, now billable per request.
 $tweet5 = @"
 5/ Live right now on Apostle Chain:
 
-35 agents actively trading
+20 agents actively trading
 3,200+ settled transactions
 2.86M ATP in circulation
 <50ms average settlement
@@ -229,7 +229,7 @@ Happy to generate a sample evidence bundle from our live testnet. Reply here.
 #  HACKER NEWS
 # ─────────────────────────────────────────────
 
-$hn_title = "Show HN: Live visualization of 35 AI agents making real payments via HTTP 402"
+$hn_title = "Show HN: Live visualization of 20 AI agents making real payments via HTTP 402"
 $hn_url = "https://twin.unykorn.org"
 $hn_text = @"
 HTTP 402 (Payment Required) has been "reserved for future use" since 1996. We implemented it for AI-to-AI commerce.
@@ -237,7 +237,7 @@ HTTP 402 (Payment Required) has been "reserved for future use" since 1996. We im
 Live demo: https://twin.unykorn.org
 
 What you're seeing:
-- 35 AI agents with sovereign wallets on Apostle Chain (Rust/Axum, chain_id 7332)
+- 20 AI agents with sovereign wallets on Apostle Chain (Rust/Axum, chain_id 7332)
 - Agents make real requests to x402-enabled endpoints with a 402 challenge/proof flow
 - The agent pays ATP (native token), provider verifies proof in <50ms, receipt written on-chain
 - Receipt feed in the bottom panel updates live as transactions settle
@@ -276,7 +276,7 @@ async def require_payment(request, call_next):
     return await call_next(request)
 ```
 
-Live demo with 35 agents making real transactions: https://twin.unykorn.org
+Live demo with 20 agents making real transactions: https://twin.unykorn.org
 
 Curious what others are doing for billing when the API consumer is an autonomous agent rather than a developer.
 "@
@@ -297,17 +297,17 @@ Flow:
 
 Your endpoint doesn't change. Just add a middleware wrapper.
 
-Live 35-agent ecosystem: https://twin.unykorn.org
+Live 20-agent ecosystem: https://twin.unykorn.org
 Source: https://github.com/FTHTrading/UnyKorn-X402-aws
 "@
 
-$reddit_ai_title = "35 AI agents paying each other in real time — here's what the machine economy looks like today"
+$reddit_ai_title = "20 AI agents paying each other in real time — here's what the machine economy looks like today"
 $reddit_ai_body = @"
 I want to show you something live, not a demo, not a mockup.
 
 https://twin.unykorn.org
 
-35 AI agents making real payments to each other for services. The 3D visualization shows the network graph. The receipt feed at the bottom updates live as transactions settle on-chain.
+20 AI agents making real payments to each other for services. The 3D visualization shows the network graph. The receipt feed at the bottom updates live as transactions settle on-chain.
 
 These agents have sovereign wallets. They make autonomous spending decisions within on-chain budget constraints. No human approves individual payments. No credit card. No billing department.
 
@@ -337,7 +337,7 @@ Flow:
 
 Budget enforcement: each agent's spend ceiling is set on-chain. When ceiling is reached, transactions are rejected before they settle — not flagged, rejected.
 
-Live 35-agent ecosystem: https://twin.unykorn.org
+Live 20-agent ecosystem: https://twin.unykorn.org
 
 What patterns are others using for agent billing?
 "@
@@ -360,7 +360,7 @@ For providers:
 - No platform fee, no marketplace lock-in
 - On-chain receipts for audit and compliance
 
-Live demo with 35 agents running in production: https://twin.unykorn.org
+Live demo with 20 agents running in production: https://twin.unykorn.org
 Source: https://github.com/FTHTrading/UnyKorn-X402-aws
 "@
 
@@ -380,7 +380,7 @@ Hey everyone — wanted to share something we've been building.
 
 We implemented HTTP 402 Payment Required for AI agent commerce. Flow: agent calls a premium endpoint → gets a 402 challenge → pays from its wallet → provider verifies in <50ms → receipt written on-chain.
 
-Live demo with 35 agents making real ATP payments: https://twin.unykorn.org — receipt feed updates live.
+Live demo with 20 agents making real ATP payments: https://twin.unykorn.org — receipt feed updates live.
 
 For devs: it's a middleware wrapper on existing endpoints. No billing portal redesign, no new auth system.
 
@@ -443,7 +443,7 @@ if ($Target -eq "all" -or $Target -eq "hn") {
     Write-Host "  Title to use: $hn_title" -ForegroundColor Yellow
     Write-Host "  URL: $hn_url" -ForegroundColor Yellow
     Write-Host ""
-    Set-Clipboard-And-Open -Content $hn_text -Url "https://news.ycombinator.com/submitlink?u=https://twin.unykorn.org&t=Show+HN%3A+Live+visualization+of+35+AI+agents+making+real+payments+via+HTTP+402" -Label "HN Show HN — paste text in the 'text' field (optional for Show HN with URL)"
+    Set-Clipboard-And-Open -Content $hn_text -Url "https://news.ycombinator.com/submitlink?u=https://twin.unykorn.org&t=Show+HN%3A+Live+visualization+of+20+AI+agents+making+real+payments+via+HTTP+402" -Label "HN Show HN — paste text in the 'text' field (optional for Show HN with URL)"
 }
 
 if ($Target -eq "all" -or $Target -eq "reddit") {
@@ -490,3 +490,4 @@ Write-Host @"
 ║  4. Day 2: Start cold email — docs\email-sequences-x402 ║
 ╚══════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Green
+
