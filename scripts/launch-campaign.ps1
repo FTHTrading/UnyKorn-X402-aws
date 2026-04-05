@@ -480,10 +480,8 @@ Write-Host @"
 ║  CAMPAIGN LAUNCH COMPLETE                               ║
 ║                                                         ║
 ║  Next actions:                                          ║
-║  1. Register Stripe webhook (fthedu.unykorn.org)        ║
-║     → dashboard.stripe.com/webhooks                    ║
-║     → URL: https://fthedu.unykorn.org/api/stripe/webhook║
-║     → Events: checkout.session.completed + 3 more      ║
+║  1. [DONE] Stripe webhook: we_1TIhCA1OEzphv6FLTL3Ril1l ║
+║     → fthedu.unykorn.org/api/stripe/webhook (live)     ║
 ║                                                         ║
 ║  2. Monitor HN/Reddit for comments (reply fast)         ║
 ║  3. Tomorrow: post standalone tweets A + B              ║
