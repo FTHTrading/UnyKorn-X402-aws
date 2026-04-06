@@ -15,13 +15,13 @@
 
 services:
   triton:
-    image: nvcr.io/nvidia/tritonserver:25.01-py3
-    container_name: triton-inference
+    image: nvcr.io/nvidia/tritonserver:25.03-py3
+    container_name: finn-triton
     restart: unless-stopped
     ports:
       - "8000:8000"   # HTTP/REST
-      - "8001:8001"   # gRPC
-      - "8002:8002"   # Prometheus metrics
+      - "8002:8001"   # gRPC (host 8002)
+      - "8003:8002"   # Prometheus metrics (host 8003)
     volumes:
       - triton-models:/models
     environment:
@@ -89,7 +89,8 @@ services:
 
 volumes:
   triton-models:
-    name: triton-models
+    external: true
+    name: infra_triton-models
   # trtllm-engines:
   #   name: trtllm-engines
   # triton-models-llm:
