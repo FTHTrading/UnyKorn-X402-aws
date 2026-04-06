@@ -1,0 +1,23 @@
+{
+  "name": "@unykorn/speech-router",
+  "version": "0.1.0",
+  "description": "Speech router: Riva NIMs (ASR + TTS) with Whisper/Piper fallback, OpenAI-compatible API",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/multipart": "^9.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "~5.9.3",
+    "@types/node": "^22.0.0"
+  }
+}

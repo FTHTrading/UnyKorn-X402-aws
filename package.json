@@ -64,9 +64,11 @@
     "nvidia:triton:up":    "docker compose -f docker/docker-compose.triton.yml up -d",
     "nvidia:triton:down":  "docker compose -f docker/docker-compose.triton.yml down",
     "nvidia:triton:logs":  "docker compose -f docker/docker-compose.triton.yml logs -f triton",
-    "nvidia:riva:up":      "docker compose -f docker/docker-compose.riva.yml up -d riva-speech",
+    "nvidia:riva:up":      "docker compose -f docker/docker-compose.riva.yml up -d",
     "nvidia:riva:down":    "docker compose -f docker/docker-compose.riva.yml down",
-    "nvidia:riva:init":    "docker compose -f docker/docker-compose.riva.yml run --rm riva-init"
+    "nvidia:riva:logs":    "docker compose -f docker/docker-compose.riva.yml logs -f",
+    "nvidia:speech:dev":   "npm run dev -w @unykorn/speech-router",
+    "nvidia:speech:start": "npm run start -w @unykorn/speech-router"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -26,9 +26,9 @@
 │  │  │  Docker Desktop (WSL2 backend)                        │   │   │
 │  │  │                                                       │   │   │
 │  │  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐ │   │   │
-│  │  │  │ Triton      │  │ TensorRT-LLM│  │ Riva         │ │   │   │
-│  │  │  │ 8000/8001/  │  │ engine      │  │ ASR/TTS      │ │   │   │
-│  │  │  │ 8002        │  │ builds      │  │ 50051        │ │   │   │
+│  │  │  │ Triton      │  │ TensorRT-LLM│  │ Riva NIMs   │ │   │   │
+│  │  │  │ 8000/8002/  │  │ engine      │  │ ASR: 9010   │ │   │   │
+│  │  │  │ 8003        │  │ builds      │  │ TTS: 9020   │ │   │   │
 │  │  │  └─────────────┘  └─────────────┘  └──────────────┘ │   │   │
 │  │  │                                                       │   │   │
 │  │  │  ┌─────────────┐  ┌─────────────┐                   │   │   │
@@ -52,7 +52,11 @@
 | Triton HTTP | Docker/WSL | 8000 | HTTP/REST | Optimized model serving |
 | Triton gRPC | Docker/WSL | 8001 | gRPC | High-perf model serving |
 | Triton Metrics | Docker/WSL | 8002 | HTTP | Prometheus metrics |
-| Riva (optional) | Docker/WSL | 50051 | gRPC | ASR/TTS speech pipeline |
+| Riva ASR NIM | Docker/WSL | 9010 | HTTP | Parakeet CTC 1.1B (STT) |
+| Riva TTS NIM | Docker/WSL | 9020 | HTTP | Magpie Multilingual (TTS) |
+| Riva ASR gRPC | Docker/WSL | 50051 | gRPC | Streaming ASR |
+| Riva TTS gRPC | Docker/WSL | 50052 | gRPC | Streaming TTS |
+| Speech Router | Windows | 8200 | HTTP | OpenAI-compatible speech proxy |
 | Open WebUI | Windows | 3000 | HTTP | Chat/dashboard UI |
 | Telegram | Windows | — | outbound | Finn control surface |
 
@@ -71,10 +75,19 @@ User / Agent Request
 ## Speech Routing (Finn)
 
 ```
-Mic Input ──→ Riva ASR (50051) ──→ Text ──→ Agent ──→ Riva TTS (50051)
-                  │                                         │
-                  └── fallback: Whisper (local)              └── fallback: Piper (local)
+Mic Input ──→ Speech Router (:8200) ──→ Riva ASR NIM (:9010) ──→ Text
+                                              │
+                                              └── fallback: Whisper (local)
+
+Agent Response ──→ Speech Router (:8200) ──→ Riva TTS NIM (:9020) ──→ Audio
+                                                   │
+                                                   └── fallback: Piper (local)
 ```
+
+**Note:** Riva SDK is Jetson/ARM64 only. x86 deployments use NVIDIA NIMs (Inference Microservices).
+ASR NIM: Parakeet CTC 1.1B (`nvcr.io/nim/nvidia/parakeet-1-1b-ctc-en-us`)
+TTS NIM: Magpie Multilingual (`nvcr.io/nim/nvidia/magpie-tts-multilingual`)
+Both require NGC API key.
 
 ## Data Layout
 
@@ -83,7 +96,7 @@ Mic Input ──→ Riva ASR (50051) ──→ Text ──→ Agent ──→ Ri
 | This repo | `C:\Users\Kevan\UnyKorn-X402-aws\` | Version-controlled config/scripts |
 | Model cache (Ollama) | `C:\Users\Kevan\.ollama\models\` | Windows-native Ollama |
 | Triton model repo | Docker volume `triton-models` | Persistent across restarts |
-| Riva model cache | Docker volume `riva-models` | NGC-downloaded models |
+| Riva NIM cache | Docker volume `nim-cache` | NIM model downloads |
 | WSL project workspace | `/home/kevan/projects/` | Heavy AI work (WSL perf) |
 | Profiling output | `C:\Users\Kevan\nsight-reports\` | Nsight traces (Windows tool) |
 
@@ -104,7 +117,7 @@ ops/nvidia/
 
 docker/
   docker-compose.triton.yml              ← Triton Inference Server
-  docker-compose.riva.yml                ← Riva ASR/TTS (optional)
+  docker-compose.riva.yml                ← Riva NIMs: ASR (Parakeet) + TTS (Magpie)
   triton-models/
     README.md                            ← model repo instructions
     bge_small_en/config.pbtxt            ← example: embedding model
@@ -118,7 +131,7 @@ scripts/windows/
 
 scripts/wsl/
   setup-triton.sh                        ← pull + launch Triton
-  setup-riva.sh                          ← pull + launch Riva (optional)
+  setup-riva.sh                          ← pull + launch Riva NIMs (requires NGC key)
   validate-gpu.sh                        ← GPU runtime validation
   benchmark-inference.sh                 ← Ollama vs Triton comparison
 
