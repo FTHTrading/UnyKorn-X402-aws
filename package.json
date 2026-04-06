@@ -58,7 +58,15 @@
     "openclaw:validate": "node packages/openclaw-hardening/src/validate-config.mjs",
     "openclaw:smoke":    "node packages/openclaw-hardening/src/smoke-test.mjs",
     "openclaw:backup":   "node packages/openclaw-hardening/src/backup.mjs",
-    "openclaw:test":     "node --test tests/openclaw-hardening.test.mjs"
+    "openclaw:test":     "node --test tests/openclaw-hardening.test.mjs",
+
+    "nvidia:verify":       "powershell -ExecutionPolicy Bypass -File scripts/windows/verify-nvidia-host.ps1",
+    "nvidia:triton:up":    "docker compose -f docker/docker-compose.triton.yml up -d",
+    "nvidia:triton:down":  "docker compose -f docker/docker-compose.triton.yml down",
+    "nvidia:triton:logs":  "docker compose -f docker/docker-compose.triton.yml logs -f triton",
+    "nvidia:riva:up":      "docker compose -f docker/docker-compose.riva.yml up -d riva-speech",
+    "nvidia:riva:down":    "docker compose -f docker/docker-compose.riva.yml down",
+    "nvidia:riva:init":    "docker compose -f docker/docker-compose.riva.yml run --rm riva-init"
   },
   "engines": {
     "node": ">=18.0.0"

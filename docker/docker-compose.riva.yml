@@ -1,0 +1,89 @@
+# ===========================================================================
+# Riva Speech AI — Optional ASR/TTS for Finn voice pipeline
+# ===========================================================================
+# Prerequisites:
+#   1. NGC API key set in NGC_API_KEY env var or .env file
+#   2. Run riva-init first to download models, then start riva-speech
+#
+# Usage:
+#   # First time — download models (takes 10-30 min depending on connection):
+#   docker compose -f docker/docker-compose.riva.yml run --rm riva-init
+#
+#   # Then start the speech server:
+#   docker compose -f docker/docker-compose.riva.yml up -d riva-speech
+#
+#   # Check health:
+#   docker compose -f docker/docker-compose.riva.yml ps
+#
+# Finn integration:
+#   Set FINN_SPEECH_BACKEND=riva and FINN_RIVA_ENDPOINT=localhost:50051
+# ===========================================================================
+
+services:
+  # Model download + preparation (run once, then exits)
+  riva-init:
+    image: nvcr.io/nvidia/riva/riva-speech:2.18.0
+    container_name: riva-init
+    volumes:
+      - riva-models:/data
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY:-}
+      - RIVA_MODEL_LOC=/data/models
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "Downloading Riva models..."
+        if [ -z "$${NGC_API_KEY}" ]; then
+          echo "ERROR: NGC_API_KEY not set. Get one from https://ngc.nvidia.com"
+          exit 1
+        fi
+        # Download English ASR (Conformer) + TTS (FastPitch + HiFiGAN)
+        riva_model_downloader \
+          --models-dir /data/models \
+          --asr-language-code en-US \
+          --asr-acoustic-model conformer \
+          --tts-language-code en-US \
+          --tts-model fastpitch_hifigan \
+          2>&1
+        echo "Model download complete."
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # Riva speech server (ASR + TTS)
+  riva-speech:
+    image: nvcr.io/nvidia/riva/riva-speech:2.18.0
+    container_name: riva-speech
+    restart: unless-stopped
+    ports:
+      - "50051:50051"  # gRPC
+    volumes:
+      - riva-models:/data
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - RIVA_MODEL_LOC=/data/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/v2/health/ready"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      riva-init:
+        condition: service_completed_successfully
+
+volumes:
+  riva-models:
+    name: riva-models

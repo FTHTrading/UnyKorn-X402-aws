@@ -1,0 +1,96 @@
+# ===========================================================================
+# Triton Inference Server — RTX 5090 Workstation
+# ===========================================================================
+# Usage:
+#   docker compose -f docker/docker-compose.triton.yml up -d
+#   docker compose -f docker/docker-compose.triton.yml down
+#
+# Health check:
+#   curl http://localhost:8000/v2/health/ready
+#
+# Model repository:
+#   Add models to the triton-models volume or mount a local directory.
+#   See docker/triton-models/README.md for structure.
+# ===========================================================================
+
+services:
+  triton:
+    image: nvcr.io/nvidia/tritonserver:25.01-py3
+    container_name: triton-inference
+    restart: unless-stopped
+    ports:
+      - "8000:8000"   # HTTP/REST
+      - "8001:8001"   # gRPC
+      - "8002:8002"   # Prometheus metrics
+    volumes:
+      - triton-models:/models
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: >
+      tritonserver
+        --model-repository=/models
+        --strict-model-config=false
+        --log-verbose=0
+        --http-port=8000
+        --grpc-port=8001
+        --metrics-port=8002
+        --allow-metrics=true
+        --allow-gpu-metrics=true
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/v2/health/ready"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Optional: TensorRT-LLM backend for LLM serving
+  # Uncomment when you have TensorRT-LLM engines built.
+  #
+  # triton-trtllm:
+  #   image: nvcr.io/nvidia/tritonserver:25.01-trtllm-python-py3
+  #   container_name: triton-trtllm
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8010:8000"
+  #     - "8011:8001"
+  #     - "8012:8002"
+  #   volumes:
+  #     - trtllm-engines:/engines
+  #     - triton-models-llm:/models
+  #   environment:
+  #     - NVIDIA_VISIBLE_DEVICES=all
+  #     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #   command: >
+  #     tritonserver
+  #       --model-repository=/models
+  #       --strict-model-config=false
+  #       --log-verbose=0
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-sf", "http://localhost:8000/v2/health/ready"]
+  #     interval: 15s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+
+volumes:
+  triton-models:
+    name: triton-models
+  # trtllm-engines:
+  #   name: trtllm-engines
+  # triton-models-llm:
+  #   name: triton-models-llm
