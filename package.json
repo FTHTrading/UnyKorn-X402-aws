@@ -53,7 +53,12 @@
     "prod:up":         "cd aws/docker && docker compose -f docker-compose.production.yml up -d --build",
     "prod:down":       "cd aws/docker && docker compose -f docker-compose.production.yml down",
     "prod:logs":       "cd aws/docker && docker compose -f docker-compose.production.yml logs -f",
-    "prod:deploy":     "node scripts/deploy-production.mjs"
+    "prod:deploy":     "node scripts/deploy-production.mjs",
+
+    "openclaw:validate": "node packages/openclaw-hardening/src/validate-config.mjs",
+    "openclaw:smoke":    "node packages/openclaw-hardening/src/smoke-test.mjs",
+    "openclaw:backup":   "node packages/openclaw-hardening/src/backup.mjs",
+    "openclaw:test":     "node --test tests/openclaw-hardening.test.mjs"
   },
   "engines": {
     "node": ">=18.0.0"

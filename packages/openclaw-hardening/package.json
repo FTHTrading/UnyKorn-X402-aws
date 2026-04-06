@@ -1,0 +1,28 @@
+{
+  "name": "@unykorn/openclaw-hardening",
+  "version": "1.0.0",
+  "description": "OpenClaw platform hardening: config validation, delivery mode enforcement, cron model resolution, memory provider checks, operator tooling",
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./constants": "./src/constants.mjs",
+    "./validate": "./src/validate-config.mjs",
+    "./delivery": "./src/validate-delivery.mjs",
+    "./cron": "./src/validate-cron.mjs",
+    "./models": "./src/validate-models.mjs",
+    "./memory": "./src/validate-memory.mjs",
+    "./plugins": "./src/validate-plugins.mjs",
+    "./recovery": "./src/delivery-recovery.mjs",
+    "./smoke": "./src/smoke-test.mjs",
+    "./backup": "./src/backup.mjs"
+  },
+  "scripts": {
+    "validate": "node src/validate-config.mjs",
+    "smoke": "node src/smoke-test.mjs",
+    "backup": "node src/backup.mjs",
+    "test": "node --test ../../tests/openclaw-hardening.test.mjs"
+  },
+  "keywords": ["openclaw", "hardening", "validation", "cron", "delivery"],
+  "license": "UNLICENSED"
+}
