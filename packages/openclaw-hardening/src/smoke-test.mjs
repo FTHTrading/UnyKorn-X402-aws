@@ -8,6 +8,8 @@
 // ---------------------------------------------------------------------------
 
 import { homedir } from "node:os";
+import http from "node:http";
+import https from "node:https";
 import { readFile, access } from "node:fs/promises";
 import { OPENCLAW_PATHS, GATEWAY_DEFAULTS, OLLAMA_DEFAULTS } from "./constants.mjs";
 import { validateFullConfig } from "./validate-config.mjs";
@@ -190,10 +192,13 @@ console.log(buildStartupSummary(config, pluginResult, gwResult));
 // ── Final ────────────────────────────────────────────────────
 console.log(`\n  Results: ${pass} passed, ${fail} failed, ${warn} warnings\n`);
 
-if (fail > 0) {
-  console.log("  ══ SMOKE TEST FAILED — see errors above ══\n");
-  process.exit(1);
-} else {
-  console.log("  ══ SMOKE TEST PASSED ══\n");
-  process.exit(0);
-}
+const exitCode = fail > 0 ? 1 : 0;
+console.log(fail > 0
+  ? "  ══ SMOKE TEST FAILED — see errors above ══\n"
+  : "  ══ SMOKE TEST PASSED ══\n");
+
+// Drain open HTTP sockets before exiting to avoid libuv assertion crash
+// on Windows (nodejs/node#50328).
+http.globalAgent.destroy();
+https.globalAgent.destroy();
+setTimeout(() => process.exit(exitCode), 50);
