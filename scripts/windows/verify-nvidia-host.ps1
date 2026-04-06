@@ -63,7 +63,7 @@ Write-Host "`n[3/8] WSL2"
 $wslStatus = & wsl --status 2>$null | Out-String
 if ($LASTEXITCODE -eq 0) {
     Ok "WSL2 enabled"
-    $distros = & wsl -l -v 2>$null | Out-String
+    $distros = (& wsl -l -q 2>$null) -replace "`0","" | Where-Object { $_ -match '\S' }
     if ($distros -match 'Ubuntu') {
         Ok "Ubuntu distro found"
     } else {
@@ -95,10 +95,9 @@ $dockerVer = & docker version --format '{{.Server.Version}}' 2>$null
 if ($dockerVer) {
     Ok "Docker Desktop installed" "v$dockerVer"
 
-    $dockerInfo = & docker info --format '{{json .SecurityOptions}}' 2>$null
-    $wslBackend = & docker info 2>$null | Select-String "Operating System.*WSL"
-    if ($wslBackend) {
-        Ok "Docker using WSL2 backend"
+    $dockerOS = & docker info --format '{{.OperatingSystem}}' 2>$null
+    if ($dockerOS -match 'Docker Desktop|WSL') {
+        Ok "Docker using WSL2 backend" $dockerOS
     } else {
         Warn "Docker backend unconfirmed" "Enable WSL2 integration in Docker Desktop settings"
     }
@@ -139,8 +138,13 @@ try {
 Write-Host "`n[7/8] Optional NVIDIA Tools"
 
 $nsightSys = Get-Command "nsys" -ErrorAction SilentlyContinue
+if (-not $nsightSys) {
+    $nsightSysPath = Get-ChildItem "C:\Program Files\NVIDIA Corporation\Nsight Systems*\target-windows-x64\nsys.exe" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
+    if ($nsightSysPath) { $nsightSys = $nsightSysPath }
+}
 if ($nsightSys) {
-    Ok "Nsight Systems available" $nsightSys.Source
+    $src = if ($nsightSys.Source) { $nsightSys.Source } else { $nsightSys.FullName }
+    Ok "Nsight Systems available" $src
 } else {
     Warn "Nsight Systems not in PATH" "Install from CUDA Toolkit or https://developer.nvidia.com/nsight-systems"
 }
