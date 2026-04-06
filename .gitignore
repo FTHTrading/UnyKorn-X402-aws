@@ -36,6 +36,9 @@ exports/
 Thumbs.db
 desktop.ini
 
+# -- Book (separate repo: FTHTrading/Book) --
+x402-book/
+
 # -- Editor --
 .idea/
 *.swp

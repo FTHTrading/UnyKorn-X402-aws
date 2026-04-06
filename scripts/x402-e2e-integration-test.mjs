@@ -12,7 +12,7 @@
  *
  * This test simulates exactly what the gateway does, but hits the
  * facilitator directly (no wrangler needed). It proves that the
- * protocol objects from fth-x402-core drive the full flow.
+ * protocol objects from x402-core drive the full flow.
  *
  * Requires: facilitator running on localhost:3100, database migrated + seeded.
  *
@@ -24,7 +24,7 @@ import pkg from "tweetnacl-util";
 const { encodeBase64, decodeUTF8 } = pkg;
 
 const BASE = process.env.FACILITATOR_URL || "http://localhost:3100";
-const PROTOCOL_VERSION = "fth-x402/2.0";
+const PROTOCOL_VERSION = "x402/2.0";
 
 // Auth: use admin token or HMAC service auth when available
 const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN || "";
@@ -75,8 +75,8 @@ function assert(condition, label) {
 
 async function main() {
   console.log("╔═══════════════════════════════════════════════════════════╗");
-  console.log("║  FTH x402 End-to-End Integration Test                    ║");
-  console.log("║  Protocol: fth-x402/2.0 │ Flow: 402 → pay → 200         ║");
+  console.log("║  x402 End-to-End Integration Test                        ║");
+  console.log("║  Protocol: x402/2.0 │ Flow: 402 → pay → 200             ║");
   console.log("╚═══════════════════════════════════════════════════════════╝\n");
 
   // =========================================================================
@@ -128,11 +128,11 @@ async function main() {
   // We do the same thing here to simulate the 402 flow.
   const invoiceReq = {
     resource: "/api/v1/genesis/repro-pack/alpha",
-    namespace: "fth.x402.route.genesis-repro",
+    namespace: "x402.route.genesis-repro",
     asset: "USDF",
     amount: "0.50",
-    receiver: "uny1_FTH_TREASURY",
-    memo: "fth:genesis:alpha",
+    receiver: "uny1_x402_TREASURY",
+    memo: "x402:genesis:alpha",
     policy: { kyc_required: false, min_pass_level: "basic", rate_limit: "100/hour" },
     ttl_seconds: 300,
   };
@@ -149,8 +149,8 @@ async function main() {
     payment: {
       asset: "USDF",
       amount: "0.50",
-      receiver: "uny1_FTH_TREASURY",
-      memo: "fth:genesis:alpha",
+      receiver: "uny1_x402_TREASURY",
+      memo: "x402:genesis:alpha",
       invoice_id: inv.data.invoice_id,
       nonce: inv.data.nonce,
       expires_at: inv.data.expires_at,
@@ -251,7 +251,7 @@ async function main() {
   const ch = await post("/channels/open", {
     wallet_address: walletAddr,
     deposited_amount: "2.00",
-    namespace: "fth.x402.route.genesis-repro",
+    namespace: "x402.route.genesis-repro",
   });
   assert((ch.status === 200 || ch.status === 201) && !!ch.data.channel_id, `Channel opened: ${ch.data.channel_id}`);
   const channelId = ch.data.channel_id;
@@ -259,11 +259,11 @@ async function main() {
   // Create invoice for second route
   const inv2 = await post("/invoices", {
     resource: "/api/v1/genesis/repro-pack/beta",
-    namespace: "fth.x402.route.genesis-repro",
+    namespace: "x402.route.genesis-repro",
     asset: "USDF",
     amount: "0.25",
-    receiver: "uny1_FTH_TREASURY",
-    memo: "fth:genesis:beta",
+    receiver: "uny1_x402_TREASURY",
+    memo: "x402:genesis:beta",
     policy: { kyc_required: false, min_pass_level: "basic", rate_limit: "100/hour" },
     ttl_seconds: 300,
   });
@@ -288,7 +288,7 @@ async function main() {
     nonce: inv2.data.nonce,
     proof: chProof,
     resource: "/api/v1/genesis/repro-pack/beta",
-    namespace: "fth.x402.route.genesis-repro",
+    namespace: "x402.route.genesis-repro",
   });
   assert(chVerify.status === 200, `Channel verify status: ${chVerify.status}`);
   assert(chVerify.data.verified === true, `Channel verified: ${chVerify.data.verified}`);
