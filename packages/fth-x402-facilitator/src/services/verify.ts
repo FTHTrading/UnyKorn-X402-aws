@@ -11,11 +11,17 @@
  */
 
 import type { VerifyBody, PaymentProof, Invoice } from "../types";
-import { getInvoice, markInvoicePaid } from "./invoices";
+import {
+  getInvoice,
+  markInvoicePaid,
+  claimInvoiceForProcessing,
+  releaseInvoiceToPending,
+  finalizeInvoicePaid,
+} from "./invoices";
 import { charge, InsufficientBalanceError } from "./settle";
 import { spendChannel, ChannelError } from "./channels";
 import { createReceipt } from "./receipts";
-import { checkReplay, recordNonce } from "./replay";
+import { checkReplay, recordNonce, recordConsumedTxHash } from "./replay";
 import { checkRateLimit } from "./rate-limiter";
 import { dispatchEvent } from "./webhooks";
 import { verifyUnykornTxHash } from "./verifyUnykornTxHash";
@@ -88,6 +94,16 @@ export async function verifyPayment(body: VerifyBody): Promise<VerifyResult> {
     }
   }
 
+  // 5c. Atomic Invoice Claim — prevent settle-before-mark race conditions
+  const claimed = await claimInvoiceForProcessing(body.invoice_id);
+  if (!claimed) {
+    return {
+      verified: false,
+      error: "Invoice is already being processed or has already been paid",
+      error_code: "invoice_conflict",
+    };
+  }
+
   // 6. Proof-type-specific verification + settlement
   let settlementResult: VerifyResult;
   try {
@@ -122,6 +138,8 @@ export async function verifyPayment(body: VerifyBody): Promise<VerifyResult> {
         };
     }
   } catch (err) {
+    // Release invoice back to pending on error
+    await releaseInvoiceToPending(body.invoice_id);
     if (err instanceof InsufficientBalanceError) {
       return { verified: false, error: err.message, error_code: "insufficient_amount" };
     }
@@ -131,18 +149,49 @@ export async function verifyPayment(body: VerifyBody): Promise<VerifyResult> {
     throw err;
   }
 
-  if (!settlementResult.verified) return settlementResult;
+  if (!settlementResult.verified) {
+    // Settlement failed — release invoice back to pending so payer may retry
+    await releaseInvoiceToPending(body.invoice_id);
+    return settlementResult;
+  }
 
   // 7. Record nonce
   await recordNonce(body.invoice_id, body.nonce);
 
-  // 8. Mark invoice paid
-  await markInvoicePaid(
+  // 8. Finalize invoice paid (atomically transitions processing -> paid)
+  const finalized = await finalizeInvoicePaid(
     body.invoice_id,
     body.proof.payer,
     body.proof.proof_type,
     body.proof as unknown as Record<string, unknown>,
   );
+
+  if (!finalized) {
+    return {
+      verified: false,
+      error: "Invoice state conflict during finalization",
+      error_code: "invoice_conflict",
+    };
+  }
+
+  // 8b. Record consumed transaction hash for on-chain proofs
+  if (body.proof.proof_type === "tx_hash" && (body.proof as any).tx_hash) {
+    await recordConsumedTxHash(
+      body.proof.rail,
+      (body.proof as any).tx_hash,
+      body.invoice_id,
+      body.proof.payer,
+      invoice.amount,
+    );
+  } else if (body.proof.proof_type === "xrpl_payment" && (body.proof as any).tx_hash) {
+    await recordConsumedTxHash(
+      "xrpl",
+      (body.proof as any).tx_hash,
+      body.invoice_id,
+      body.proof.payer,
+      invoice.amount,
+    );
+  }
 
   // 9. Create receipt
   const receipt = await createReceipt({

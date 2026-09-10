@@ -53,6 +53,14 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
+// Security: Facilitator must not boot in an unauthenticated fail-open state.
+// Either FTH_SERVICE_SECRET (for HMAC inter-service auth) or ADMIN_API_TOKEN must be configured.
+if (!process.env.FTH_SERVICE_SECRET?.trim() && !process.env.ADMIN_API_TOKEN?.trim()) {
+  console.error("[FATAL] Security violation: either FTH_SERVICE_SECRET or ADMIN_API_TOKEN must be configured.");
+  console.error("The facilitator refuses to boot in an unauthenticated fail-open mode.");
+  process.exit(1);
+}
+
 async function main() {
   const app = Fastify({
     logger: {

@@ -51,20 +51,62 @@ export async function getInvoice(invoice_id: string): Promise<Invoice | null> {
 }
 
 /**
- * Mark an invoice as paid with the given proof.
+ * Atomically claim an invoice for processing to prevent settle-before-mark race conditions.
+ * Returns true if the claim succeeded (row updated from pending -> processing).
+ */
+export async function claimInvoiceForProcessing(invoice_id: string): Promise<boolean> {
+  const { rowCount } = await pool.query(
+    `UPDATE invoices
+     SET status = 'processing'
+     WHERE invoice_id = $1 AND status = 'pending'`,
+    [invoice_id],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/**
+ * Release an invoice back to 'pending' if settlement failed.
+ */
+export async function releaseInvoiceToPending(invoice_id: string): Promise<void> {
+  await pool.query(
+    `UPDATE invoices
+     SET status = 'pending'
+     WHERE invoice_id = $1 AND status = 'processing'`,
+    [invoice_id],
+  );
+}
+
+/**
+ * Finalize an invoice as paid after successful settlement.
+ * Only transitions from 'processing' (or 'pending') to 'paid'.
+ */
+export async function finalizeInvoicePaid(
+  invoice_id: string,
+  payer: string,
+  proof_type: string,
+  proof_data: Record<string, unknown>,
+  client?: { query: (q: string, params: any[]) => Promise<any> },
+): Promise<boolean> {
+  const executor = client ?? pool;
+  const { rowCount } = await executor.query(
+    `UPDATE invoices
+     SET status = 'paid', payer = $2, proof_type = $3, proof_data = $4, paid_at = now()
+     WHERE invoice_id = $1 AND (status = 'processing' OR status = 'pending')`,
+    [invoice_id, payer, proof_type, JSON.stringify(proof_data)],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/**
+ * Mark an invoice as paid with the given proof (legacy wrapper).
  */
 export async function markInvoicePaid(
   invoice_id: string,
   payer: string,
   proof_type: string,
   proof_data: Record<string, unknown>,
-): Promise<void> {
-  await pool.query(
-    `UPDATE invoices
-     SET status = 'paid', payer = $2, proof_type = $3, proof_data = $4, paid_at = now()
-     WHERE invoice_id = $1 AND status = 'pending'`,
-    [invoice_id, payer, proof_type, JSON.stringify(proof_data)],
-  );
+): Promise<boolean> {
+  return finalizeInvoicePaid(invoice_id, payer, proof_type, proof_data);
 }
 
 /**

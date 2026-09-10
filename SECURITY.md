@@ -7,8 +7,8 @@ smart contracts, or infrastructure, please report it responsibly.
 
 ### How to Report
 
-1. **Email**: security@fth.trading
-2. **GitHub Security Advisories**: Use the [Report a vulnerability](https://github.com/FTHTrading/UnyKorn-X402-aws/security/advisories) button
+1. **Email**: kevan@unykorn.org
+2. **GitHub Security Advisories**: Use the [Report a vulnerability](https://github.com/FTHTrading/UnyKorn-X402-aws/security/advisories) button (if enabled) or direct security email
 3. **Do NOT** open a public issue for security vulnerabilities
 
 ### What to Include

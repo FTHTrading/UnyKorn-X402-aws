@@ -39,15 +39,18 @@ export async function getOrCreateAccount(
 
 /**
  * Register or update a public key for Ed25519 proof verification.
+ * By default, refuses to overwrite an existing public key unless forceOverwrite is explicitly enabled.
  */
 export async function registerPubkey(
   wallet_address: string,
   pubkey: string,
-): Promise<void> {
-  await pool.query(
-    `UPDATE credit_accounts SET pubkey = $2, updated_at = now() WHERE wallet_address = $1`,
-    [wallet_address, pubkey],
-  );
+  forceOverwrite: boolean = false,
+): Promise<boolean> {
+  const query = forceOverwrite
+    ? `UPDATE credit_accounts SET pubkey = $2, updated_at = now() WHERE wallet_address = $1`
+    : `UPDATE credit_accounts SET pubkey = $2, updated_at = now() WHERE wallet_address = $1 AND (pubkey IS NULL OR pubkey = '')`;
+  const { rowCount } = await pool.query(query, [wallet_address, pubkey]);
+  return (rowCount ?? 0) > 0;
 }
 
 /**

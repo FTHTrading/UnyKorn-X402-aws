@@ -1,4 +1,5 @@
 import type { Invoice, PaymentProof } from "../types";
+import { checkTxHashConsumed } from "./replay";
 
 type TxHashProof = Extract<PaymentProof, { proof_type: "tx_hash" }>;
 
@@ -29,6 +30,16 @@ export async function verifyTxHashPayment(
 ): Promise<VerifyResult> {
   if (proof.rail !== invoice.rail) {
     return { verified: false, error: "Rail mismatch", error_code: "rail_not_allowed" };
+  }
+
+  // Replay guard: Ensure this tx_hash has not been consumed for any invoice
+  const alreadyConsumed = await checkTxHashConsumed(proof.rail, proof.tx_hash);
+  if (alreadyConsumed) {
+    return {
+      verified: false,
+      error: "Transaction hash has already been consumed",
+      error_code: "tx_already_consumed",
+    };
   }
 
   switch (proof.rail) {

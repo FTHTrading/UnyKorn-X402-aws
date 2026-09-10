@@ -75,9 +75,14 @@ export function registerAuthMiddleware(app: FastifyInstance): void {
     // 2. Admin routes — handled by operator.ts's own hook (skip here to avoid double-check)
     if (isAdminRoute(url)) return;
 
-    // 3. Service routes — require HMAC service auth OR admin token
-    //    In dev mode (no SIGNING_KEY and no ADMIN_TOKEN), everything passes.
-    if (!SIGNING_KEY && !ADMIN_TOKEN) return;
+    // 3. Service routes — require HMAC service auth OR admin token. Fail-closed by default.
+    if (!SIGNING_KEY && !ADMIN_TOKEN) {
+      req.log.error("Service authentication rejected: no FTH_SERVICE_SECRET or ADMIN_API_TOKEN configured on server");
+      return reply.code(500).send({
+        error: "Service authentication is not configured on server",
+        error_code: "server_misconfigured",
+      });
+    }
 
     const headers = req.headers as Record<string, string | string[] | undefined>;
 

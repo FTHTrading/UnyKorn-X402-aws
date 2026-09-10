@@ -28,9 +28,23 @@ export default async function creditRoutes(app: FastifyInstance): Promise<void> 
 
     const account = await getOrCreateAccount(wallet_address, rail ?? "unykorn-l1", pubkey);
 
+    // Prevent pubkey hijacking: reject silent overwrite if account already has a registered pubkey
+    if (account.pubkey && account.pubkey !== pubkey) {
+      return reply.status(409).send({
+        error: "Wallet already has a registered public key. Key rotation requires signature authorization from existing key.",
+        error_code: "pubkey_already_registered",
+      });
+    }
+
     // Also update pubkey if account already existed without one
     if (!account.pubkey) {
-      await registerPubkey(wallet_address, pubkey);
+      const updated = await registerPubkey(wallet_address, pubkey);
+      if (!updated) {
+        return reply.status(409).send({
+          error: "Public key registration conflict",
+          error_code: "pubkey_conflict",
+        });
+      }
     }
 
     return reply.status(200).send({
@@ -42,6 +56,15 @@ export default async function creditRoutes(app: FastifyInstance): Promise<void> 
   app.post<{
     Body: { wallet_address: string; amount: string; reference?: string; tx_hash?: string };
   }>("/credits/deposit", async (req, reply) => {
+    // Security: Only admin or verified inter-service callers can directly deposit credits
+    const auth = (req as any).serviceAuth;
+    if (!auth || (auth.service !== "admin" && auth.via !== "hmac")) {
+      return reply.status(403).send({
+        error: "Forbidden: Direct deposit requires admin token or verified HMAC service credentials",
+        error_code: "admin_required",
+      });
+    }
+
     const { wallet_address, amount, reference, tx_hash } = req.body;
 
     if (!wallet_address || !amount) {
