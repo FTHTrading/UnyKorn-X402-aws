@@ -249,6 +249,25 @@ function resourceDoc(taskName) {
   };
 }
 
+// Bazaar discovery extension (x402 v2, @x402/extensions "bazaar"): a worked example plus a JSON Schema
+// so an agent can build a valid paid request before paying. The CDP facilitator indexes this after the
+// first settled call. Shape per coinbase/x402 typescript/packages/extensions/src/bazaar/http/types.ts.
+const BAZAAR_EXAMPLES = {
+  'genesis-sim': { input: { params: { n: 50, epochs: 100 } }, schema: { n: { type: 'integer', minimum: 5, maximum: 500 }, epochs: { type: 'integer', minimum: 10, maximum: 200 } }, output: { type: 'genesis-sim', result: { agents: 50, epochs: 100, final_gini: 0.41, total_energy: 5225, stable: true, state_commitment_sha256: '<64 hex>' } } },
+  'wallet-ops': { input: { params: { chains: ['base'] } }, schema: { chains: { type: 'array', items: { type: 'string', enum: ['base', 'xrpl', 'stellar'] } } }, output: { type: 'wallet-ops', balances: { base: { usdc: '<decimal>', eth: '<decimal>', source: 'https://mainnet.base.org' } } } },
+  'rwa-screen': { input: { params: { market: 'texas' } }, schema: { market: { type: 'string', enum: ['texas', 'florida', 'newyork', 'oregon'] } }, output: { type: 'rwa-screen', market: 'texas', grid: 'ERCOT', readiness: 'ready', score: 0.87, data_source: 'curated static table; not advice' } },
+  'prove': { input: { params: { sha256: '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', claim: 'invoice 1042 existed before the dispute', subject: 'invoice-1042' } }, schema: { sha256: { type: 'string', pattern: '^[0-9a-f]{64}$' }, text: { type: 'string', maxLength: 16384 }, claim: { type: 'string', maxLength: 512 }, subject: { type: 'string', maxLength: 200 } }, output: { type: 'prove', proofReceipt: { receiptVersion: 'genesis402-receipt-v1', receiptId: 'g402_rcpt_<12hex>', truthLabels: ['ATTESTED', 'VERIFIED'], issuer: { keyId: 'g402-key-<16hex>', alg: 'ed25519' } }, verify: { keys: '/prove/keys', source: 'https://github.com/FTHTrading/402-truth' } } }
+};
+function bazaarExtension(taskName) {
+  const ex = BAZAAR_EXAMPLES[taskName]; if (!ex) return null;
+  return { bazaar: {
+    info: { input: { type: 'http', method: 'POST', bodyType: 'json', body: ex.input }, output: { type: 'json', example: Object.assign({ ok: true, receipt: { receipt_id: 'g402-<16hex>', tx_hash: '0x<64hex>', amount_usd: rails.PRICES.base_usdc_usd } }, ex.output) } },
+    schema: { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object',
+      properties: { input: { type: 'object', properties: { type: { type: 'string', const: 'http' }, method: { type: 'string', enum: ['POST'] }, bodyType: { type: 'string', enum: ['json'] }, body: { type: 'object', properties: { params: { type: 'object', properties: ex.schema } }, required: ['params'] } }, required: ['type', 'method', 'bodyType', 'body'] },
+        output: { type: 'object' } }, required: ['input'] }
+  } };
+}
+
 /**
  * 402 challenge — or 503 when no lane is payable.
  * Quoting a price on a lane we cannot receive on or settle is the exact defect this
@@ -271,7 +290,8 @@ async function sendChallenge(res, taskName) {
       retry_after_seconds: 300
     }, { 'Retry-After': '300' });
   }
-  const payload = { x402Version: 2, error: 'Payment required', resource: resourceDoc(taskName), accepts };
+  const ext = bazaarExtension(taskName);
+  const payload = { x402Version: 2, error: 'Payment required', resource: resourceDoc(taskName), accepts, ...(ext ? { extensions: ext } : {}) };
   const b64 = Buffer.from(JSON.stringify(payload)).toString('base64');
   send(res, 402, payload, {
     'Payment-Required': b64,
@@ -338,7 +358,7 @@ async function handlePaid(req, res, taskName, body) {
     }
     proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)' };
   } else {
-    const s = await rails.settleBase(payment);
+    const s = await rails.settleBase(payment, { resourceUrl: PUBLIC_ORIGIN + CATALOG[taskName].path, extensions: bazaarExtension(taskName) });
     if (!s.ok) {
       alerts.alert('warn', 'x402 Base settlement FAILED', { Reason: s.reason, Detail: s.detail || s.self || '', Task: taskName }, 'basefail:' + s.reason);
       return send(res, 402, {
