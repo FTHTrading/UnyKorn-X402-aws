@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DIR = path.join(__dirname, 'data', 'prove');
+const DIR = process.env.PROVE_DIR || path.join(__dirname, 'data', 'prove');   // PROVE_DIR: test harnesses point this at a temp dir
 const KEY_FILE = path.join(DIR, 'issuer.key.pem');
 const PUB_FILE = path.join(DIR, 'issuer.pub.pem');
 const LEDGER = path.join(DIR, 'ledger.jsonl');
@@ -108,8 +108,9 @@ function prove(params, ctx) {
   // Each receipt is sealed on issue as a one-leaf segment: root == leaf, proof []. Stated plainly.
   env.integrity = { canonicalBodyHash: cbh, leafHash: leaf, segmentRoot: leaf, inclusionProof: [], segmentId: 'seg_' + rid.slice(10), leafIndex: 0, segmentNote: 'one-leaf segment sealed at issue; root equals leaf; not externally anchored' };
   fs.appendFileSync(LEDGER, JSON.stringify(env) + '\n');
+  // `receipt` is the rail's payment receipt (tx hash); the signed proof receipt lives under `proofReceipt`.
   return {
-    type: 'prove', receipt: env,
+    type: 'prove', proofReceipt: env,
     verify: { how: 'offline with @genesis402/verify', keys: '/prove/keys', lookup: '/prove/receipts/' + rid, source: 'https://github.com/FTHTrading/402-truth' },
     truthLabels: labels, mode: 'LIVE', anchor: 'UNANCHORED',
     companionRule: STANDARD_LIMITATIONS[0]
