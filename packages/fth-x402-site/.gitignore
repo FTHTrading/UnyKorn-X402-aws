@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.cdp-recovered.pem 
+_ops_envscan.txt 
+
+# rail issuer key + proof ledger (never commit)
+data/prove/
