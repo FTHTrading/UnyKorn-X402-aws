@@ -491,6 +491,7 @@ const server = http.createServer(async (req, res) => {
   // ---------- free: proof receipt lookup + issuer key (so anyone can verify offline) ----------
   if (p === '/prove/keys') return send(res, 200, [prove.registryEntry()]);
   if (p === '/prove/stats') return send(res, 200, { ...prove.stats(), keyId: prove.registryEntry().keyId, anchor: 'UNANCHORED', verifier: 'https://github.com/FTHTrading/402-truth' });
+  if (p === '/prove/recent') return send(res, 200, { receipts: prove.recent(20), anchor: 'UNANCHORED' });
   if (p.startsWith('/prove/receipts/')) {
     const r = prove.get(p.slice('/prove/receipts/'.length));
     return r ? send(res, 200, { receipt: r, keys: [prove.registryEntry()], anchor: 'UNANCHORED' }) : send(res, 404, { error: 'receipt_not_found' });

@@ -122,6 +122,12 @@ function get(rid) {
   for (const line of fs.readFileSync(LEDGER, 'utf8').split(/\r?\n/)) { if (line.includes('"' + rid + '"')) { const r = JSON.parse(line); if (r.receiptId === rid) return r; } }
   return null;
 }
+/** Last N sold receipts, public metadata only (no claim text beyond 80 chars). */
+function recent(n) {
+  if (!fs.existsSync(LEDGER)) return [];
+  const lines = fs.readFileSync(LEDGER, 'utf8').split(/\r?\n/).filter(Boolean).slice(-(n || 20)).reverse();
+  return lines.map((l) => { const r = JSON.parse(l); return { receiptId: r.receiptId, kind: r.kind, truthLabels: r.truthLabels, issuedAt: r.lifecycle.issuedAt, sequence: r.workflow.sequence, sha256: r.body.sha256, claim: r.body.claim ? String(r.body.claim).slice(0, 80) : null, txHash: r.body.txHash, amountUsd: r.body.payment && r.body.payment.amountUsd }; });
+}
 function stats() { if (!fs.existsSync(LEDGER)) return { receipts: 0 }; const n = fs.readFileSync(LEDGER, 'utf8').split(/\r?\n/).filter(Boolean).length; return { receipts: n, head: head() }; }
 
-module.exports = { prove, get, stats, registryEntry, loadIssuer };
+module.exports = { prove, get, stats, recent, registryEntry, loadIssuer };
