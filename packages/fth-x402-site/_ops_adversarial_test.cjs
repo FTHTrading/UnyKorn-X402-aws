@@ -160,7 +160,7 @@ async function paymentTests() {
   const oa = await req('GET', '/openapi.json');
   check('openapi describes /risk with a 402 and a 400-before-payment response', oa.status === 200 && oa.json.paths['/risk'] && oa.json.paths['/risk'].post.responses['402'] && oa.json.paths['/risk'].post.responses['400'], oa.status);
   const lt = await req('GET', '/llms.txt');
-  check('llms.txt is plain text and names the receipts feed', lt.status === 200 && /text\/plain/.test(lt.headers['content-type']) && /\/receipts/.test(lt.raw) && /not investment/.test(lt.raw), lt.status);
+  check('llms.txt is plain text and names the receipts feed', lt.status === 200 && /text\/plain/.test(lt.headers['content-type']) && /\/receipts/.test(lt.raw) && /investment, legal or tax advice/.test(lt.raw), lt.status);
 
   console.log('\n-- public receipts feed --');
   const rcp = await req('GET', '/receipts');
