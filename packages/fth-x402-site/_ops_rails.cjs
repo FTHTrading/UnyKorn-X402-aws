@@ -258,12 +258,14 @@ async function readiness(force) {
 }
 
 /** accepts[] built ONLY from lanes we can honour right now. Empty => fail closed. */
-function buildAccepts(r) {
+function buildAccepts(r, priceUsd) {
+  const ctx = { priceUsd };
+  const atomic = priceAtomicOf(ctx);
   const out = [];
   if (r.lanes['base:usdc'].payable) {
     out.push({
       scheme: 'exact', network: 'eip155:8453', asset: BASE_USDC,
-      amount: PRICES.base_usdc_atomic, payTo: payToEvm(), maxTimeoutSeconds: 300,
+      amount: atomic, payTo: payToEvm(), maxTimeoutSeconds: 300,
       extra: { name: 'USD Coin', version: '2' }
     });
   }
@@ -275,7 +277,7 @@ function buildAccepts(r) {
   }
   for (const k of ['polygon:usdc', 'solana:usdc']) {
     if (r.lanes[k] && r.lanes[k].payable) {
-      const q = lanes.exactRequirements(k, r.lanes[k]); delete q.resource;
+      const q = lanes.exactRequirements(k, r.lanes[k], undefined, atomic); delete q.resource;
       out.push(q);
     }
   }
@@ -381,15 +383,16 @@ function authFrom(payment) {
  * Checks the authorization against SERVER-side amount and destination BEFORE
  * spending gas, so a malformed or underpaid authorization costs us nothing.
  */
-async function settleBaseSelf(payment) {
+async function settleBaseSelf(payment, ctx) {
   const a = authFrom(payment);
   if (!a || !a.from || !a.signature || !a.nonce) return { ok: false, reason: 'base_authorization_incomplete' };
   const want = payToEvm().toLowerCase();
   if (String(a.to || '').toLowerCase() !== want) return { ok: false, reason: 'base_wrong_destination', expected: payToEvm() };
   let value;
   try { value = BigInt(a.value); } catch (e) { return { ok: false, reason: 'base_value_unparseable' }; }
-  if (value < BigInt(PRICES.base_usdc_atomic)) {
-    return { ok: false, reason: 'base_underpaid', got: value.toString(), required: PRICES.base_usdc_atomic };
+  const requiredAtomic = priceAtomicOf(ctx);
+  if (value < BigInt(requiredAtomic)) {
+    return { ok: false, reason: 'base_underpaid', got: value.toString(), required: requiredAtomic };
   }
   const now = Math.floor(Date.now() / 1000);
   if (a.validBefore && Number(a.validBefore) < now) return { ok: false, reason: 'base_authorization_expired' };
@@ -479,10 +482,19 @@ async function cdpCall(path, body, method) {
   });
 }
 
-function baseRequirements() {
+/** USD price -> USDC atomic (6 decimals). Falls back to the rail default when absent or malformed. */
+function priceAtomicOf(ctx) {
+  const usd = ctx && ctx.priceUsd != null ? Number(ctx.priceUsd) : NaN;
+  if (!Number.isFinite(usd) || usd <= 0) return PRICES.base_usdc_atomic;
+  return String(Math.round(usd * 1e6));
+}
+function priceUsdOf(ctx) { return Number(priceAtomicOf(ctx)) / 1e6; }
+
+function baseRequirements(ctx) {
+  const atomic = priceAtomicOf(ctx);
   return {
     scheme: 'exact', network: 'eip155:8453', asset: BASE_USDC,
-    maxAmountRequired: PRICES.base_usdc_atomic, amount: PRICES.base_usdc_atomic,
+    maxAmountRequired: atomic, amount: atomic,
     payTo: payToEvm(), maxTimeoutSeconds: 300, resource: 'https://twin.unykorn.org/task',
     extra: { name: 'USD Coin', version: '2' }
   };
@@ -535,7 +547,7 @@ function toCanonicalPayload(payment, ctx) {
     accepted: {
       scheme: 'exact',
       network: 'eip155:8453',
-      amount: PRICES.base_usdc_atomic,
+      amount: priceAtomicOf(ctx),
       asset: BASE_USDC,
       payTo: payToEvm(),
       maxTimeoutSeconds: 300,
@@ -546,7 +558,7 @@ function toCanonicalPayload(payment, ctx) {
       authorization: {
         from: a.from,
         to: a.to || payToEvm(),
-        value: str(a.value, PRICES.base_usdc_atomic),
+        value: str(a.value, priceAtomicOf(ctx)),
         validAfter: str(a.validAfter, '0'),
         validBefore: str(a.validBefore, String(Math.floor(Date.now() / 1000) + 600)),
         nonce: a.nonce
@@ -565,7 +577,7 @@ async function settleBase(payment, ctx) {
   const st = cdpStatus();
   if (st.ok) {
     try {
-      const reqs = baseRequirements();
+      const reqs = baseRequirements(ctx);
       if (ctx.resourceUrl) reqs.resource = ctx.resourceUrl;
       const canonical = toCanonicalPayload(payment, ctx);
       const auth = canonical.payload.authorization;
@@ -583,19 +595,19 @@ async function settleBase(payment, ctx) {
       const s = await cdpCall('/platform/v2/x402/settle', { x402Version: 2, paymentPayload: canonical, paymentRequirements: reqs });
       const txHash = s.json && (s.json.transaction || s.json.txHash || s.json.transactionHash);
       if (s.status >= 200 && s.status < 300 && txHash) {
-        return { ok: true, via: 'cdp', txHash, amount_usd: PRICES.base_usdc_usd };
+        return { ok: true, via: 'cdp', txHash, amount_usd: priceUsdOf(ctx) };
       }
       // CDP could not settle — fall through to our own relayer rather than serving free.
-      const fb = await settleBaseSelf(payment);
+      const fb = await settleBaseSelf(payment, ctx);
       if (fb.ok) return fb;
       return { ok: false, reason: 'cdp_settle_failed_and_selfsettle_failed', cdp: (s.json && s.json.error) || s.raw, self: fb.reason };
     } catch (e) {
-      const fb = await settleBaseSelf(payment);
+      const fb = await settleBaseSelf(payment, ctx);
       if (fb.ok) return fb;
       return { ok: false, reason: 'cdp_error_and_selfsettle_failed', detail: (e.message || '').slice(0, 160), self: fb.reason };
     }
   }
-  return settleBaseSelf(payment);
+  return settleBaseSelf(payment, ctx);
 }
 
 /** Settle any CDP-settled lane. base keeps its self-settle fallback; polygon/solana are CDP-only. */
@@ -604,12 +616,12 @@ async function settleExact(payment, laneKey, ctx) {
   const r = await readiness();
   const st = r.lanes[laneKey];
   if (!st || !st.payable) return { ok: false, reason: 'lane_unavailable', lane: laneKey, detail: st && st.reason };
-  return lanes.settleExactCdp(cdpCall, laneKey, st, payment, ctx);
+  return lanes.settleExactCdp(cdpCall, laneKey, st, payment, Object.assign({}, ctx, { priceAtomic: priceAtomicOf(ctx) }));
 }
 
 module.exports = {
   PRICES, BASE_USDC, RLUSD_ISSUER, readiness, buildAccepts,
   verifyXrpl, settleBase, settleBaseSelf, settleExact, cdpStatus, relayerStatus,
   xrplStatus, stellarStatus, decodePaymentHeader, payToEvm, payToXrpl,
-  selectLane: lanes.selectLane, verifyStellar: lanes.verifyStellar, EXACT_LANES: lanes.EXACT_LANES, cdpCall
+  selectLane: lanes.selectLane, verifyStellar: lanes.verifyStellar, EXACT_LANES: lanes.EXACT_LANES, cdpCall, priceAtomicOf
 };

@@ -22,6 +22,7 @@ const http = require('http');
 const crypto = require('crypto');
 
 const rails = require('./_ops_rails.cjs');
+const llm = require('./_ops_llm.cjs');
 const ledger = require('./_ops_ledger.cjs');
 const alerts = require('./_ops_alerts.cjs');
 const prove = require('./_ops_prove.cjs');
@@ -70,6 +71,15 @@ const CATALOG = {
     markets_supported: ['texas', 'florida', 'newyork', 'oregon'],
     deterministic: true,
     typical_ms: '1-5'
+  },
+  'llm': {
+    path: '/llm',
+    title: 'LLM chat completion (local RTX 5090 models first, hosted allowlist second)',
+    buys: 'One chat completion, OpenAI message shape in, up to 1,024 output tokens. Local models run on the operator\'s own GPU; hosted models come from an allowlist whose cost is a fraction of the price. The response names the provider and model that actually answered and the token counts. Not deterministic. No content is retained after the response is sent.',
+    params: { model: 'optional: a local model (see /llm/models) or an allowlisted hosted id; default local', messages: 'OpenAI-shape array of {role, content}', prompt: 'alternative to messages: one user string', max_tokens: 'optional, 1-1024, default 512', temperature: 'optional, 0-2, default 0.2' },
+    price_usd: Number(process.env.PRICE_LLM_USD || 0.02),
+    deterministic: false,
+    typical_ms: '400-8000'
   },
   'prove': {
     path: '/prove',
@@ -256,8 +266,16 @@ const BAZAAR_EXAMPLES = {
   'genesis-sim': { input: { params: { n: 50, epochs: 100 } }, schema: { n: { type: 'integer', minimum: 5, maximum: 500 }, epochs: { type: 'integer', minimum: 10, maximum: 200 } }, output: { type: 'genesis-sim', result: { agents: 50, epochs: 100, final_gini: 0.41, total_energy: 5225, stable: true, state_commitment_sha256: '<64 hex>' } } },
   'wallet-ops': { input: { params: { chains: ['base'] } }, schema: { chains: { type: 'array', items: { type: 'string', enum: ['base', 'xrpl', 'stellar'] } } }, output: { type: 'wallet-ops', balances: { base: { usdc: '<decimal>', eth: '<decimal>', source: 'https://mainnet.base.org' } } } },
   'rwa-screen': { input: { params: { market: 'texas' } }, schema: { market: { type: 'string', enum: ['texas', 'florida', 'newyork', 'oregon'] } }, output: { type: 'rwa-screen', market: 'texas', grid: 'ERCOT', readiness: 'ready', score: 0.87, data_source: 'curated static table; not advice' } },
+  'llm': { input: { params: { model: 'qwen2.5:7b', messages: [{ role: 'user', content: 'Summarise the x402 payment flow in three sentences.' }], max_tokens: 200 } }, schema: { model: { type: 'string' }, messages: { type: 'array', items: { type: 'object', properties: { role: { type: 'string', enum: ['system', 'user', 'assistant'] }, content: { type: 'string' } }, required: ['role', 'content'] } }, prompt: { type: 'string', maxLength: 24000 }, max_tokens: { type: 'integer', minimum: 1, maximum: 1024 }, temperature: { type: 'number', minimum: 0, maximum: 2 } }, output: { type: 'llm', provider: 'ollama-local', model: 'qwen2.5:7b', output: '<assistant text>', usage: { prompt_tokens: 42, completion_tokens: 88 }, finish_reason: 'stop' } },
   'prove': { input: { params: { sha256: '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', claim: 'invoice 1042 existed before the dispute', subject: 'invoice-1042' } }, schema: { sha256: { type: 'string', pattern: '^[0-9a-f]{64}$' }, text: { type: 'string', maxLength: 16384 }, claim: { type: 'string', maxLength: 512 }, subject: { type: 'string', maxLength: 200 } }, output: { type: 'prove', proofReceipt: { receiptVersion: 'genesis402-receipt-v1', receiptId: 'g402_rcpt_<12hex>', truthLabels: ['ATTESTED', 'VERIFIED'], issuer: { keyId: 'g402-key-<16hex>', alg: 'ed25519' } }, verify: { keys: '/prove/keys', source: 'https://github.com/FTHTrading/402-truth' } } }
 };
+function taskPrice(taskName) {
+  const c = CATALOG[taskName];
+  const p = c && Number(c.price_usd);
+  return Number.isFinite(p) && p > 0 ? p : rails.PRICES.base_usdc_usd;
+}
+const lanesMod = require('./_ops_lanes.cjs');
+
 function bazaarExtension(taskName) {
   const ex = BAZAAR_EXAMPLES[taskName]; if (!ex) return null;
   return { bazaar: {
@@ -275,7 +293,7 @@ function bazaarExtension(taskName) {
  */
 async function sendChallenge(res, taskName) {
   const r = await rails.readiness();
-  const accepts = rails.buildAccepts(r);
+  const accepts = rails.buildAccepts(r, taskPrice(taskName));
   if (!accepts.length) {
     alerts.alert('crit', 'x402 gate FAIL-CLOSED — no payable lane', {
       Reason: 'every settlement/receive lane is unavailable',
@@ -301,6 +319,7 @@ async function sendChallenge(res, taskName) {
 }
 
 async function runTask(taskName, params, ctx) {
+  if (taskName === 'llm') { const r = await llm.run(params, ctx); return Object.assign({ type: 'llm' }, r); }
   if (taskName === 'genesis-sim') return runGenesisSim(params);
   if (taskName === 'rwa-screen') return rwaScreen(params);
   if (taskName === 'wallet-ops') return walletOps(params);
@@ -373,7 +392,7 @@ async function handlePaid(req, res, taskName, body) {
     }
     proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)' };
   } else {
-    const s = await rails.settleExact(payment, laneKey, { resourceUrl: PUBLIC_ORIGIN + CATALOG[taskName].path, extensions: bazaarExtension(taskName) });
+    const s = await rails.settleExact(payment, laneKey, { resourceUrl: PUBLIC_ORIGIN + CATALOG[taskName].path, extensions: bazaarExtension(taskName), priceUsd: taskPrice(taskName) });
     if (!s.ok) {
       alerts.alert('warn', 'x402 ' + laneKey + ' settlement FAILED', { Reason: s.reason, Detail: s.detail || s.self || '', Task: taskName }, 'settlefail:' + laneKey + ':' + s.reason);
       return send(res, 402, {
@@ -441,6 +460,7 @@ async function handlePaid(req, res, taskName, body) {
 // Router
 // =====================================================================
 const PATH_TO_TASK = {
+  '/llm': 'llm',
   '/task': null,               // task chosen by body.type
   '/genesis-sim': 'genesis-sim',
   '/rwa-screen': 'rwa-screen',
@@ -505,7 +525,7 @@ const server = http.createServer(async (req, res) => {
         markets_supported: c.markets_supported,
         deterministic: c.deterministic,
         typical_execution_ms: c.typical_ms,
-        price: { usd: rails.PRICES.base_usdc_usd, note: 'per successful execution on base, polygon, solana or stellar (USDC); XRPL lane is ' + rails.PRICES.xrpl_xrp + ' XRP' }
+        price: { usd: taskPrice(name), note: 'per successful execution on base, polygon or solana (USDC, this task\'s price); pay-first lanes: stellar ' + lanesMod.STELLAR_PRICE + ' USDC, XRPL ' + rails.PRICES.xrpl_xrp + ' XRP flat' }
       })),
       accepts,
       lanes: r.lanes,
@@ -518,13 +538,14 @@ const server = http.createServer(async (req, res) => {
         refunds: 'Base lane: funds do not move unless settlement succeeds. XRPL lane is pay-first: if verification fails the proof is retryable, and unresolved cases are handled by contacting the address above.',
         not_advice: 'rwa-screen is informational only and is not investment, legal or tax advice'
       },
-      free_endpoints: ['/health', '/.well-known/x402', '/prove/keys', '/prove/stats', '/prove/receipts/{receiptId}'],
+      free_endpoints: ['/health', '/.well-known/x402', '/prove/keys', '/prove/stats', '/prove/receipts/{receiptId}', '/llm/models'],
       generated_at: new Date().toISOString()
     });
   }
 
   // ---------- free: proof receipt lookup + issuer key (so anyone can verify offline) ----------
   if (p === '/prove/keys') return send(res, 200, [prove.registryEntry()]);
+  if (p === '/llm/models') { const st = await llm.status(); return send(res, 200, Object.assign({ price_usd: taskPrice('llm'), max_output_tokens: llm.MAX_OUTPUT_TOKENS, max_input_chars: llm.MAX_INPUT_CHARS, note: 'local models run on the operator GPU; hosted models are an allowlist; the paid response names the one that answered' }, st)); }
   if (p === '/prove/stats') return send(res, 200, { ...prove.stats(), keyId: prove.registryEntry().keyId, anchor: 'UNANCHORED', verifier: 'https://github.com/FTHTrading/402-truth' });
   if (p === '/prove/recent') return send(res, 200, { receipts: prove.recent(20), anchor: 'UNANCHORED' });
   if (p.startsWith('/prove/receipts/')) {

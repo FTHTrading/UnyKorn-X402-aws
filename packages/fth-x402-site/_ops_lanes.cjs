@@ -86,12 +86,13 @@ function exactLaneStatus(laneKey, cdpOk, supported) {
 }
 
 /** The `accepts[]` entry (and paymentRequirements) for a CDP-settled lane. */
-function exactRequirements(laneKey, status, resourceUrl) {
+function exactRequirements(laneKey, status, resourceUrl, atomicOverride) {
   const lane = EXACT_LANES[laneKey];
+  const atomic = atomicOverride && /^\d+$/.test(String(atomicOverride)) ? String(atomicOverride) : lane.atomic;
   const extra = lane.kind === 'svm' ? { feePayer: status.fee_payer } : { ...lane.extra };
   return {
     scheme: 'exact', network: lane.network, asset: lane.asset,
-    maxAmountRequired: lane.atomic, amount: lane.atomic,
+    maxAmountRequired: atomic, amount: atomic,
     payTo: status.payTo, maxTimeoutSeconds: 300,
     resource: resourceUrl || 'https://twin.unykorn.org/task',
     extra
@@ -105,13 +106,13 @@ function exactRequirements(laneKey, status, resourceUrl) {
 function toCanonicalExact(laneKey, status, payment, ctx) {
   ctx = ctx || {};
   const lane = EXACT_LANES[laneKey];
-  const req = exactRequirements(laneKey, status, ctx.resourceUrl);
+  const req = exactRequirements(laneKey, status, ctx.resourceUrl, ctx.priceAtomic);
   const p = (payment && (payment.payload || payment)) || {};
   const base = {
     x402Version: 2, scheme: 'exact', network: lane.network,
     resource: { url: ctx.resourceUrl || 'https://twin.unykorn.org/task', mimeType: 'application/json' },
     ...(ctx.extensions ? { extensions: ctx.extensions } : {}),
-    accepted: { scheme: 'exact', network: lane.network, amount: lane.atomic, asset: lane.asset, payTo: status.payTo, maxTimeoutSeconds: 300, extra: req.extra }
+    accepted: { scheme: 'exact', network: lane.network, amount: req.amount, asset: lane.asset, payTo: status.payTo, maxTimeoutSeconds: 300, extra: req.extra }
   };
   if (lane.kind === 'svm') {
     const tx = p.transaction || payment.transaction || null;
@@ -129,7 +130,7 @@ function toCanonicalExact(laneKey, status, payment, ctx) {
     ...base,
     payload: {
       signature,
-      authorization: { from: a.from, to: a.to || status.payTo, value: str(a.value, lane.atomic), validAfter: str(a.validAfter, '0'), validBefore: str(a.validBefore, String(Math.floor(Date.now() / 1000) + 600)), nonce: a.nonce }
+      authorization: { from: a.from, to: a.to || status.payTo, value: str(a.value, req.amount), validAfter: str(a.validAfter, '0'), validBefore: str(a.validBefore, String(Math.floor(Date.now() / 1000) + 600)), nonce: a.nonce }
     }
   };
   const missing = [!signature && 'signature', !a.from && 'from', !a.nonce && 'nonce'].filter(Boolean);
@@ -147,7 +148,7 @@ async function settleExactCdp(cdpCall, laneKey, status, payment, ctx) {
     if (!valid) return { ok: false, reason: 'cdp_verify_rejected', status: v.status, detail: (v.json && (v.json.invalidReason || v.json.error)) || v.raw };
     const s = await cdpCall('/platform/v2/x402/settle', { x402Version: 2, paymentPayload: built.canonical, paymentRequirements: built.requirements });
     const txHash = s.json && (s.json.transaction || s.json.txHash || s.json.transactionHash || s.json.signature);
-    if (s.status >= 200 && s.status < 300 && txHash) return { ok: true, via: 'cdp', txHash: String(txHash), amount_usd: lane.usd, lane: laneKey };
+    if (s.status >= 200 && s.status < 300 && txHash) return { ok: true, via: 'cdp', txHash: String(txHash), amount_usd: Number(built.requirements.amount) / 1e6, lane: laneKey };
     return { ok: false, reason: 'cdp_settle_failed', status: s.status, detail: (s.json && s.json.error) || s.raw };
   } catch (e) {
     return { ok: false, reason: 'cdp_error', detail: (e.message || '').slice(0, 160) };
