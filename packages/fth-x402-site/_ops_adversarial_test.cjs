@@ -154,6 +154,14 @@ async function paymentTests() {
   check('discovery names the launch SKU', disc.json && disc.json.launch_sku && disc.json.launch_sku.name === 'risk', disc.json && disc.json.launch_sku);
   check('risk copy carries its limitations (not advice, not a clearance)', riskSvc && /not advice/i.test(riskSvc.what_you_get) && /not a clearance/i.test(riskSvc.what_you_get));
 
+  console.log('\n-- zero-cost discovery surfaces --');
+  const card = await req('GET', '/.well-known/agent.json');
+  check('agent card lists every paid task as a skill with a price', card.status === 200 && Array.isArray(card.json.skills) && card.json.skills.length === disc.json.services.length && card.json.skills.every((s) => s.price && s.price.usd > 0), card.status);
+  const oa = await req('GET', '/openapi.json');
+  check('openapi describes /risk with a 402 and a 400-before-payment response', oa.status === 200 && oa.json.paths['/risk'] && oa.json.paths['/risk'].post.responses['402'] && oa.json.paths['/risk'].post.responses['400'], oa.status);
+  const lt = await req('GET', '/llms.txt');
+  check('llms.txt is plain text and names the receipts feed', lt.status === 200 && /text\/plain/.test(lt.headers['content-type']) && /\/receipts/.test(lt.raw) && /not investment/.test(lt.raw), lt.status);
+
   console.log('\n-- public receipts feed --');
   const rcp = await req('GET', '/receipts');
   check('/receipts is free and returns stats + receipts', rcp.status === 200 && rcp.json.stats && Array.isArray(rcp.json.receipts), rcp.status);

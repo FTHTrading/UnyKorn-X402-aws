@@ -24,7 +24,7 @@ const TARGETS = {
 // ADMIN: receipts + log, which the task server itself guards with a bearer key.
 const X402_PATHS = new Set([
   '/task', '/risk', '/receipts', '/rwa-screen', '/wallet-ops', '/genesis-sim', '/prove', '/llm', '/llm/models', '/facilitator/supported', '/facilitator/verify', '/facilitator/settle',
-  '/health', '/.well-known/x402', '/prove/keys', '/prove/stats', '/prove/recent',
+  '/health', '/.well-known/x402', '/.well-known/agent.json', '/openapi.json', '/llms.txt', '/prove/keys', '/prove/stats', '/prove/recent',
   '/admin/receipts', '/admin/log', '/log'
 ]);
 // Free receipt lookups carry an id in the path: /prove/receipts/{receiptId}

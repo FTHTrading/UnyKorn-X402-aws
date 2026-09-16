@@ -575,7 +575,7 @@ const server = http.createServer(async (req, res) => {
         refunds: 'Base lane: funds do not move unless settlement succeeds. XRPL lane is pay-first: if verification fails the proof is retryable, and unresolved cases are handled by contacting the address above.',
         not_advice: 'rwa-screen is informational only and is not investment, legal or tax advice'
       },
-      free_endpoints: ['/health', '/.well-known/x402', '/receipts', '/receipts/{receiptId}', '/prove/keys', '/prove/stats', '/prove/receipts/{receiptId}', '/llm/models'],
+      free_endpoints: ['/health', '/.well-known/x402', '/.well-known/agent.json', '/openapi.json', '/llms.txt', '/receipts', '/receipts/{receiptId}', '/prove/keys', '/prove/stats', '/prove/receipts/{receiptId}', '/llm/models'],
       launch_sku: { name: 'risk', endpoint: PUBLIC_ORIGIN + '/risk', price_usd: taskPrice('risk'), promise: 'Pay once; receive a reproducible, timestamped risk snapshot with an evidence hash and a public receipt.' },
       generated_at: new Date().toISOString()
     });
@@ -606,6 +606,35 @@ const server = http.createServer(async (req, res) => {
     }
   }
   if (p === '/llm/models') { const st = await llm.status(); return send(res, 200, Object.assign({ price_usd: taskPrice('llm'), max_output_tokens: llm.MAX_OUTPUT_TOKENS, max_input_chars: llm.MAX_INPUT_CHARS, note: 'local models run on the operator GPU; hosted models are an allowlist; the paid response names the one that answered' }, st)); }
+  // ---------- free: zero-cost discovery surfaces for agent frameworks and crawlers ----------
+  if (p === '/.well-known/agent.json') {
+    return send(res, 200, {
+      name: 'Genesis402 task rail', description: 'Pay-per-call machine endpoints over x402 v2. No account, no API key: read the 402, pay in USDC, receive JSON. Launch SKU: wallet / token / contract risk snapshot with an evidence hash and a public receipt.',
+      url: PUBLIC_ORIGIN, version: VERSION, provider: { organization: 'UnyKorn LLC (Wyoming)', url: 'https://unykorn.org' },
+      protocolVersion: '0.3.0', capabilities: { streaming: false, pushNotifications: false, stateTransitionHistory: false },
+      defaultInputModes: ['application/json'], defaultOutputModes: ['application/json'],
+      skills: Object.entries(CATALOG).map(([name, c]) => ({ id: name, name: c.title, description: c.buys, tags: (c.tags || []).concat(['x402', 'paid']), examples: BAZAAR_EXAMPLES[name] ? [JSON.stringify(BAZAAR_EXAMPLES[name].input)] : [], inputModes: ['application/json'], outputModes: ['application/json'], price: { usd: taskPrice(name), protocol: 'x402', endpoint: PUBLIC_ORIGIN + c.path } })),
+      payment: { protocol: 'x402', version: 2, discovery: PUBLIC_ORIGIN + '/.well-known/x402', receipts: PUBLIC_ORIGIN + '/receipts' },
+      securitySchemes: {}, security: []
+    });
+  }
+  if (p === '/openapi.json') {
+    const paths = {};
+    for (const [name, c] of Object.entries(CATALOG)) {
+      const ex = BAZAAR_EXAMPLES[name];
+      paths[c.path] = { post: { operationId: name, summary: c.title, description: c.buys + ' Price: $' + taskPrice(name) + ' per successful execution, paid with x402 v2 (read the 402 response for accepts).', tags: c.tags || [],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { params: { type: 'object', properties: ex ? ex.schema : {}, description: JSON.stringify(c.params) } } }, example: ex ? ex.input : undefined } } },
+        responses: { '402': { description: 'Payment required: body carries x402 accepts[] with network, asset, payTo and amount' }, '200': { description: 'Delivered result plus receipt {receipt_id, tx_hash, amount_usd, payer}', content: { 'application/json': { example: ex ? Object.assign({ ok: true }, ex.output) : undefined } } }, '400': { description: 'Refused before payment (invalid input); nothing charged' }, '409': { description: 'Payment proof already redeemed' }, '503': { description: 'No payable lane; nothing charged' } } } };
+    }
+    return send(res, 200, { openapi: '3.1.0', info: { title: 'Genesis402 task rail', version: VERSION, description: 'x402 pay-per-call endpoints. Free: /health, /.well-known/x402, /receipts, /prove/keys, /prove/stats.', contact: { email: process.env.X402_CONTACT || 'x402@unykorn.org' } }, servers: [{ url: PUBLIC_ORIGIN }], paths, 'x-x402': { discovery: PUBLIC_ORIGIN + '/.well-known/x402', receipts: PUBLIC_ORIGIN + '/receipts' } });
+  }
+  if (p === '/llms.txt') {
+    const lines = ['# Genesis402 task rail (' + PUBLIC_ORIGIN + ')', '', '> Pay-per-call machine endpoints over x402 v2. No account, no API key. Read the 402, pay USDC on Base/Polygon/Solana (or XRP on XRPL, USDC on Stellar), receive JSON. Operated by UnyKorn LLC (Wyoming).', '', '## Paid endpoints'];
+    for (const [name, c] of Object.entries(CATALOG)) lines.push('- [' + c.title + '](' + PUBLIC_ORIGIN + c.path + '): $' + taskPrice(name) + ' per call. ' + c.buys.slice(0, 220) + (c.buys.length > 220 ? '…' : ''));
+    lines.push('', '## Free endpoints', '- [x402 discovery](' + PUBLIC_ORIGIN + '/.well-known/x402): lanes, prices, terms, worked examples', '- [OpenAPI](' + PUBLIC_ORIGIN + '/openapi.json)', '- [Agent card](' + PUBLIC_ORIGIN + '/.well-known/agent.json)', '- [Public receipts](' + PUBLIC_ORIGIN + '/receipts): every settled call, payer class internal/external, result hash', '- [Health](' + PUBLIC_ORIGIN + '/health)', '', '## Rules', '- One payment proof buys exactly one execution; a re-presented proof returns 409.', '- Invalid input is refused with 400 before any payment is read.', '- If delivery fails after payment the proof is released and can be re-presented at no extra cost.', '- Nothing here is investment, legal or tax advice.');
+    const body = lines.join('\n');
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Length': Buffer.byteLength(body), 'Cache-Control': 'no-store' }); return res.end(body);
+  }
   if (p === '/receipts') {
     const st = ledger.stats();
     return send(res, 200, { stats: st, receipts: ledger.publicRecent(50), fields: { payer: 'shortened payer address', payer_class: 'internal = operator wallet (rail test, not demand); external = a wallet the operator does not control', result_sha256: 'sha256 over the canonical delivered result; the buyer can recompute it from the artifact', tx_hash: 'settlement transaction on the named rail' }, explorer: { 'base:usdc': 'https://base.blockscout.com/tx/{tx_hash}', 'polygon:usdc': 'https://polygon.blockscout.com/tx/{tx_hash}', 'solana:usdc': 'https://solscan.io/tx/{tx_hash}', 'xrpl:xrp': 'https://livenet.xrpl.org/transactions/{tx_hash}', 'stellar:usdc': 'https://stellar.expert/explorer/public/tx/{tx_hash}' } });
