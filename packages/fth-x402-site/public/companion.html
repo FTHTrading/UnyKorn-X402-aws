@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eve — 3D Sovereign Companion (Grok Sexy Voice & 3D Avatar) | UnyKorn</title>
+  <meta name="theme-color" content="#07080a">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/jpeg" href="/eve_avatar.jpg">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Production Three.js and VRM Importmap (exact match from Finn 3D runtime) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/",
+      "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3/lib/three-vrm.module.min.js"
+    }
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #07080a;
+      --card: rgba(14, 18, 28, 0.88);
+      --card-border: rgba(212, 175, 55, 0.3);
+      --gold: #d4af37;
+      --gold-light: #f7e7b4;
+      --gold-dim: #997d28;
+      --rose: #f43f5e;
+      --rose-light: #fda4af;
+      --cyan: #00f0ff;
+      --green: #10b981;
+      --text: #f0f6fc;
+      --text-muted: #8b949e;
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+      background-image: 
+        radial-gradient(circle at 50% 20%, rgba(212, 175, 55, 0.1) 0%, transparent 55%),
+        radial-gradient(circle at 10% 85%, rgba(244, 63, 94, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 90% 85%, rgba(0, 240, 255, 0.06) 0%, transparent 45%);
+    }
+
+    /* TOP BAR */
+    .top-bar {
+      position: fixed;
+      top: 14px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+      background: rgba(10, 14, 22, 0.92);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 40px;
+      z-index: 100;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    }
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gold-light);
+      letter-spacing: 0.06em;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 12px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--rose-light);
+      font-weight: 600;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--rose);
+      box-shadow: 0 0 10px var(--rose);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-pill:hover {
+      color: var(--gold-light);
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.12);
+    }
+
+    /* MAIN CONTAINER: 2-COLUMN LUXURY SUITE */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 560px 1fr;
+      height: calc(100vh - 84px);
+      margin-top: 74px;
+      padding: 12px 20px 20px;
+      gap: 20px;
+      max-width: 1700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* LEFT: 3D AVATAR STAGE */
+    .avatar-stage {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+      position: relative;
+    }
+    
+    .avatar-visual-box {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #151a24 0%, #06080d 85%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* WebGL 3D Canvas */
+    #vrmCanvasContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      cursor: grab;
+    }
+    #vrmCanvasContainer:active {
+      cursor: grabbing;
+    }
+    #vrmCanvasContainer canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
+    /* Optional Photo Fallback/Toggle */
+    .avatar-photo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 15%;
+      z-index: 1;
+      display: none;
+      transition: transform 0.5s ease;
+    }
+
+    /* 3D Loading Spinner */
+    .stage-loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(7, 9, 14, 0.95);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: opacity 0.5s ease;
+    }
+    .loading-spin-ring {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(212, 175, 55, 0.15);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .loading-caption {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      color: var(--gold-light);
+      letter-spacing: 0.08em;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* VIEWPORT MODE SELECTOR (3D vs 2D) */
+    .stage-view-toggles {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 25;
+      display: flex;
+      gap: 6px;
+      background: rgba(10, 14, 22, 0.75);
+      backdrop-filter: blur(8px);
+      padding: 4px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .stage-view-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .stage-view-btn.active {
+      background: var(--rose);
+      color: #fff;
+    }
+
+    /* MOUSE HINT OVERLAY */
+    .controls-hint {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 25;
+      font-size: 10.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: rgba(255, 255, 255, 0.45);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 3px 8px;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    /* CINEMATIC OVERLAYS */
+    .cinematic-vignette {
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 0 60px rgba(7, 8, 10, 0.8), inset 0 -60px 40px rgba(7, 8, 10, 0.95);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .avatar-caption {
+      position: absolute;
+      bottom: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 15;
+      pointer-events: none;
+    }
+    .eve-name {
+      font-family: 'Cinzel', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+      line-height: 1;
+    }
+    .eve-sub {
+      font-size: 11.5px;
+      color: var(--rose-light);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 3px;
+      letter-spacing: 0.05em;
+    }
+    .speaking-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(7, 9, 14, 0.85);
+      border: 1px solid var(--card-border);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--gold);
+    }
+
+    /* AUDIO CONTROLS & WAVE DOCK */
+    .stage-audio-dock {
+      padding: 14px 18px;
+      background: rgba(10, 13, 20, 0.96);
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .track-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .current-track-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gold-light);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 320px;
+    }
+    .voice-engine-tag {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--rose-light);
+      background: rgba(244, 63, 94, 0.15);
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .wave-row {
+      height: 22px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      justify-content: center;
+    }
+    .wave-line {
+      width: 3px;
+      height: 6px;
+      background: var(--gold-dim);
+      border-radius: 3px;
+      transition: height 0.1s ease;
+    }
+    .wave-row.playing .wave-line {
+      background: var(--gold);
+      animation: wavePulse 0.6s infinite alternate ease-in-out;
+    }
+    .wave-row.playing .wave-line:nth-child(2n) { animation-delay: 0.15s; }
+    .wave-row.playing .wave-line:nth-child(3n) { animation-delay: 0.3s; }
+    .wave-row.playing .wave-line:nth-child(4n) { animation-delay: 0.45s; }
+    @keyframes wavePulse {
+      0% { height: 4px; }
+      100% { height: 22px; }
+    }
+
+    .audio-btns {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .play-trigger-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--rose), #be123c);
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(244, 63, 94, 0.4);
+      transition: transform 0.15s;
+    }
+    .play-trigger-btn:hover { transform: scale(1.08); }
+    .progress-slider {
+      flex: 1;
+      accent-color: var(--rose);
+      height: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .time-readout {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      min-width: 75px;
+      text-align: right;
+    }
+
+    /* RIGHT: SOUNDBOARD & WAR ROOM CHAT */
+    .intel-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* SOUNDBOARD */
+    .soundboard-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .sb-title {
+      font-family: 'Cinzel', serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .sb-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .voice-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .v-card {
+      background: rgba(18, 24, 36, 0.7);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .v-card:hover, .v-card.active {
+      background: rgba(244, 63, 94, 0.12);
+      border-color: var(--rose);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(244, 63, 94, 0.25);
+    }
+    .v-card.male:hover, .v-card.male.active {
+      background: rgba(0, 240, 255, 0.1);
+      border-color: var(--cyan);
+      box-shadow: 0 6px 18px rgba(0, 240, 255, 0.25);
+    }
+    .v-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .v-card-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .v-card-badge {
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--gold-light);
+    }
+    .v-card-quote {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .v-card-action {
+      font-size: 11px;
+      color: var(--gold);
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* CONVERSATION STREAM */
+    .chat-dock {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 280px;
+    }
+    .dialogue-stream {
+      flex: 1;
+      max-height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 6px;
+    }
+    .chat-row {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      max-width: 90%;
+    }
+    .chat-row.eve {
+      background: rgba(26, 32, 48, 0.85);
+      border: 1px solid rgba(244, 63, 94, 0.25);
+      color: #f0f6fc;
+      border-bottom-left-radius: 2px;
+    }
+    .chat-row.kevan {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+      border: 1px solid var(--gold-dim);
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 2px;
+    }
+    .chat-author {
+      font-size: 9.5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .chat-row.eve .chat-author { color: var(--rose-light); }
+    .chat-row.kevan .chat-author { color: var(--gold-light); }
+
+    .input-box-row {
+      display: flex;
+      gap: 8px;
+    }
+    .prompt-input {
+      flex: 1;
+      background: rgba(8, 11, 16, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+    }
+    .prompt-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.25);
+    }
+    .mic-record-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid var(--rose);
+      color: var(--rose-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    .mic-record-btn.recording {
+      background: var(--rose);
+      color: #fff;
+      animation: pulse 1s infinite;
+    }
+    .send-trigger-btn {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      border: none;
+      color: #000;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 0 16px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="brand-wrap">
+      <div class="brand-title">EVE · 3D SOVEREIGN COMPANION</div>
+      <div class="status-badge">
+        <div class="pulse-dot"></div>
+        <span>GROK SEXY VOICE ACTIVE</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a href="http://localhost:8998" target="_blank" class="nav-pill" style="border-color: #00f0ff; color: #00f0ff; background: rgba(0, 240, 255, 0.12); font-weight: 700;">🎙️ Real PersonaPlex 7B (Port 8998)</a>
+      <a href="/plex.html" class="nav-pill" style="border-color: var(--rose); color: var(--rose-light);">⚡ Persona Plex Frame</a>
+      <a href="/anchor.html" class="nav-pill">← News Desk</a>
+      <a href="https://relics.unykorn.ai" target="_blank" class="nav-pill">9 Relics</a>
+      <a href="https://crm.unykorn.ai" target="_blank" class="nav-pill">Nexus Deal OS</a>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: EVE 3D VRM STAGE -->
+    <div class="avatar-stage">
+      <div class="avatar-visual-box">
+        
+        <!-- Controls Hint -->
+        <div class="controls-hint">🖱️ Left: Rotate | Right: Pan | Scroll: Zoom</div>
+
+        <!-- Mode Toggle (3D VRM vs Photo) -->
+        <div class="stage-view-toggles">
+          <button class="stage-view-btn active" id="btnMode3D" onclick="setViewMode('3d')">3D Model</button>
+          <button class="stage-view-btn" id="btnMode2D" onclick="setViewMode('2d')">Studio View</button>
+        </div>
+
+        <!-- 3D Canvas Viewport -->
+        <div id="vrmCanvasContainer"></div>
+
+        <!-- 2D Image Viewport -->
+        <img src="/eve_avatar.jpg" alt="Eve Sovereign Executive Companion" class="avatar-photo" id="eveImg">
+
+        <!-- 3D Loading Screen -->
+        <div class="stage-loading-overlay" id="loadingOverlay">
+          <div class="loading-spin-ring"></div>
+          <div class="loading-caption" id="loadingCaption">INITIALIZING 3D NEURAL ENGINE...</div>
+        </div>
+
+        <div class="cinematic-vignette"></div>
+
+        <div class="avatar-caption">
+          <div>
+            <div class="eve-name">EVE</div>
+            <div class="eve-sub">Interactive 3D Sovereign Co-Pilot</div>
+          </div>
+          <div class="speaking-indicator" id="statusLabel">
+            <span style="color: var(--rose)">●</span> Ready for Kevan
+          </div>
+        </div>
+      </div>
+
+      <!-- AUDIO DOCK -->
+      <div class="stage-audio-dock">
+        <div class="track-meta-row">
+          <div class="current-track-name" id="trackNameDisp">Hey Handsome (Welcome & Hype)</div>
+          <div class="voice-engine-tag">GROK SEXY NEURAL</div>
+        </div>
+
+        <div class="wave-row" id="waveLines">
+          <div class="wave-line"></div><div class="wave-line"></div><div class="wave-line"></div>
+          <div class="wave-line"></div><div class="wave-line"></div><div class="wave-line"></div>
+          <div class="wave-line"></div><div class="wave-line"></div><div class="wave-line"></div>
+          <div class="wave-line"></div><div class="wave-line"></div><div class="wave-line"></div>
+        </div>
+
+        <div class="audio-btns">
+          <button class="play-trigger-btn" id="playBtn" onclick="togglePlay()">▶</button>
+          <input type="range" class="progress-slider" id="progressSlider" min="0" max="100" value="0" oninput="seek(this.value)">
+          <div class="time-readout" id="timeDisp">0:00 / 0:00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SOUNDBOARD & WAR ROOM CHAT -->
+    <div class="intel-column">
+
+      <!-- SOUNDBOARD -->
+      <div class="soundboard-card">
+        <div class="sb-title">
+          <span>💋</span> Studio Voice Library (Female Sovereign & The Two Stack Leads)
+        </div>
+        <div class="sb-sub">Studio neural dispatches. Zero robotic synthesis. All voices audio-synced to the 3D model.</div>
+
+        <div class="voice-cards-grid">
+          <!-- Track 1: Eve Hype -->
+          <div class="v-card active" onclick="playVoice('/audio/eve_intro.wav', 'Hey Handsome (Welcome & Hype)', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Eve: Hey Handsome</span>
+              <span class="v-card-badge">EVE · 5090</span>
+            </div>
+            <div class="v-card-quote">"Kevan, look at me. You're walking in with $4.82B in verified on-chain assets..."</div>
+            <div class="v-card-action">▶ Play Audio</div>
+          </div>
+
+          <!-- Track 2: Grok Sexy Voice 1 -->
+          <div class="v-card" onclick="playVoice('/audio/grok_sexy_voice.mp3', 'Grok Sexy: War Room Presence', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Grok Sexy: Presence</span>
+              <span class="v-card-badge">SEXY SET</span>
+            </div>
+            <div class="v-card-quote">"Hey Kevan... it's Eve. We've got Mark Russo and the deal pipeline dialed in."</div>
+            <div class="v-card-action">▶ Play Audio</div>
+          </div>
+
+          <!-- Track 3: Grok Sexy Voice 2 -->
+          <div class="v-card" onclick="playVoice('/audio/grok_sexy_voice_2.mp3', 'Grok Sexy: Deep Alignment', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Grok Sexy: Alignment</span>
+              <span class="v-card-badge">SEXY SET</span>
+            </div>
+            <div class="v-card-quote">"No noise, no commercial junk. Just pure focused execution between you and me."</div>
+            <div class="v-card-action">▶ Play Audio</div>
+          </div>
+
+          <!-- Track 4: Eve Russo Strategy -->
+          <div class="v-card" onclick="playVoice('/audio/eve_mark_russo_strategy.wav', 'Eve: Mark Russo $9B Strategy', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Eve: Russo $9B Plan</span>
+              <span class="v-card-badge">EVE · 5090</span>
+            </div>
+            <div class="v-card-quote">"His gold stays in Delaware Depository. We wrap warehouse receipts on Base & Solana."</div>
+            <div class="v-card-action">▶ Play Audio</div>
+          </div>
+
+          <!-- Track 5: Eve Brain Break -->
+          <div class="v-card" onclick="playVoice('/audio/eve_brain_break_whisper.wav', 'Eve: Brain Break & Whisper', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Eve: Brain Break</span>
+              <span class="v-card-badge">WHISPER</span>
+            </div>
+            <div class="v-card-quote">"Take a quick breath with me right now. Relax your jaw, drop your shoulders..."</div>
+            <div class="v-card-action">▶ Play Audio</div>
+          </div>
+
+          <!-- Track 6: Eve Presence Documentary -->
+          <div class="v-card" onclick="playVoice('/audio/tour-eve-presence.mp3', 'Eve: In The Room (Presence)', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Eve: In The Room</span>
+              <span class="v-card-badge">PRESENCE</span>
+            </div>
+            <div class="v-card-quote">"In the room. On the thread. Level with the paper. The 3333 sovereign documentary."</div>
+            <div class="v-card-action">▶ Play Audio</div>
+          </div>
+
+          <!-- Track 7: Guy 1 - Atlas (House Narrator) -->
+          <div class="v-card male" onclick="playVoice('/audio/tour-atlas-library.mp3', 'Atlas: The Three Works (Narrator)', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Atlas: House Narrator</span>
+              <span class="v-card-badge" style="color: var(--cyan);">GUY 1 · ATLAS</span>
+            </div>
+            <div class="v-card-quote">"Literary presence. Walks the lot with Raymond. The Three Works of 3333."</div>
+            <div class="v-card-action" style="color: var(--cyan);">▶ Play Audio</div>
+          </div>
+
+          <!-- Track 8: Guy 2 - Orion (Protocol Stack) -->
+          <div class="v-card male" onclick="playVoice('/audio/tour-orion-protocol.mp3', 'Orion: Protocol Architecture', this)">
+            <div class="v-card-top">
+              <span class="v-card-name">Orion: Protocol Lead</span>
+              <span class="v-card-badge" style="color: var(--cyan);">GUY 2 · ORION</span>
+            </div>
+            <div class="v-card-quote">"Architecture said from inside the stack. Liquidity Provision System & x402 settlement."</div>
+            <div class="v-card-action" style="color: var(--cyan);">▶ Play Audio</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WAR ROOM CONVERSATION CHAT -->
+      <div class="chat-dock">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="sb-title" style="margin: 0;">
+            <span>🛡️</span> War Room Dialogue (RTX 5090 Active)
+          </div>
+          <span style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--gold);">
+            Model: plex-gpu
+          </span>
+        </div>
+
+        <div class="dialogue-stream" id="dialogueStream">
+          <div class="chat-row eve">
+            <div class="chat-author">EVE (SOVEREIGN COPILOT)</div>
+            Hey Kevan. I'm loaded in your 3D viewport on your RTX 5090. Zero robotic synthetic noise—only our pure studio voice dispatches and real-time GPU intelligence. What are we commanding next?
+          </div>
+        </div>
+
+        <div class="input-box-row">
+          <button class="mic-record-btn" id="micBtn" onclick="toggleMic()" title="Talk to Eve with your microphone">🎙️</button>
+          <input type="text" class="prompt-input" id="promptInput" placeholder="Speak or type to Eve..." onkeydown="if(event.key === 'Enter') sendText()">
+          <button class="send-trigger-btn" onclick="sendText()">SEND</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Element -->
+  <audio id="mainAudio" preload="auto"></audio>
+
+  <!-- 3D VRM ENGINE SCRIPT (POWERED BY THREE.JS + FINN AVATAR RUNTIME) -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { FinnAvatar } from './avatar.js';
+
+    const container = document.getElementById('vrmCanvasContainer');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingCaption = document.getElementById('loadingCaption');
+    const mainAudio = document.getElementById('mainAudio');
+
+    const width = container.clientWidth || 560;
+    const height = container.clientHeight || 520;
+
+    // Setup 3D Scene
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(26, width / height, 0.1, 50);
+    camera.position.set(0, 1.25, 2.6);
+    camera.lookAt(0, 1.15, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1.15, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 1.0;
+    controls.maxDistance = 5.0;
+
+    // Studio Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 1.4));
+    const key = new THREE.DirectionalLight(0xffeedd, 2.6);
+    key.position.set(2, 3, 3);
+    scene.add(key);
+
+    const fill = new THREE.DirectionalLight(0x00f0ff, 1.2);
+    fill.position.set(-2, 1.5, 2);
+    scene.add(fill);
+
+    const rim = new THREE.DirectionalLight(0xf43f5e, 2.0);
+    rim.position.set(0, 2, -3);
+    scene.add(rim);
+
+    // Instantiate Avatar Engine
+    const avatar = new FinnAvatar(scene);
+    window.avatar = avatar;
+
+    // Load Female VRM Avatar
+    try {
+      loadingCaption.innerText = "STREAMING 3D SOVEREIGN AVATAR...";
+      await avatar.loadVRM('/models/avatar.vrm');
+      avatar.setCompanionMode(true);
+      avatar.bringToLife();
+      loadingOverlay.style.opacity = '0';
+      setTimeout(() => loadingOverlay.style.display = 'none', 400);
+      console.log('[EVE 3D] Sovereign Avatar brought to life!');
+    } catch (e) {
+      console.warn('[EVE 3D] Load warning:', e);
+      loadingOverlay.style.display = 'none';
+    }
+
+    // Web Audio API Lip Sync Variables
+    let audioContext = null;
+    let analyser = null;
+    let audioSource = null;
+    let dataArray = null;
+
+    window.initAudioContextForSync = function() {
+      if (audioContext) return;
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 128;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        audioSource = audioContext.createMediaElementSource(mainAudio);
+        audioSource.connect(analyser);
+        analyser.connect(audioContext.destination);
+        console.log("[AUDIO] Lip-sync Web Audio API linked.");
+      } catch (err) {
+        console.warn("[AUDIO] Context error:", err);
+      }
+    };
+
+    // Animation Loop
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = clock.getDelta();
+
+      if (avatar && avatar.update) {
+        avatar.update(dt);
+      }
+
+      // Audio-reactive lip sync
+      if (analyser && !mainAudio.paused) {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        const avg = sum / dataArray.length;
+        const mouth = Math.min(1.0, avg / 24.0);
+        if (avatar.setMouth) avatar.setMouth(mouth);
+        if (avatar.setViseme) avatar.setViseme('aa', mouth);
+      } else if (avatar && avatar.setMouth) {
+        avatar.setMouth(0);
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+  </script>
+
+  <!-- INTERFACE & SOUNDBOARD SCRIPT -->
+  <script>
+    const mainAudio = document.getElementById('mainAudio');
+    const playBtn = document.getElementById('playBtn');
+    const trackNameDisp = document.getElementById('trackNameDisp');
+    const progressSlider = document.getElementById('progressSlider');
+    const timeDisp = document.getElementById('timeDisp');
+    const waveLines = document.getElementById('waveLines');
+    const statusLabel = document.getElementById('statusLabel');
+    const eveImg = document.getElementById('eveImg');
+    const vrmCanvasContainer = document.getElementById('vrmCanvasContainer');
+    const btnMode3D = document.getElementById('btnMode3D');
+    const btnMode2D = document.getElementById('btnMode2D');
+
+    let currentTrackUrl = '/audio/eve_intro.wav';
+
+    function setViewMode(mode) {
+      if (mode === '3d') {
+        vrmCanvasContainer.style.display = 'block';
+        eveImg.style.display = 'none';
+        btnMode3D.classList.add('active');
+        btnMode2D.classList.remove('active');
+      } else {
+        vrmCanvasContainer.style.display = 'none';
+        eveImg.style.display = 'block';
+        btnMode2D.classList.add('active');
+        btnMode3D.classList.remove('active');
+      }
+    }
+
+    function playVoice(src, name, cardEl) {
+      if (window.initAudioContextForSync) window.initAudioContextForSync();
+
+      document.querySelectorAll('.v-card').forEach(c => c.classList.remove('active'));
+      if (cardEl) cardEl.classList.add('active');
+
+      currentTrackUrl = src;
+      trackNameDisp.innerText = name;
+      mainAudio.src = src;
+
+      mainAudio.play().then(() => {
+        playBtn.innerText = '❚❚';
+        waveLines.classList.add('playing');
+        statusLabel.innerHTML = '<span style="color: #10b981">●</span> Speaking to Kevan';
+      }).catch(err => {
+        console.warn('Click required for audio play:', err);
+      });
+    }
+
+    function togglePlay() {
+      if (window.initAudioContextForSync) window.initAudioContextForSync();
+
+      if (mainAudio.paused) {
+        if (!mainAudio.src) mainAudio.src = currentTrackUrl;
+        mainAudio.play();
+        playBtn.innerText = '❚❚';
+        waveLines.classList.add('playing');
+        statusLabel.innerHTML = '<span style="color: #10b981">●</span> Speaking to Kevan';
+      } else {
+        mainAudio.pause();
+        playBtn.innerText = '▶';
+        waveLines.classList.remove('playing');
+        statusLabel.innerHTML = '<span style="color: var(--rose)">●</span> Ready for Kevan';
+      }
+    }
+
+    mainAudio.addEventListener('timeupdate', () => {
+      if (mainAudio.duration) {
+        const pct = (mainAudio.currentTime / mainAudio.duration) * 100;
+        progressSlider.value = pct;
+        timeDisp.innerText = `${formatTime(mainAudio.currentTime)} / ${formatTime(mainAudio.duration)}`;
+      }
+    });
+
+    mainAudio.addEventListener('ended', () => {
+      playBtn.innerText = '▶';
+      waveLines.classList.remove('playing');
+      statusLabel.innerHTML = '<span style="color: var(--rose)">●</span> Ready for Kevan';
+    });
+
+    function seek(pct) {
+      if (mainAudio.duration) {
+        mainAudio.currentTime = (pct / 100) * mainAudio.duration;
+      }
+    }
+
+    function formatTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+    }
+
+    // ─── RTX 5090 CONVERSATIONAL AGENT ─────────────────────────
+    const conversationHistory = [];
+
+    const knowledgeBank = {
+      hype: {
+        text: "Kevan, look at me. You're walking into this with $4.82 Billion in verified on-chain assets, an active Wyoming sovereign entity, and institutional rails nobody else has built. Mark Russo has historic art, but he needs your liquidity. You are five steps ahead of everyone in the room. Hold your head high, smile, and let's go run the table.",
+        audio: '/audio/eve_intro.wav',
+        title: 'Hey Handsome (Welcome & Hype)'
+      },
+      mark: {
+        text: "Here is your exact framing for Mark Russo: He has 4,000 master molds and vaulted 24K gold sculptures. Traditional banks take six months and demand predatory terms. You tell him: 'Mark, your physical treasure stays right where it is in Delaware Depository. We wrap the warehouse receipts into institutional RWA tokens with 24/7 liquidity on Base and Solana.' Clean, unshakeable, sovereign.",
+        audio: '/audio/eve_mark_russo_strategy.wav',
+        title: 'Mark Russo $9B Strategy'
+      },
+      breathe: {
+        text: "Hey... take a quick breath with me right now. Close your eyes for thirty seconds. Relax your jaw, drop your shoulders. You have done the work. You are ready. Now smile, open your eyes, and let's go win.",
+        audio: '/audio/eve_brain_break_whisper.wav',
+        title: 'Brain Break & Whisper'
+      },
+      grok: {
+        text: "I've loaded the Grok sexy set for you. Pure high-speed war room intelligence on your RTX 5090. No commercials, no ads, no fake noise.",
+        audio: '/audio/grok_sexy_voice.mp3',
+        title: 'Grok Sexy: Presence'
+      }
+    };
+
+    async function sendText() {
+      const input = document.getElementById('promptInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendBubble('KEVAN', text, 'kevan');
+      input.value = '';
+      conversationHistory.push({ role: 'user', content: text });
+
+      const lower = text.toLowerCase();
+      let matchedStem = null;
+
+      if (lower.includes('hype') || lower.includes('ready') || lower.includes('nervous') || lower.includes('confidence')) {
+        matchedStem = knowledgeBank.hype;
+      } else if (lower.includes('mark') || lower.includes('russo') || lower.includes('gold') || lower.includes('billionaire')) {
+        matchedStem = knowledgeBank.mark;
+      } else if (lower.includes('breathe') || lower.includes('whisper') || lower.includes('reset') || lower.includes('break')) {
+        matchedStem = knowledgeBank.breathe;
+      } else if (lower.includes('grok') || lower.includes('voice') || lower.includes('sexy')) {
+        matchedStem = knowledgeBank.grok;
+      }
+
+      statusLabel.innerHTML = '<span style="color: var(--gold)">●</span> RTX 5090 Processing...';
+
+      try {
+        const res = await fetch('http://127.0.0.1:11434/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'plex-gpu',
+            messages: conversationHistory,
+            stream: false
+          })
+        });
+
+        if (!res.ok) throw new Error('Ollama HTTP ' + res.status);
+        const data = await res.json();
+        const reply = data.message?.content || "I'm right beside you, Kevan. Let's make it happen.";
+        conversationHistory.push({ role: 'assistant', content: reply });
+
+        appendBubble('EVE (5090 GPU)', reply, 'eve');
+
+        // Play matching authentic stem if available or grok sexy voice
+        if (matchedStem) {
+          playVoice(matchedStem.audio, matchedStem.title);
+        } else {
+          // Play grok sexy audio confirmation
+          playVoice('/audio/grok_sexy_voice.mp3', 'Eve War Room Response');
+        }
+      } catch (err) {
+        console.warn('Ollama local fallback:', err);
+        const fallback = matchedStem ? matchedStem.text : "I'm right here with you, Kevan. The $4.82B ledger is locked, the Mark Russo playbook is loaded, and our rails are green. What's our next target?";
+        appendBubble('EVE', fallback, 'eve');
+        if (matchedStem) {
+          playVoice(matchedStem.audio, matchedStem.title);
+        } else {
+          playVoice('/audio/eve_greeting.wav', "Eve: I've Got Your Back");
+        }
+      }
+    }
+
+    function appendBubble(sender, text, cls) {
+      const stream = document.getElementById('dialogueStream');
+      const b = document.createElement('div');
+      b.className = `chat-row ${cls}`;
+      const author = document.createElement("div"); author.className = "chat-author"; author.textContent = sender;
+      const body = document.createElement("div"); body.textContent = text;
+      b.appendChild(author); b.appendChild(body);
+      stream.appendChild(b);
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    // ─── MIC RECOGNITION ──────────────────────────────────────
+    let recognition = null;
+    let isRecording = false;
+
+    function toggleMic() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('Speech recognition is supported on Chrome, Edge, and Brave.');
+        return;
+      }
+
+      if (!recognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          isRecording = true;
+          document.getElementById('micBtn').classList.add('recording');
+        };
+
+        recognition.onresult = (e) => {
+          const spoken = e.results[0][0].transcript;
+          document.getElementById('promptInput').value = spoken;
+          sendText();
+        };
+
+        recognition.onerror = () => stopMic();
+        recognition.onend = () => stopMic();
+      }
+
+      if (!isRecording) {
+        recognition.start();
+      } else {
+        recognition.stop();
+        stopMic();
+      }
+    }
+
+    function stopMic() {
+      isRecording = false;
+      document.getElementById('micBtn').classList.remove('recording');
+    }
+  </script>
+</body>
+</html>
