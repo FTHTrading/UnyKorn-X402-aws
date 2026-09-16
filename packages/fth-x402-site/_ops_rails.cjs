@@ -315,14 +315,14 @@ async function verifyXrpl(payment) {
       if (BigInt(delivered) < needDrops) {
         return { valid: false, reason: 'xrpl_underpaid', delivered_drops: delivered, required_drops: needDrops.toString() };
       }
-      return { valid: true, rail: 'xrpl:xrp', txHash, amount_usd: PRICES.xrpl_xrp_usd, paid: (Number(delivered) / 1e6) + ' XRP' };
+      return { valid: true, rail: 'xrpl:xrp', txHash, amount_usd: PRICES.xrpl_xrp_usd, paid: (Number(delivered) / 1e6) + ' XRP', payer: body.Account || tx.Account || null };
     }
     if (!delivered || typeof delivered !== 'object') return { valid: false, reason: 'xrpl_not_issued_currency' };
     if (delivered.issuer !== RLUSD_ISSUER) return { valid: false, reason: 'xrpl_wrong_issuer' };
     if (Number(delivered.value) < Number(PRICES.xrpl_xrp)) {
       return { valid: false, reason: 'xrpl_underpaid', delivered: delivered.value, required: PRICES.xrpl_xrp };
     }
-    return { valid: true, rail: 'xrpl:rlusd', txHash, amount_usd: Number(delivered.value), paid: delivered.value + ' RLUSD' };
+    return { valid: true, rail: 'xrpl:rlusd', txHash, amount_usd: Number(delivered.value), paid: delivered.value + ' RLUSD', payer: body.Account || tx.Account || null };
   } catch (e) {
     try { if (client) await client.disconnect(); } catch (e2) { /* ignore */ }
     // FAIL CLOSED. Never fall through to a different verifier — that is how the old
@@ -416,7 +416,7 @@ async function settleBaseSelf(payment, ctx) {
     });
     const rcpt = await pub.waitForTransactionReceipt({ hash, timeout: 90000 });
     if (rcpt.status !== 'success') return { ok: false, reason: 'base_settlement_reverted', txHash: hash };
-    return { ok: true, via: 'self-settle', txHash: hash, amount_usd: PRICES.base_usdc_usd };
+    return { ok: true, via: 'self-settle', txHash: hash, amount_usd: PRICES.base_usdc_usd, payer: a.from || null };
   } catch (e) {
     return { ok: false, reason: 'base_settlement_error', detail: (e.shortMessage || e.message || '').slice(0, 200) };
   }
@@ -595,7 +595,7 @@ async function settleBase(payment, ctx) {
       const s = await cdpCall('/platform/v2/x402/settle', { x402Version: 2, paymentPayload: canonical, paymentRequirements: reqs });
       const txHash = s.json && (s.json.transaction || s.json.txHash || s.json.transactionHash);
       if (s.status >= 200 && s.status < 300 && txHash) {
-        return { ok: true, via: 'cdp', txHash, amount_usd: priceUsdOf(ctx) };
+        return { ok: true, via: 'cdp', txHash, amount_usd: priceUsdOf(ctx), payer: (s.json && s.json.payer) || (v.json && v.json.payer) || auth.from || null };
       }
       // CDP could not settle — fall through to our own relayer rather than serving free.
       const fb = await settleBaseSelf(payment, ctx);

@@ -43,6 +43,7 @@ function readBodyLimited(req, limit) {
 const ledger = require('./_ops_ledger.cjs');
 const alerts = require('./_ops_alerts.cjs');
 const prove = require('./_ops_prove.cjs');
+const risk = require('./_ops_risk.cjs');
 
 const PORT = Number(process.env.TASK_SERVER_PORT || 3101);
 const PUBLIC_ORIGIN = process.env.PUBLIC_ORIGIN || 'https://twin.unykorn.org';
@@ -64,6 +65,16 @@ function log(msg) {
 // honestly here, it does not belong on the paid surface.
 // =====================================================================
 const CATALOG = {
+  'risk': {
+    path: '/risk',
+    title: 'Wallet / token / contract risk snapshot (Base, Polygon) — pre-trade check, machine-readable JSON',
+    buys: 'One structured, timestamped, reproducible risk snapshot of ONE EVM address on Base or Polygon: OFAC SDN digital-currency screening, community scam-address blocklists and the Blockchain Fraud case registry; explorer scam flag and public tags; recent-activity sample (age, counterparties); for contracts, source-verification and proxy status; for tokens, holder count and top-holder concentration. Every signal names its dataset and fetch URL, a source that cannot be reached is reported as unavailable (never scored), and the response carries an evidence hash (sha256 over the canonical signal set) so the artifact is reproducible. Verdict bands: listed / high_risk / medium_risk / low_risk / not_scored. Heuristic summary of public evidence — not a KYC decision, not a finding about any person, not advice. Absence from every list is not a clearance.',
+    params: { address: 'required: 0x-prefixed 40-hex EVM address (wallet, token or contract)', chain: 'optional: base (default) | polygon' },
+    tags: ['wallet risk', 'token screening', 'contract analysis', 'transaction evidence', 'pre-trade check', 'counterparty due diligence', 'sanctions screening', 'OFAC', 'Base USDC', 'x402', 'MCP', 'JSON'],
+    price_usd: Number(process.env.PRICE_RISK_USD || 0.25),
+    deterministic: false,
+    typical_ms: '900-12000'
+  },
   'genesis-sim': {
     path: '/genesis-sim',
     title: 'Genesis agent-economy simulation',
@@ -268,7 +279,7 @@ function resourceDoc(taskName) {
     description: c.title + ' — Genesis402 / UnyKorn Operator Network',
     mimeType: 'application/json',
     serviceName: c.title,
-    tags: ['infra', 'ai', 'agents', 'genesis402', 'unykorn'],
+    tags: (c.tags || []).concat(['infra', 'ai', 'agents', 'genesis402', 'unykorn']),
     what_you_get: c.buys,
     parameters: c.params,
     deterministic: c.deterministic,
@@ -280,6 +291,7 @@ function resourceDoc(taskName) {
 // so an agent can build a valid paid request before paying. The CDP facilitator indexes this after the
 // first settled call. Shape per coinbase/x402 typescript/packages/extensions/src/bazaar/http/types.ts.
 const BAZAAR_EXAMPLES = {
+  'risk': { input: { params: { address: '0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed', chain: 'base' } }, schema: { address: { type: 'string', pattern: '^0x[0-9a-fA-F]{40}$' }, chain: { type: 'string', enum: ['base', 'polygon'] } }, output: { type: 'risk', request_id: 'risk_<16hex>', subject: { chain: 'base', network: 'eip155:8453', address: '0x4ed4…efed', kind: 'token_contract' }, verdict: 'low_risk', score: 0, signals: [{ name: 'screen:ofac_sdn_treasury', severity: 'clear', evidence: 'Not present on the OFAC SDN list (1046 digital-currency entries screened).' }, { name: 'token:liquidity_concentration', severity: 'info', evidence: 'Top 10 holders control 41.2% of supply.' }], sources: [{ name: 'blockscout_address', url: 'https://base.blockscout.com/api/v2/addresses/0x…', ok: true }], evidence_hash: 'sha256:<64hex>', generated_at: '<iso8601>' } },
   'genesis-sim': { input: { params: { n: 50, epochs: 100 } }, schema: { n: { type: 'integer', minimum: 5, maximum: 500 }, epochs: { type: 'integer', minimum: 10, maximum: 200 } }, output: { type: 'genesis-sim', result: { agents: 50, epochs: 100, final_gini: 0.41, total_energy: 5225, stable: true, state_commitment_sha256: '<64 hex>' } } },
   'wallet-ops': { input: { params: { chains: ['base'] } }, schema: { chains: { type: 'array', items: { type: 'string', enum: ['base', 'xrpl', 'stellar'] } } }, output: { type: 'wallet-ops', balances: { base: { usdc: '<decimal>', eth: '<decimal>', source: 'https://mainnet.base.org' } } } },
   'rwa-screen': { input: { params: { market: 'texas' } }, schema: { market: { type: 'string', enum: ['texas', 'florida', 'newyork', 'oregon'] } }, output: { type: 'rwa-screen', market: 'texas', grid: 'ERCOT', readiness: 'ready', score: 0.87, data_source: 'curated static table; not advice' } },
@@ -336,6 +348,7 @@ async function sendChallenge(res, taskName) {
 }
 
 async function runTask(taskName, params, ctx) {
+  if (taskName === 'risk') return risk.run(params, ctx);
   if (taskName === 'llm') { const r = await llm.run(params, ctx); return Object.assign({ type: 'llm' }, r); }
   if (taskName === 'genesis-sim') return runGenesisSim(params);
   if (taskName === 'rwa-screen') return rwaScreen(params);
@@ -361,6 +374,7 @@ async function handlePaid(req, res, taskName, body) {
     try { parsed = JSON.parse(body); } catch (e) { return send(res, 400, { error: 'invalid_json' }); }
   }
   const params = parsed.params || {};
+  if (taskName === 'risk' && parsed.params) { const chk = risk.validate(params); if (!chk.ok) return send(res, 400, { error: chk.error, message: chk.message + ' (refused before any payment was read; nothing was charged)', supported_chains: chk.supported || Object.keys(risk.CHAINS) }); }
   const header = req.headers['x-payment'] || req.headers['payment-signature'];
   if (!header) return sendChallenge(res, taskName);
 
@@ -394,7 +408,7 @@ async function handlePaid(req, res, taskName, body) {
           : 'That proof did not verify as a settled payment of the required amount to our address.'
       });
     }
-    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)' };
+    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)', payer: v.payer || null };
   } else if (isStellar) {
     const v = await rails.verifyStellar(payment);
     if (!v.valid) {
@@ -407,7 +421,7 @@ async function handlePaid(req, res, taskName, body) {
           : 'That proof did not verify as a settled USDC payment of the required amount to our Stellar address.'
       });
     }
-    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)' };
+    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)', payer: v.payer || null };
   } else {
     const s = await rails.settleExact(payment, laneKey, { resourceUrl: PUBLIC_ORIGIN + CATALOG[taskName].path, extensions: bazaarExtension(taskName), priceUsd: taskPrice(taskName) });
     if (!s.ok) {
@@ -417,7 +431,7 @@ async function handlePaid(req, res, taskName, body) {
         message: 'Your authorization was not settled, so no funds moved from your wallet and nothing was delivered.'
       });
     }
-    proof = { rail: laneKey, txHash: s.txHash, amount_usd: s.amount_usd, paid: '$' + s.amount_usd + ' USDC', settled_by: s.via };
+    proof = { rail: laneKey, txHash: s.txHash, amount_usd: s.amount_usd, paid: '$' + s.amount_usd + ' USDC', settled_by: s.via, payer: s.payer || null };
   }
 
   // ---- step 2: burn the proof so it cannot buy twice ----
@@ -435,22 +449,27 @@ async function handlePaid(req, res, taskName, body) {
   const started = Date.now();
   try {
     const out = await runTask(taskName, params, { rail: proof.rail, txHash: proof.txHash, amountUsd: proof.amount_usd });
+    const internal = ledger.isInternalPayer(proof.payer);
     const receipt = {
       receipt_id: 'g402-' + crypto.randomBytes(8).toString('hex'),
       task: taskName,
+      request_class: taskName === 'risk' ? 'risk:' + ((out.subject && out.subject.kind) || 'address') : taskName,
       rail: proof.rail,
       tx_hash: proof.txHash,
       amount_usd: proof.amount_usd,
       paid: proof.paid,
       settled_by: proof.settled_by,
+      payer: proof.payer || null,
+      internal: internal === null ? undefined : internal,
+      result_sha256: crypto.createHash('sha256').update(risk.canonical(out)).digest('hex'),
       duration_ms: Date.now() - started,
       at: new Date().toISOString()
     };
     ledger.commit(proof.rail, proof.txHash, receipt);
     const st = ledger.stats();
     log('PAID ' + taskName + ' ' + proof.rail + ' ' + proof.paid + ' tx=' + proof.txHash + ' receipt=' + receipt.receipt_id);
-    alerts.alert('money', 'x402 PAYMENT SETTLED', {
-      Task: taskName, Lane: proof.rail, Amount: proof.paid, 'Settled by': proof.settled_by,
+    alerts.alert('money', internal === false ? 'x402 EXTERNAL PAYMENT SETTLED' : 'x402 PAYMENT SETTLED' + (internal ? ' (internal wallet — rail test)' : ''), {
+      Task: taskName, Lane: proof.rail, Amount: proof.paid, 'Settled by': proof.settled_by, Payer: proof.payer || 'unknown', Class: internal === true ? 'INTERNAL' : internal === false ? 'EXTERNAL' : 'unattributed',
       Tx: proof.txHash, Receipt: receipt.receipt_id,
       'Lifetime gross': '$' + st.gross_usd + ' over ' + st.receipts + ' sales'
     });
@@ -477,6 +496,7 @@ async function handlePaid(req, res, taskName, body) {
 // Router
 // =====================================================================
 const PATH_TO_TASK = {
+  '/risk': 'risk',
   '/llm': 'llm',
   '/task': null,               // task chosen by body.type
   '/genesis-sim': 'genesis-sim',
@@ -555,7 +575,8 @@ const server = http.createServer(async (req, res) => {
         refunds: 'Base lane: funds do not move unless settlement succeeds. XRPL lane is pay-first: if verification fails the proof is retryable, and unresolved cases are handled by contacting the address above.',
         not_advice: 'rwa-screen is informational only and is not investment, legal or tax advice'
       },
-      free_endpoints: ['/health', '/.well-known/x402', '/prove/keys', '/prove/stats', '/prove/receipts/{receiptId}', '/llm/models'],
+      free_endpoints: ['/health', '/.well-known/x402', '/receipts', '/receipts/{receiptId}', '/prove/keys', '/prove/stats', '/prove/receipts/{receiptId}', '/llm/models'],
+      launch_sku: { name: 'risk', endpoint: PUBLIC_ORIGIN + '/risk', price_usd: taskPrice('risk'), promise: 'Pay once; receive a reproducible, timestamped risk snapshot with an evidence hash and a public receipt.' },
       generated_at: new Date().toISOString()
     });
   }
@@ -585,6 +606,14 @@ const server = http.createServer(async (req, res) => {
     }
   }
   if (p === '/llm/models') { const st = await llm.status(); return send(res, 200, Object.assign({ price_usd: taskPrice('llm'), max_output_tokens: llm.MAX_OUTPUT_TOKENS, max_input_chars: llm.MAX_INPUT_CHARS, note: 'local models run on the operator GPU; hosted models are an allowlist; the paid response names the one that answered' }, st)); }
+  if (p === '/receipts') {
+    const st = ledger.stats();
+    return send(res, 200, { stats: st, receipts: ledger.publicRecent(50), fields: { payer: 'shortened payer address', payer_class: 'internal = operator wallet (rail test, not demand); external = a wallet the operator does not control', result_sha256: 'sha256 over the canonical delivered result; the buyer can recompute it from the artifact', tx_hash: 'settlement transaction on the named rail' }, explorer: { 'base:usdc': 'https://base.blockscout.com/tx/{tx_hash}', 'polygon:usdc': 'https://polygon.blockscout.com/tx/{tx_hash}', 'solana:usdc': 'https://solscan.io/tx/{tx_hash}', 'xrpl:xrp': 'https://livenet.xrpl.org/transactions/{tx_hash}', 'stellar:usdc': 'https://stellar.expert/explorer/public/tx/{tx_hash}' } });
+  }
+  if (p.startsWith('/receipts/')) {
+    const r = ledger.get(p.slice('/receipts/'.length));
+    return r ? send(res, 200, { receipt: r }) : send(res, 404, { error: 'receipt_not_found' });
+  }
   if (p === '/prove/stats') return send(res, 200, { ...prove.stats(), keyId: prove.registryEntry().keyId, anchor: 'UNANCHORED', verifier: 'https://github.com/FTHTrading/402-truth' });
   if (p === '/prove/recent') return send(res, 200, { receipts: prove.recent(20), anchor: 'UNANCHORED' });
   if (p.startsWith('/prove/receipts/')) {
@@ -635,7 +664,7 @@ const server = http.createServer(async (req, res) => {
     return send(res, 405, { error: 'method_not_allowed', allow: 'GET, POST' });
   }
 
-  return send(res, 404, { error: 'not_found', free: ['/health', '/.well-known/x402', '/prove/keys', '/prove/receipts/{receiptId}'], paid: Object.values(CATALOG).map((c) => c.path) });
+  return send(res, 404, { error: 'not_found', free: ['/health', '/.well-known/x402', '/receipts', '/receipts/{receiptId}', '/prove/keys', '/prove/receipts/{receiptId}'], paid: Object.values(CATALOG).map((c) => c.path) });
 });
 
 // =====================================================================

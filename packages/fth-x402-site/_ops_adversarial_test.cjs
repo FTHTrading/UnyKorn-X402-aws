@@ -138,6 +138,46 @@ async function paymentTests() {
     check('503 says nothing was charged', baseTry.json && /nothing was charged/i.test(baseTry.json.message), baseTry.json);
   }
 
+  console.log('\n-- launch SKU: /risk --');
+  const rc = await req('GET', '/risk');
+  check('/risk without payment is a 402 challenge', rc.status === 402, rc.status);
+  check('challenge names the risk resource and a price', rc.json && JSON.stringify(rc.json).includes('/risk') && Array.isArray(rc.json.accepts), rc.json && Object.keys(rc.json));
+  const badAddr = await req('POST', '/risk', {}, { params: { address: 'not-an-address' } });
+  check('bad address is refused with 400 BEFORE any payment is read', badAddr.status === 400 && badAddr.json.error === 'invalid_address' && /nothing was charged/.test(badAddr.json.message), badAddr.json);
+  const badChain = await req('POST', '/risk', {}, { params: { address: '0x' + 'a'.repeat(40), chain: 'solana' } });
+  check('unsupported chain is refused with 400 and lists supported chains', badChain.status === 400 && badChain.json.error === 'unsupported_chain' && Array.isArray(badChain.json.supported_chains), badChain.json);
+  const goodNoPay = await req('POST', '/risk', {}, { params: { address: '0x' + 'a'.repeat(40), chain: 'base' } });
+  check('valid params without payment still get the 402 challenge', goodNoPay.status === 402, goodNoPay.status);
+  const disc = await req('GET', '/.well-known/x402');
+  const riskSvc = disc.json && disc.json.services.find((x) => x.name === 'risk');
+  check('discovery lists risk with price and address parameter', riskSvc && riskSvc.price && riskSvc.price.usd > 0 && /address/.test(JSON.stringify(riskSvc.parameters)), riskSvc);
+  check('discovery names the launch SKU', disc.json && disc.json.launch_sku && disc.json.launch_sku.name === 'risk', disc.json && disc.json.launch_sku);
+  check('risk copy carries its limitations (not advice, not a clearance)', riskSvc && /not advice/i.test(riskSvc.what_you_get) && /not a clearance/i.test(riskSvc.what_you_get));
+
+  console.log('\n-- public receipts feed --');
+  const rcp = await req('GET', '/receipts');
+  check('/receipts is free and returns stats + receipts', rcp.status === 200 && rcp.json.stats && Array.isArray(rcp.json.receipts), rcp.status);
+  check('stats split internal from external receipts', typeof rcp.json.stats.external_receipts === 'number' && typeof rcp.json.stats.internal_receipts === 'number' && typeof rcp.json.stats.gross_external_usd === 'string', rcp.json.stats);
+  check('stats state that only external receipts are evidence of demand', /only external receipts are evidence of demand/i.test(rcp.json.stats.note || ''));
+  const rmiss = await req('GET', '/receipts/g402-doesnotexist');
+  check('unknown receipt id 404s', rmiss.status === 404 && rmiss.json.error === 'receipt_not_found', rmiss.status);
+  const h3 = await req('GET', '/health');
+  check('/health ledger stats carry the internal/external split', h3.json.replay_protection.ledger.external_receipts !== undefined, h3.json.replay_protection.ledger);
+
+  console.log('\n-- risk module (direct) --');
+  const risk = require('./_ops_risk.cjs');
+  check('validate refuses a malformed address', risk.validate({ address: '0x123' }).ok === false);
+  check('validate refuses an unsupported chain', risk.validate({ address: '0x' + 'b'.repeat(40), chain: 'tron' }).ok === false);
+  check('validate defaults to base', risk.validate({ address: '0x' + 'b'.repeat(40) }).chain === 'base');
+  check('canonical JSON is key-order independent', risk.canonical({ b: 1, a: [2, { d: 3, c: 4 }] }) === risk.canonical({ a: [2, { c: 4, d: 3 }], b: 1 }));
+  const ledgerMod = require('./_ops_ledger.cjs');
+  check('operator Scout wallet classifies as internal', ledgerMod.isInternalPayer('0x710CBD5B3EE298BB3E1FA9A231239EDE615A7AB9') === true);
+  check('a foreign wallet classifies as external', ledgerMod.isInternalPayer('0x' + 'c'.repeat(40)) === false);
+  check('unknown payer classifies as null, never external', ledgerMod.isInternalPayer(null) === null);
+  const rsrc = fs.readFileSync(path.join(__dirname, '_ops_risk.cjs'), 'utf8');
+  check('an unavailable source never lowers the score', /unavailable:\s*0/.test(rsrc));
+  check('risk response carries limitations in-band', /Absence from every list is not a clearance/.test(rsrc) && /not investment, legal or tax advice/i.test(rsrc));
+
   console.log('\n-- routing --');
   const nf = await req('GET', '/totally-made-up');
   check('unknown path 404s and lists the free endpoints', nf.status === 404 && Array.isArray(nf.json.free), nf.status);

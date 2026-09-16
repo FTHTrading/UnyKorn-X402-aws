@@ -23,12 +23,12 @@ const TARGETS = {
 //       digital-twin app on :8402, which 404s them, so discovery looked absent.
 // ADMIN: receipts + log, which the task server itself guards with a bearer key.
 const X402_PATHS = new Set([
-  '/task', '/rwa-screen', '/wallet-ops', '/genesis-sim', '/prove', '/llm', '/llm/models', '/facilitator/supported', '/facilitator/verify', '/facilitator/settle',
+  '/task', '/risk', '/receipts', '/rwa-screen', '/wallet-ops', '/genesis-sim', '/prove', '/llm', '/llm/models', '/facilitator/supported', '/facilitator/verify', '/facilitator/settle',
   '/health', '/.well-known/x402', '/prove/keys', '/prove/stats', '/prove/recent',
   '/admin/receipts', '/admin/log', '/log'
 ]);
 // Free receipt lookups carry an id in the path: /prove/receipts/{receiptId}
-const X402_PREFIXES = ['/prove/receipts/'];
+const X402_PREFIXES = ['/prove/receipts/', '/receipts/'];
 
 function getTarget(req) {
   const host = (req.headers.host || '').split(':')[0].toLowerCase();

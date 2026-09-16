@@ -148,7 +148,8 @@ async function settleExactCdp(cdpCall, laneKey, status, payment, ctx) {
     if (!valid) return { ok: false, reason: 'cdp_verify_rejected', status: v.status, detail: (v.json && (v.json.invalidReason || v.json.error)) || v.raw };
     const s = await cdpCall('/platform/v2/x402/settle', { x402Version: 2, paymentPayload: built.canonical, paymentRequirements: built.requirements });
     const txHash = s.json && (s.json.transaction || s.json.txHash || s.json.transactionHash || s.json.signature);
-    if (s.status >= 200 && s.status < 300 && txHash) return { ok: true, via: 'cdp', txHash: String(txHash), amount_usd: Number(built.requirements.amount) / 1e6, lane: laneKey };
+    const payer = (s.json && s.json.payer) || (v.json && v.json.payer) || (built.canonical.payload && built.canonical.payload.authorization && built.canonical.payload.authorization.from) || null;
+    if (s.status >= 200 && s.status < 300 && txHash) return { ok: true, via: 'cdp', txHash: String(txHash), amount_usd: Number(built.requirements.amount) / 1e6, lane: laneKey, payer };
     return { ok: false, reason: 'cdp_settle_failed', status: s.status, detail: (s.json && s.json.error) || s.raw };
   } catch (e) {
     return { ok: false, reason: 'cdp_error', detail: (e.message || '').slice(0, 160) };
@@ -185,7 +186,7 @@ async function verifyStellar(payment, opts) {
   const hit = ops.find((o) => (o.type === 'payment' || o.type === 'path_payment_strict_send' || o.type === 'path_payment_strict_receive') && o.to === treasury && o.transaction_successful !== false && o.asset_type !== 'native' && o.asset_code === 'USDC' && o.asset_issuer === STELLAR_USDC_ISSUER);
   if (!hit) return { valid: false, reason: 'stellar_no_matching_usdc_payment_to_treasury' };
   if (Number(hit.amount) < Number(STELLAR_PRICE)) return { valid: false, reason: 'stellar_underpaid', delivered: hit.amount, required: STELLAR_PRICE };
-  return { valid: true, rail: 'stellar:usdc', txHash: txHash.toLowerCase(), amount_usd: Number(hit.amount), paid: hit.amount + ' USDC (Stellar)' };
+  return { valid: true, rail: 'stellar:usdc', txHash: txHash.toLowerCase(), amount_usd: Number(hit.amount), paid: hit.amount + ' USDC (Stellar)', payer: hit.from || hit.source_account || null };
 }
 
 function stellarAccept(status) {
