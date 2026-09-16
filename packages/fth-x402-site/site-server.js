@@ -88,7 +88,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Proxy x402 task execution directly to task-server on 3101
-  if (url.pathname === '/llm' || url.pathname.startsWith('/llm/') || url.pathname === '/task' || url.pathname.startsWith('/task/') || url.pathname === '/rwa-screen' || url.pathname === '/genesis-sim' || url.pathname === '/wallet-ops') {
+  if (url.pathname.startsWith('/facilitator/') || url.pathname === '/llm' || url.pathname.startsWith('/llm/') || url.pathname === '/task' || url.pathname.startsWith('/task/') || url.pathname === '/rwa-screen' || url.pathname === '/genesis-sim' || url.pathname === '/wallet-ops') {
     const proxyReq = http.request({
       hostname: '127.0.0.1',
       port: 3101,

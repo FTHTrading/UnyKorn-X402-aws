@@ -23,6 +23,23 @@ const crypto = require('crypto');
 
 const rails = require('./_ops_rails.cjs');
 const llm = require('./_ops_llm.cjs');
+const os = require('os');
+// Facilitator bearer: other UnyKorn services (truth gateway, blockchainfraud, MCP tools) present this to settle through
+// the rail's CDP credential. Env first, file second. Never logged.
+const FACILITATOR_BEARER = (process.env.FACILITATOR_BEARER || (() => { try { return require('fs').readFileSync(require('path').join(os.homedir(), '.unykorn', 'secrets', 'facilitator-proxy.key'), 'utf8').trim(); } catch (e) { return ''; } })());
+function bearerOk(req) {
+  const a = String(req.headers['authorization'] || '');
+  if (!FACILITATOR_BEARER || a.length !== ('Bearer ' + FACILITATOR_BEARER).length) return false;
+  let r = 0; const want = 'Bearer ' + FACILITATOR_BEARER;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ want.charCodeAt(i);
+  return r === 0;
+}
+function readBodyLimited(req, limit) {
+  return new Promise((resolve, reject) => {
+    let d = ''; req.on('data', (c) => { d += c; if (d.length > limit) { reject(new Error('body_too_large')); req.destroy(); } });
+    req.on('end', () => resolve(d)); req.on('error', reject);
+  });
+}
 const ledger = require('./_ops_ledger.cjs');
 const alerts = require('./_ops_alerts.cjs');
 const prove = require('./_ops_prove.cjs');
@@ -545,6 +562,28 @@ const server = http.createServer(async (req, res) => {
 
   // ---------- free: proof receipt lookup + issuer key (so anyone can verify offline) ----------
   if (p === '/prove/keys') return send(res, 200, [prove.registryEntry()]);
+  // ---------- facilitator proxy (bearer): the estate settles on Base/Polygon/Solana through this process's CDP key ----------
+  if (p === '/facilitator/supported' || p === '/facilitator/verify' || p === '/facilitator/settle') {
+    if (!FACILITATOR_BEARER) return send(res, 503, { refused: 'facilitator proxy not configured' });
+    if (!bearerOk(req)) return send(res, 401, { refused: 'bearer required' });
+    const which = p.split('/').pop();
+    try {
+      if (which === 'supported') {
+        if (req.method !== 'GET') return send(res, 405, { refused: 'GET' });
+        const r = await rails.cdpCall('/platform/v2/x402/supported', undefined, 'GET');
+        return send(res, r.status, r.json || { raw: r.raw });
+      }
+      if (req.method !== 'POST') return send(res, 405, { refused: 'POST' });
+      const raw = await readBodyLimited(req, 65536);
+      let body; try { body = JSON.parse(raw); } catch (e) { return send(res, 400, { refused: 'invalid JSON' }); }
+      if (!body || !body.paymentPayload || !body.paymentRequirements) return send(res, 400, { refused: 'paymentPayload and paymentRequirements required' });
+      const r = await rails.cdpCall('/platform/v2/x402/' + which, { x402Version: body.x402Version || 2, paymentPayload: body.paymentPayload, paymentRequirements: body.paymentRequirements });
+      log('FACILITATOR ' + which + ' -> ' + r.status);
+      return send(res, r.status, r.json || { raw: r.raw });
+    } catch (e) {
+      return send(res, e.message === 'body_too_large' ? 413 : 502, { refused: e.message === 'body_too_large' ? 'body too large' : 'facilitator upstream error', detail: (e.message || '').slice(0, 160) });
+    }
+  }
   if (p === '/llm/models') { const st = await llm.status(); return send(res, 200, Object.assign({ price_usd: taskPrice('llm'), max_output_tokens: llm.MAX_OUTPUT_TOKENS, max_input_chars: llm.MAX_INPUT_CHARS, note: 'local models run on the operator GPU; hosted models are an allowlist; the paid response names the one that answered' }, st)); }
   if (p === '/prove/stats') return send(res, 200, { ...prove.stats(), keyId: prove.registryEntry().keyId, anchor: 'UNANCHORED', verifier: 'https://github.com/FTHTrading/402-truth' });
   if (p === '/prove/recent') return send(res, 200, { receipts: prove.recent(20), anchor: 'UNANCHORED' });
