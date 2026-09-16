@@ -178,7 +178,7 @@ function publicView(r) {
     tx_hash: r.tx_hash,
     settled_by: r.settled_by,
     payer: shortAddr(r.payer),
-    payer_class: c === true ? 'internal (operator wallet — rail test, not demand)' : c === false ? 'external' : 'unattributed (pre-2026-09-16 receipt without payer capture)',
+    payer_class: c === true ? 'internal (operator wallet - rail test, not demand)' : c === false ? 'external' : 'unattributed (pre-2026-09-16 receipt without payer capture)',
     request_class: r.request_class || r.task,
     result_sha256: r.result_sha256 || null,
     duration_ms: r.duration_ms
