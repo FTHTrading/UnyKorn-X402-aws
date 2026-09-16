@@ -19,6 +19,7 @@ const PRICES = {
 };
 
 const BASE_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const lanes = require('./_ops_lanes.cjs');
 const RLUSD_ISSUER = process.env.RLUSD_ISSUER || 'rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De';
 const XRPL_WSS = process.env.XRPL_WSS_URL || process.env.XRPL_SERVER || 'wss://xrplcluster.com';
 const BASE_RPC = process.env.BASE_RPC || 'https://mainnet.base.org';
@@ -225,6 +226,8 @@ async function readiness(force) {
       ? { ok: true, mode: cdp.mode, keyId: cdp.keyId, facilitator: 'authenticated' }
       : { ok: false, reason: 'cdp_auth_rejected', detail: live.detail, mode: cdp.mode };
   }
+  // Which networks the facilitator will actually settle; polygon and solana are quoted only when listed here.
+  const supported = cdp.ok ? await lanes.cdpSupported(cdpCall) : null;
   // Base is payable only if we can RECEIVE (always true for an EOA) AND SETTLE.
   const baseSettle = cdp.ok ? { ok: true, via: 'cdp' } : (relayerR.ok ? { ok: true, via: 'self-settle' } : { ok: false, reason: 'no_settlement_path', cdp: cdp.reason, relayer: relayerR.reason });
   const value = {
@@ -240,10 +243,13 @@ async function readiness(force) {
         ? { payable: true, payTo: payToXrpl(), issuer: RLUSD_ISSUER }
         : { payable: false, reason: xrplR.rlusd.reason },
       'stellar:usdc': stellarR.ok
-        ? { payable: true, payTo: stellarR.account }
-        : { payable: false, reason: stellarR.reason }
+        ? { payable: true, payTo: stellarR.account, price_usd: Number(lanes.STELLAR_PRICE), usdc_issuer: lanes.STELLAR_USDC_ISSUER, pay_first: true }
+        : { payable: false, reason: stellarR.reason },
+      'polygon:usdc': lanes.exactLaneStatus('polygon:usdc', cdp.ok, supported),
+      'solana:usdc': lanes.exactLaneStatus('solana:usdc', cdp.ok, supported)
     },
-    cdp, relayer: relayerR
+    cdp, relayer: relayerR,
+    cdp_supported_networks: supported ? supported.networks : []
   };
   value.payable_lanes = Object.entries(value.lanes).filter(([, v]) => v.payable).map(([k]) => k);
   value.any_payable = value.payable_lanes.length > 0;
@@ -267,6 +273,13 @@ function buildAccepts(r) {
   if (r.lanes['xrpl:rlusd'].payable) {
     out.push({ scheme: 'exact', network: 'xrpl:mainnet', asset: 'RLUSD', price: PRICES.xrpl_xrp, payTo: payToXrpl(), issuer: RLUSD_ISSUER });
   }
+  for (const k of ['polygon:usdc', 'solana:usdc']) {
+    if (r.lanes[k] && r.lanes[k].payable) {
+      const q = lanes.exactRequirements(k, r.lanes[k]); delete q.resource;
+      out.push(q);
+    }
+  }
+  if (r.lanes['stellar:usdc'] && r.lanes['stellar:usdc'].payable) out.push(lanes.stellarAccept(r.lanes['stellar:usdc']));
   return out;
 }
 
@@ -585,8 +598,18 @@ async function settleBase(payment, ctx) {
   return settleBaseSelf(payment);
 }
 
+/** Settle any CDP-settled lane. base keeps its self-settle fallback; polygon/solana are CDP-only. */
+async function settleExact(payment, laneKey, ctx) {
+  if (laneKey === 'base:usdc') return settleBase(payment, ctx);
+  const r = await readiness();
+  const st = r.lanes[laneKey];
+  if (!st || !st.payable) return { ok: false, reason: 'lane_unavailable', lane: laneKey, detail: st && st.reason };
+  return lanes.settleExactCdp(cdpCall, laneKey, st, payment, ctx);
+}
+
 module.exports = {
   PRICES, BASE_USDC, RLUSD_ISSUER, readiness, buildAccepts,
-  verifyXrpl, settleBase, settleBaseSelf, cdpStatus, relayerStatus,
-  xrplStatus, stellarStatus, decodePaymentHeader, payToEvm, payToXrpl
+  verifyXrpl, settleBase, settleBaseSelf, settleExact, cdpStatus, relayerStatus,
+  xrplStatus, stellarStatus, decodePaymentHeader, payToEvm, payToXrpl,
+  selectLane: lanes.selectLane, verifyStellar: lanes.verifyStellar, EXACT_LANES: lanes.EXACT_LANES, cdpCall
 };

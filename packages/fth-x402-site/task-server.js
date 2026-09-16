@@ -332,8 +332,10 @@ async function handlePaid(req, res, taskName, body) {
   if (!payment) return send(res, 400, { error: 'x_payment_undecodable', message: 'X-PAYMENT must be JSON or base64-encoded JSON' });
 
   const r = await rails.readiness();
-  const isXrpl = String(payment.network || '').includes('xrpl');
-  const laneKey = isXrpl ? (payment.asset === 'RLUSD' ? 'xrpl:rlusd' : 'xrpl:xrp') : 'base:usdc';
+  const laneKey = rails.selectLane(payment);
+  if (!laneKey) return send(res, 400, { error: 'unknown_network', message: 'X-PAYMENT names a network this rail does not run. Lanes: ' + Object.keys(r.lanes).join(', ') });
+  const isXrpl = laneKey.startsWith('xrpl:');
+  const isStellar = laneKey === 'stellar:usdc';
   if (!r.lanes[laneKey] || !r.lanes[laneKey].payable) {
     return send(res, 503, {
       error: 'lane_unavailable', lane: laneKey,
@@ -357,16 +359,29 @@ async function handlePaid(req, res, taskName, body) {
       });
     }
     proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)' };
+  } else if (isStellar) {
+    const v = await rails.verifyStellar(payment);
+    if (!v.valid) {
+      alerts.alert('warn', 'x402 payment REJECTED', { Lane: laneKey, Reason: v.reason, Task: taskName, Detail: v.detail }, 'reject:' + v.reason);
+      return send(res, v.retryable ? 503 : 402, {
+        error: 'payment_not_verified', reason: v.reason, detail: v.detail,
+        required: { asset: 'USDC', issuer: r.lanes[laneKey].usdc_issuer, amount: r.lanes[laneKey].price_usd, payTo: r.lanes[laneKey].payTo },
+        message: v.retryable
+          ? 'Our verifier could not reach Horizon right now. We fail closed rather than guess. Your payment is on-chain and can be re-presented once this clears.'
+          : 'That proof did not verify as a settled USDC payment of the required amount to our Stellar address.'
+      });
+    }
+    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)' };
   } else {
-    const s = await rails.settleBase(payment, { resourceUrl: PUBLIC_ORIGIN + CATALOG[taskName].path, extensions: bazaarExtension(taskName) });
+    const s = await rails.settleExact(payment, laneKey, { resourceUrl: PUBLIC_ORIGIN + CATALOG[taskName].path, extensions: bazaarExtension(taskName) });
     if (!s.ok) {
-      alerts.alert('warn', 'x402 Base settlement FAILED', { Reason: s.reason, Detail: s.detail || s.self || '', Task: taskName }, 'basefail:' + s.reason);
+      alerts.alert('warn', 'x402 ' + laneKey + ' settlement FAILED', { Reason: s.reason, Detail: s.detail || s.self || '', Task: taskName }, 'settlefail:' + laneKey + ':' + s.reason);
       return send(res, 402, {
-        error: 'settlement_failed', reason: s.reason, detail: s.detail || s.self,
+        error: 'settlement_failed', lane: laneKey, reason: s.reason, detail: s.detail || s.self,
         message: 'Your authorization was not settled, so no funds moved from your wallet and nothing was delivered.'
       });
     }
-    proof = { rail: 'base:usdc', txHash: s.txHash, amount_usd: s.amount_usd, paid: '$' + s.amount_usd + ' USDC', settled_by: s.via };
+    proof = { rail: laneKey, txHash: s.txHash, amount_usd: s.amount_usd, paid: '$' + s.amount_usd + ' USDC', settled_by: s.via };
   }
 
   // ---- step 2: burn the proof so it cannot buy twice ----
@@ -407,7 +422,7 @@ async function handlePaid(req, res, taskName, body) {
   } catch (e) {
     ledger.release(proof.rail, proof.txHash);
     const userErr = e.userMessage || 'task_execution_failed';
-    const owed = proof.rail === 'base:usdc';
+    const owed = !isXrpl && !isStellar; // facilitator-settled lanes: the buyer's money moved before delivery
     log('DELIVERY FAILED ' + taskName + ' tx=' + proof.txHash + ' err=' + e.message + ' (claim released)');
     alerts.alert('crit', 'x402 PAID BUT NOT DELIVERED', {
       Task: taskName, Lane: proof.rail, Tx: proof.txHash, Error: e.message,
@@ -490,7 +505,7 @@ const server = http.createServer(async (req, res) => {
         markets_supported: c.markets_supported,
         deterministic: c.deterministic,
         typical_execution_ms: c.typical_ms,
-        price: { usd: rails.PRICES.base_usdc_usd, note: 'per successful execution; XRPL lane is ' + rails.PRICES.xrpl_xrp + ' XRP' }
+        price: { usd: rails.PRICES.base_usdc_usd, note: 'per successful execution on base, polygon, solana or stellar (USDC); XRPL lane is ' + rails.PRICES.xrpl_xrp + ' XRP' }
       })),
       accepts,
       lanes: r.lanes,
