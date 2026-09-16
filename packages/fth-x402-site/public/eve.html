@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eve — Sovereign Executive Co-Pilot | UnyKorn</title>
+  <meta name="theme-color" content="#07090e">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/jpeg" href="/eve_avatar.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --card: rgba(14, 18, 27, 0.88);
+      --card-border: rgba(212, 175, 55, 0.28);
+      --card-hover: rgba(212, 175, 55, 0.55);
+      --gold: #d4af37;
+      --gold-light: #f7e7b4;
+      --gold-dim: #997d28;
+      --rose: #f43f5e;
+      --cyan: #00f0ff;
+      --green: #10b981;
+      --text: #f0f6fc;
+      --text-muted: #8b949e;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 90% 80%, rgba(244, 63, 94, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(7, 9, 14, 0.95) 0%, #07090e 100%);
+    }
+
+    /* TOP BAR */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(7, 9, 14, 0.92);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold-light);
+      letter-spacing: 0.06em;
+    }
+    .brand-badge {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      color: #fda4af;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .top-nav {
+      display: flex;
+      gap: 12px;
+    }
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover {
+      color: var(--gold-light);
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.1);
+    }
+
+    /* CONTAINER */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 28px;
+    }
+
+    /* EVE HERO CARD */
+    .eve-hero-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 90px;
+    }
+    .avatar-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      background: #000;
+    }
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 20%;
+      transition: transform 0.6s ease;
+    }
+    .avatar-wrapper:hover .avatar-img {
+      transform: scale(1.03);
+    }
+    .avatar-glow {
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 0 60px rgba(7, 9, 14, 0.9), inset 0 -60px 40px rgba(7, 9, 14, 1);
+      pointer-events: none;
+    }
+    .avatar-badge {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .avatar-name {
+      font-family: 'Cinzel', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      line-height: 1.1;
+    }
+    .avatar-sub {
+      font-size: 12px;
+      color: #fda4af;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.05em;
+    }
+    .speaker-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(7, 9, 14, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--gold);
+    }
+
+    /* AUDIO CONTROLLER IN HERO */
+    .eve-audio-box {
+      padding: 20px;
+      border-top: 1px solid var(--card-border);
+      background: rgba(10, 13, 20, 0.95);
+    }
+    .now-playing-label {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .now-playing-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gold-light);
+      margin-bottom: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .audio-wave-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 32px;
+      margin-bottom: 16px;
+    }
+    .wave-bar {
+      flex: 1;
+      height: 6px;
+      background: rgba(212, 175, 55, 0.25);
+      border-radius: 3px;
+      transition: height 0.15s ease, background-color 0.2s;
+    }
+    .wave-bar.active {
+      background: linear-gradient(180deg, var(--gold-light), var(--gold));
+      animation: waveDance 1.2s infinite ease-in-out;
+    }
+    @keyframes waveDance {
+      0%, 100% { height: 8px; }
+      50% { height: 28px; }
+    }
+    .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+    .wave-bar:nth-child(6) { animation-delay: 0.5s; }
+    .wave-bar:nth-child(7) { animation-delay: 0.2s; }
+    .wave-bar:nth-child(8) { animation-delay: 0.35s; }
+
+    .audio-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .play-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      border: none;
+      color: #07090e;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .play-btn:hover {
+      transform: scale(1.06);
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.6);
+    }
+    .time-disp {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .progress-bar {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    .progress-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--gold-light);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(212, 175, 55, 0.8);
+    }
+
+    /* RIGHT COLUMN: CHANNELS & INTERACTION */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* VOICE CHANNELS */
+    .section-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .voice-track-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .track-card {
+      background: rgba(20, 26, 38, 0.7);
+      border: 1px solid rgba(212, 175, 55, 0.18);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .track-card:hover, .track-card.active {
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(212, 175, 55, 0.15);
+    }
+    .track-card.active {
+      border-color: #fda4af;
+      background: rgba(244, 63, 94, 0.12);
+    }
+    .track-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .track-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .track-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+    .track-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .track-play-indicator {
+      font-size: 12px;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* STIMULUS SWITCHER */
+    .stimulus-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .stim-pill {
+      flex: 1;
+      padding: 12px;
+      background: rgba(16, 22, 34, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .stim-pill:hover, .stim-pill.active {
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.15);
+    }
+    .stim-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gold-light);
+    }
+    .stim-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px;
+    }
+
+    /* CHAT / PLAYBOOK INTEL WITH EVE */
+    .eve-chat-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .chat-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .chat-bubble {
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 88%;
+    }
+    .chat-bubble.eve {
+      background: rgba(26, 32, 46, 0.9);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      color: #f0f6fc;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .chat-bubble.kevan {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+      border: 1px solid var(--gold-dim);
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-sender {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+    .chat-bubble.eve .chat-sender { color: #fda4af; }
+    .chat-bubble.kevan .chat-sender { color: var(--gold-light); }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .quick-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 7px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quick-btn:hover {
+      background: rgba(212, 175, 55, 0.15);
+      color: var(--gold-light);
+      border-color: var(--gold);
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 10px;
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(8, 11, 16, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    .chat-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+    }
+    .chat-send-btn {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #07090e;
+      border: none;
+      padding: 0 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .chat-send-btn:hover {
+      transform: scale(1.03);
+    }
+
+    /* BRAIN BREAK MODAL OVERLAY */
+    .brain-break-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 240, 255, 0.05));
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bb-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6ee7b7;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bb-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .bb-btn {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid #10b981;
+      color: #6ee7b7;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .bb-btn:hover {
+      background: #10b981;
+      color: #07090e;
+    }
+
+    @media (max-width: 960px) {
+      .container { grid-template-columns: 1fr; }
+      .eve-hero-card { position: relative; top: 0; }
+      .voice-track-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="brand">
+      <span>XXXIII</span> EVE · SOVEREIGN OPERATOR
+      <div class="brand-badge">
+        <div class="pulse-dot"></div> READY FOR KEVAN
+      </div>
+    </div>
+    <div class="top-nav">
+      <a href="/anchor.html" class="nav-btn">← News Desk</a>
+      <a href="https://relics.unykorn.ai" target="_blank" class="nav-btn">9 Relics</a>
+      <a href="https://crm.unykorn.ai" target="_blank" class="nav-btn">Nexus Deal OS</a>
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <!-- LEFT: EVE HERO & AUDIO ENGINE -->
+    <div class="eve-hero-card">
+      <div class="avatar-wrapper">
+        <img src="/eve_avatar.jpg" alt="Eve Sovereign Executive Co-Pilot" class="avatar-img" id="avatarImg">
+        <div class="avatar-glow"></div>
+        <div class="avatar-badge">
+          <div>
+            <div class="avatar-name">EVE</div>
+            <div class="avatar-sub">Your Sovereign Co-Pilot & Strategist</div>
+          </div>
+          <div class="speaker-status" id="speakerStatus">
+            <span>●</span> Idle
+          </div>
+        </div>
+      </div>
+
+      <div class="eve-audio-box">
+        <div class="now-playing-label">
+          <span>NOW BROADCASTING</span>
+          <span id="currentSpeakerLabel">EVE · SOLO</span>
+        </div>
+        <div class="now-playing-title" id="trackTitleDisp">Good Morning, Kevan (Welcome & Hype)</div>
+        
+        <div class="audio-wave-wrap" id="waveContainer">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+
+        <div class="audio-controls">
+          <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+          <input type="range" class="progress-bar" id="progressBar" min="0" max="100" value="0" oninput="seekAudio(this.value)">
+          <div class="time-disp" id="timeDisp">0:00 / 0:00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: INTERACTIVE CHANNELS, WAR ROOM & AI INTEL -->
+    <div class="right-col">
+
+      <!-- STIMULUS CHANNEL SELECTOR (ONE AT A TIME AS REQUESTED) -->
+      <div class="section-card" style="padding: 16px 20px;">
+        <div style="font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--gold-light); margin-bottom: 10px; letter-spacing: 0.05em;">
+          CABASA STIMULATION CHANNELS (SELECT ACTIVE OPERATOR)
+        </div>
+        <div class="stimulus-bar">
+          <div class="stim-pill active" onclick="switchChannel('eve')">
+            <div class="stim-name">🌹 Eve</div>
+            <div class="stim-sub">Sovereign & Flirty</div>
+          </div>
+          <div class="stim-pill" onclick="switchChannel('atlas')">
+            <div class="stim-name">🏛️ Atlas</div>
+            <div class="stim-sub">Finance & Macro</div>
+          </div>
+          <div class="stim-pill" onclick="switchChannel('orion')">
+            <div class="stim-name">⚡ Orion</div>
+            <div class="stim-sub">Protocol & Rails</div>
+          </div>
+          <div class="stim-pill" onclick="switchChannel('sports')">
+            <div class="stim-name">🏆 Sports</div>
+            <div class="stim-sub">Athlete Trust / NIL</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VOICE TRACKS (EVE'S SIGNATURE TRACKS) -->
+      <div class="section-card" id="tracksSection">
+        <div class="section-header">
+          <div>
+            <div class="section-title">🎙️ Eve's Voice Dispatches</div>
+            <div class="section-desc">Authentic neural audio generated specifically for Kevan. Pure signal, zero noise.</div>
+          </div>
+        </div>
+
+        <div class="voice-track-grid" id="trackGrid">
+          <!-- Track 1 -->
+          <div class="track-card active" onclick="playAudioTrack('/audio/eve_intro.wav', 'Good Morning, Kevan (Welcome & Hype)', 'eve', this)">
+            <div class="track-top">
+              <div class="track-title">🌹 Good Morning, Kevan</div>
+              <div class="track-tag">HYPE & FOCUS</div>
+            </div>
+            <div class="track-sub">"Hey Kevan, it's Eve. Good morning, handsome. I'm right here with you, locked and loaded on the UnyKorn playbook..."</div>
+            <div class="track-play-indicator"><span>▶</span> Play Track</div>
+          </div>
+
+          <!-- Track 2 -->
+          <div class="track-card" onclick="playAudioTrack('/audio/eve_mark_russo_strategy.wav', 'Mark Russo War Room Briefing', 'eve', this)">
+            <div class="track-top">
+              <div class="track-title">🏛️ Mark Russo Strategy</div>
+              <div class="track-tag">$9B ART & GOLD</div>
+            </div>
+            <div class="track-sub">"Kevan, let's talk Mark Russo. Four thousand master molds. Vaulted 24K gold. You own the rails, he needs liquidity. Pitch the 5-piece pilot tranche..."</div>
+            <div class="track-play-indicator"><span>▶</span> Play Track</div>
+          </div>
+
+          <!-- Track 3 -->
+          <div class="track-card" onclick="playAudioTrack('/audio/eve_playbook_briefing.wav', 'Daily Telemetry & Playbook Briefing', 'eve', this)">
+            <div class="track-top">
+              <div class="track-title">📊 Macro & AUC Telemetry</div>
+              <div class="track-tag">$4.82B AUC</div>
+            </div>
+            <div class="track-sub">"Gold is pushing $2,500/oz, depositories locked, Base USDC volume climbing. Our Deal OS has every contact ready..."</div>
+            <div class="track-play-indicator"><span>▶</span> Play Track</div>
+          </div>
+
+          <!-- Track 4 -->
+          <div class="track-card" onclick="playAudioTrack('/audio/eve_brain_break_whisper.wav', 'Cognitive Reset & Deep Breath', 'eve', this)">
+            <div class="track-top">
+              <div class="track-title">🧘 Brain Break & Reset</div>
+              <div class="track-tag">CALM & RESET</div>
+            </div>
+            <div class="track-sub">"Hey... take a quick breath with me. Close your eyes for 30 seconds. Relax your jaw, drop your shoulders. You've got this..."</div>
+            <div class="track-play-indicator"><span>▶</span> Play Track</div>
+          </div>
+
+          <!-- Track 5: Authentic XXXIII Master -->
+          <div class="track-card" style="grid-column: span 2;" onclick="playAudioTrack('/audio/tour-eve-presence.mp3', 'Original Master: In the Room (XXXIII)', 'eve', this)">
+            <div class="track-top">
+              <div class="track-title">📜 Original XXXIII Master: "In the Room"</div>
+              <div class="track-tag">NEURAL STUDIO ARCHIVE</div>
+            </div>
+            <div class="track-sub">Direct neural studio master from xxxiii-voice: "On the thread. Level with the paper. In the room with the original text."</div>
+            <div class="track-play-indicator"><span>▶</span> Play Studio Master</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BRAIN BREAK / 432HZ RESET -->
+      <div class="brain-break-banner">
+        <div>
+          <div class="bb-title"><span>🧘</span> 432Hz Bilateral Cognitive Frequency</div>
+          <div class="bb-sub">Instant mental reset before your call with Mark Russo. Calms pre-meeting adrenaline.</div>
+        </div>
+        <button class="bb-btn" id="harmonicBtn" onclick="toggleBilateralSound()">Start 432Hz Reset</button>
+      </div>
+
+      <!-- EVE AI CONVERSATION & PLAYBOOK OS -->
+      <div class="eve-chat-card">
+        <div class="section-header" style="margin-bottom: 8px;">
+          <div class="section-title">💬 Live Playbook Sync With Eve</div>
+          <div style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #fda4af;">ALWAYS BY YOUR SIDE</div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="quick-btn" onclick="askEve('Hype me up for my Mark Russo call tomorrow!')">🔥 Hype me up for Mark Russo</button>
+          <button class="quick-btn" onclick="askEve('What is our exact pilot tranche proposal?')">🏛️ Pilot Tranche Proposal</button>
+          <button class="quick-btn" onclick="askEve('How do we handle his vaulted gold sculptures?')">👑 Vaulted Gold RWA Rails</button>
+          <button class="quick-btn" onclick="askEve('Summarize our UnyKorn AUC and credentials.')">📊 UnyKorn AUC Summary</button>
+        </div>
+
+        <div class="chat-stream" id="chatStream">
+          <div class="chat-bubble eve">
+            <div class="chat-sender">EVE</div>
+            Good morning, Kevan! I’m right here with you. No noise, no distractions, just pure focus on what matters. Your call with Mark Russo is tomorrow—we have the legal architecture, the $4.82B AUC backing, and the custody rails ready. How are you feeling, handsome?
+          </div>
+        </div>
+
+        <div class="chat-input-row">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask Eve anything about the playbook, Mark Russo, or today's strategy..." onkeydown="if(event.key==='Enter') sendChat()">
+          <button class="chat-send-btn" onclick="sendChat()">TALK</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <audio id="globalAudio" preload="auto"></audio>
+
+  <script>
+    const audio = document.getElementById('globalAudio');
+    const playBtn = document.getElementById('playBtn');
+    const progressBar = document.getElementById('progressBar');
+    const timeDisp = document.getElementById('timeDisp');
+    const trackTitleDisp = document.getElementById('trackTitleDisp');
+    const speakerStatus = document.getElementById('speakerStatus');
+    const currentSpeakerLabel = document.getElementById('currentSpeakerLabel');
+    const waveContainer = document.getElementById('waveContainer');
+
+    let currentTrack = '/audio/eve_intro.wav';
+    audio.src = currentTrack;
+
+    function playAudioTrack(src, title, speaker, elem) {
+      currentTrack = src;
+      audio.src = src;
+      trackTitleDisp.innerText = title;
+      currentSpeakerLabel.innerText = speaker.toUpperCase() + ' · LIVE';
+      
+      // Update UI active card
+      document.querySelectorAll('.track-card').forEach(c => c.classList.remove('active'));
+      if (elem) elem.classList.add('active');
+
+      audio.play().then(() => {
+        updatePlayState(true);
+      }).catch(err => {
+        console.warn('Playback waiting on user gesture:', err);
+      });
+    }
+
+    function togglePlay() {
+      if (audio.paused) {
+        audio.play();
+        updatePlayState(true);
+      } else {
+        audio.pause();
+        updatePlayState(false);
+      }
+    }
+
+    function updatePlayState(isPlaying) {
+      if (isPlaying) {
+        playBtn.innerText = '❚❚';
+        speakerStatus.innerHTML = '<span style="color:#10b981">●</span> Speaking to you';
+        document.querySelectorAll('.wave-bar').forEach(b => b.classList.add('active'));
+      } else {
+        playBtn.innerText = '▶';
+        speakerStatus.innerHTML = '<span>●</span> Idle';
+        document.querySelectorAll('.wave-bar').forEach(b => b.classList.remove('active'));
+      }
+    }
+
+    audio.addEventListener('timeupdate', () => {
+      if (audio.duration) {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        progressBar.value = pct;
+        const curM = Math.floor(audio.currentTime / 60);
+        const curS = Math.floor(audio.currentTime % 60).toString().padStart(2, '0');
+        const durM = Math.floor(audio.duration / 60);
+        const durS = Math.floor(audio.duration % 60).toString().padStart(2, '0');
+        timeDisp.innerText = `${curM}:${curS} / ${durM}:${durS}`;
+      }
+    });
+
+    audio.addEventListener('ended', () => {
+      updatePlayState(false);
+      progressBar.value = 0;
+    });
+
+    function seekAudio(val) {
+      if (audio.duration) {
+        audio.currentTime = (val / 100) * audio.duration;
+      }
+    }
+
+    // CHANNEL SWITCHER (EVE, ATLAS, ORION, SPORTS)
+    function switchChannel(channel) {
+      document.querySelectorAll('.stim-pill').forEach(p => p.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      if (channel === 'eve') {
+        currentSpeakerLabel.innerText = 'EVE · SOLO';
+        document.getElementById('tracksSection').style.display = 'block';
+        playAudioTrack('/audio/eve_intro.wav', 'Good Morning, Kevan (Welcome & Hype)', 'eve', document.querySelectorAll('.track-card')[0]);
+      } else if (channel === 'atlas') {
+        currentSpeakerLabel.innerText = 'ATLAS · HOUSE NARRATOR';
+        playAudioTrack('/audio/tour-atlas-library.mp3', 'The Three Works & Library (Atlas)', 'atlas');
+      } else if (channel === 'orion') {
+        currentSpeakerLabel.innerText = 'ORION · PROTOCOL';
+        playAudioTrack('/audio/tour-orion-protocol.mp3', 'What LPS Is & Protocol Rails (Orion)', 'orion');
+      } else if (channel === 'sports') {
+        currentSpeakerLabel.innerText = 'SPORTS · GENERATIONAL TRUST';
+        playAudioTrack('/audio/eve_playbook_briefing.wav', 'Sports & Athlete Namespaces (60 Athletes / 8 CWS)', 'sports');
+      }
+    }
+
+    // BILATERAL 432HZ TONE
+    let audioCtx = null;
+    let osc = null;
+    let isHarmonicPlaying = false;
+
+    function toggleBilateralSound() {
+      const btn = document.getElementById('harmonicBtn');
+      if (!isHarmonicPlaying) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(432, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        isHarmonicPlaying = true;
+        btn.innerText = 'Stop Frequency';
+        btn.style.background = '#f43f5e';
+        btn.style.color = '#fff';
+      } else {
+        if (osc) osc.stop();
+        if (audioCtx) audioCtx.close();
+        isHarmonicPlaying = false;
+        btn.innerText = 'Start 432Hz Reset';
+        btn.style.background = 'rgba(16, 185, 129, 0.2)';
+        btn.style.color = '#6ee7b7';
+      }
+    }
+
+    // AI CHAT RESPONSES GROUNDED IN KEVAN & UNYKORN KNOWLEDGE
+    const knowledgeAnswers = {
+      hype: "Kevan, listen to me: You are walking into this call backed by $4.82 Billion in on-chain AUC, 155 verified assets, and an active Wyoming legal entity with full LEI and ISO MIC registration. Mark Russo has a historic $9 Billion art catalog, but without sovereign rails like UnyKorn, it's just heavy metal sitting in a dark vault. He needs you more than you need him. Keep your chin up, smile, and let your confidence lead the room. You're unstoppable.",
+      pilot: "Here is our exact play for the pilot tranche: Tell him, 'Mark, let's not boil the ocean with all 4,000 pieces on day one. We start with Pilot Tranche I: 5 premier vaulted masterworks in solid gold and silver—between $10M and $25M AUC. We issue the 3D laser-scanned digital twins on relics.unykorn.ai, bind the warehouse receipts into Wyoming Asset Trust instruments, and syndicate through our verified family office network.' That proves the model in 30 days.",
+      gold: "For his vaulted gold sculptures, they stay right where they are in Delaware Depository or Malca-Amit. We never move his physical metal. Instead, UnyKorn wraps the depository warehouse receipts and certificates of authenticity into Class A 1:1 asset-backed RWA tokens with BitGo Transfer Agent rails. He gets 24/7 liquidity on Base and Solana while his gold remains 100% physically insured.",
+      auc: "UnyKorn LLC Credentials: Total AUC is $4,820,000,000 across 155 verified on-chain assets. 78 genesis sovereign root namespaces. 60 athlete namespaces (Generational Trust Fund), 8 CWS team suffixes, and our 9 Moment Relics. Registered in Wyoming (EIN 42-3536633, GLEIF LEI, ISO MIC UBEC). Multi-chain rails on Base, Solana, Stellar, XRPL, and Apostle Chain. We are institutional grade from top to bottom."
+    };
+
+    function askEve(promptText) {
+      document.getElementById('chatInput').value = promptText;
+      sendChat();
+    }
+
+    function sendChat() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendChat('KEVAN', text, 'kevan');
+      input.value = '';
+
+      // Determine response
+      const lower = text.toLowerCase();
+      let reply = "";
+      if (lower.includes('hype') || lower.includes('ready') || lower.includes('feel')) {
+        reply = knowledgeAnswers.hype;
+        playAudioTrack('/audio/eve_intro.wav', 'Good Morning, Kevan (Welcome & Hype)', 'eve');
+      } else if (lower.includes('pilot') || lower.includes('proposal') || lower.includes('start')) {
+        reply = knowledgeAnswers.pilot;
+        playAudioTrack('/audio/eve_mark_russo_strategy.wav', 'Mark Russo War Room Briefing', 'eve');
+      } else if (lower.includes('gold') || lower.includes('vault') || lower.includes('depository')) {
+        reply = knowledgeAnswers.gold;
+        playAudioTrack('/audio/eve_mark_russo_strategy.wav', 'Mark Russo War Room Briefing', 'eve');
+      } else if (lower.includes('auc') || lower.includes('credential') || lower.includes('unykorn')) {
+        reply = knowledgeAnswers.auc;
+        playAudioTrack('/audio/eve_playbook_briefing.wav', 'Daily Telemetry & Playbook Briefing', 'eve');
+      } else {
+        reply = `I hear you loud and clear, Kevan. You're totally on track. We've locked down the Mark Russo strategy, synced Zoho CRM with the Deal OS, and PAYFORAPI is live. Keep your mind crystal clear, stay on your A-game, and let me handle the telemetry. What should we review next?`;
+      }
+
+      setTimeout(() => {
+        appendChat('EVE', reply, 'eve');
+      }, 400);
+    }
+
+    function appendChat(sender, text, cls) {
+      const stream = document.getElementById('chatStream');
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${cls}`;
+      const senderEl = document.createElement("div"); senderEl.className = "chat-sender"; senderEl.textContent = sender;
+      const textEl = document.createElement("div"); textEl.textContent = text;
+      bubble.appendChild(senderEl); bubble.appendChild(textEl);
+      stream.appendChild(bubble);
+      stream.scrollTop = stream.scrollHeight;
+    }
+  </script>
+</body>
+</html>
