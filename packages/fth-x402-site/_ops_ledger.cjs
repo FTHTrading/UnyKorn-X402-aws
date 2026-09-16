@@ -16,6 +16,7 @@
 // tx hashes below (each verified on Blockscout as paid by the operator's Scout wallet), never rewritten.
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const DB_PATH = process.env.GENESIS402_LEDGER
   || path.join(__dirname, 'data', 'genesis402-ledger.json');
@@ -34,6 +35,20 @@ const INTERNAL_WALLETS = new Set(DEFAULT_INTERNAL.concat(String(process.env.INTE
 const LEGACY_INTERNAL_TX = new Set([
   '0xc0804c4c7b0538', '0xd370ca346209cd', '0xba8fa7fe8ebf3a'
 ].map((s) => s.toLowerCase()));
+
+// Tester wallets: created and funded by the operator, handed to outside people to try a paid call. Their receipts
+// are a usability signal, never demand. Addresses come from TESTER_WALLETS="addr,addr" and ~/.unykorn/testers.txt
+// (public addresses only, one per line, optional label after a space).
+function loadTesters() {
+  const set = new Set(String(process.env.TESTER_WALLETS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
+  try {
+    const f = process.env.TESTER_WALLETS_FILE || path.join(os.homedir(), '.unykorn', 'testers.txt');
+    if (fs.existsSync(f)) for (const line of fs.readFileSync(f, 'utf8').split(/\r?\n/)) { const a = line.trim().split(/\s+/)[0]; if (a && !a.startsWith('#')) set.add(a.toLowerCase()); }
+  } catch (e) { /* no tester file */ }
+  return set;
+}
+const TESTER_WALLETS = loadTesters();
+function isTesterPayer(payer) { return payer ? TESTER_WALLETS.has(String(payer).toLowerCase()) : false; }
 
 function isInternalPayer(payer) {
   if (!payer) return null;
@@ -133,12 +148,13 @@ function isConsumed(rail, txHash) {
 
 function stats() {
   const vals = Object.values(db.consumed);
-  let gross = 0, grossExternal = 0, internal = 0, external = 0, unattributed = 0, lastExternalAt = null;
+  let gross = 0, grossExternal = 0, internal = 0, external = 0, tester = 0, unattributed = 0, lastExternalAt = null;
   for (const r of db.receipts) {
     const amt = Number(r.amount_usd) || 0;
     gross += amt;
     const c = classify(r);
-    if (c === true) internal++;
+    if (isTesterPayer(r.payer)) tester++;
+    else if (c === true) internal++;
     else if (c === false) { external++; grossExternal += amt; if (!lastExternalAt || r.at > lastExternalAt) lastExternalAt = r.at; }
     else unattributed++;
   }
@@ -149,10 +165,11 @@ function stats() {
     gross_usd: gross.toFixed(4),
     external_receipts: external,
     internal_receipts: internal,
+    tester_receipts: tester,
     unattributed_receipts: unattributed,
     gross_external_usd: grossExternal.toFixed(4),
     last_external_at: lastExternalAt,
-    note: 'internal = paid from an operator-controlled wallet (rail tests); external = paid by a wallet the operator does not control. Only external receipts are evidence of demand.'
+    note: 'internal = paid from an operator-controlled wallet (rail tests); tester = an operator-funded wallet handed to an outside person (usability signal); external = paid by a wallet the operator neither controls nor funded. Only external receipts are evidence of demand.'
   };
 }
 
@@ -178,7 +195,7 @@ function publicView(r) {
     tx_hash: r.tx_hash,
     settled_by: r.settled_by,
     payer: shortAddr(r.payer),
-    payer_class: c === true ? 'internal (operator wallet - rail test, not demand)' : c === false ? 'external' : 'unattributed (pre-2026-09-16 receipt without payer capture)',
+    payer_class: isTesterPayer(r.payer) ? 'tester (operator-funded wallet, outside operator - usability signal, not demand)' : c === true ? 'internal (operator wallet - rail test, not demand)' : c === false ? 'external' : 'unattributed (pre-2026-09-16 receipt without payer capture)',
     request_class: r.request_class || r.task,
     result_sha256: r.result_sha256 || null,
     duration_ms: r.duration_ms
@@ -190,4 +207,4 @@ function get(receiptId) { const r = db.receipts.find((x) => x.receipt_id === rec
 
 function reload() { db = load(); }
 
-module.exports = { claim, commit, release, isConsumed, stats, recent, publicRecent, get, classify, isInternalPayer, reload, DB_PATH, INTERNAL_WALLETS };
+module.exports = { claim, commit, release, isConsumed, stats, recent, publicRecent, get, classify, isInternalPayer, isTesterPayer, reload, DB_PATH, INTERNAL_WALLETS, TESTER_WALLETS };

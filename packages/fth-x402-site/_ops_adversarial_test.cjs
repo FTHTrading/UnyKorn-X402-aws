@@ -182,6 +182,7 @@ async function paymentTests() {
   check('operator Scout wallet classifies as internal', ledgerMod.isInternalPayer('0x710CBD5B3EE298BB3E1FA9A231239EDE615A7AB9') === true);
   check('a foreign wallet classifies as external', ledgerMod.isInternalPayer('0x' + 'c'.repeat(40)) === false);
   check('unknown payer classifies as null, never external', ledgerMod.isInternalPayer(null) === null);
+  check('tester wallets are a separate class from internal and external', typeof ledgerMod.isTesterPayer === 'function' && ledgerMod.isTesterPayer('0x' + 'd'.repeat(40)) === false && 'tester_receipts' in ledgerMod.stats());
   const rsrc = fs.readFileSync(path.join(__dirname, '_ops_risk.cjs'), 'utf8');
   check('an unavailable source never lowers the score', /unavailable:\s*0/.test(rsrc));
   check('risk response carries limitations in-band', /Absence from every list is not a clearance/.test(rsrc) && /not investment, legal or tax advice/i.test(rsrc));
