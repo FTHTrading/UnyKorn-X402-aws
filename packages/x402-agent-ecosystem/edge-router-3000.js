@@ -23,7 +23,7 @@ const TARGETS = {
 //       digital-twin app on :8402, which 404s them, so discovery looked absent.
 // ADMIN: receipts + log, which the task server itself guards with a bearer key.
 const X402_PATHS = new Set([
-  '/task', '/rwa-screen', '/wallet-ops', '/genesis-sim', '/prove',
+  '/task', '/rwa-screen', '/wallet-ops', '/genesis-sim', '/prove', '/llm', '/llm/models',
   '/health', '/.well-known/x402', '/prove/keys', '/prove/stats', '/prove/recent',
   '/admin/receipts', '/admin/log', '/log'
 ]);
