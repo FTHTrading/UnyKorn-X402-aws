@@ -55,15 +55,16 @@ const mimeTypes = {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`);
 
-  if (url.pathname.startsWith('/api/register') || url.pathname.startsWith('/api/namespace/') || url.pathname === '/api/provision') {
-    try {
-      // LEGACY_ROUTE_GATE (2026-09-16 security review): escrow, vault, paid-api and onboarding routes carry no session of
+  // LEGACY_ROUTE_GATE (2026-09-16 security review): escrow, vault, paid-api and onboarding routes carry no session of
   // their own. Until they do, every one of them requires the operator bearer. Public hostnames never reach this server
   // for these paths (edge-router-3000 and genesis402-apex refuse them); this closes the loopback/tunnel side.
   if (/^\/api\/(escrow|vault|namespace|register|paid|payments)(\/|$)/.test(url.pathname)) {
     const _a = String(req.headers['authorization'] || '');
     if (!process.env.ADMIN_KEY || _a !== 'Bearer ' + process.env.ADMIN_KEY) { res.writeHead(401, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: 'operator bearer required (legacy route gate)' })); return; }
   }
+
+  if (url.pathname.startsWith('/api/register') || url.pathname.startsWith('/api/namespace/') || url.pathname === '/api/provision') {
+    try {
   const handledOb = await handleOnboardingApi(req, res, url);
       if (handledOb) return;
     } catch (e) {
