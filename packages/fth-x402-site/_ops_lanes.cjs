@@ -190,7 +190,7 @@ async function verifyStellar(payment, opts) {
 }
 
 function stellarAccept(status) {
-  return { scheme: 'exact', network: 'stellar:pubnet', asset: 'USDC', issuer: STELLAR_USDC_ISSUER, price: STELLAR_PRICE, payTo: status.payTo, pay_first: true, proof: 'present the transaction hash as X-PAYMENT {"network":"stellar:pubnet","txHash":"<hex>"}' };
+  return { scheme: 'exact', network: 'stellar:pubnet', asset: 'USDC', amount: String(Math.round(Number(STELLAR_PRICE) * 1e7)), maxTimeoutSeconds: 300, extra: { unit: 'stroops (7 decimals)', pay_first: true }, issuer: STELLAR_USDC_ISSUER, price: STELLAR_PRICE, payTo: status.payTo, pay_first: true, proof: 'present the transaction hash as X-PAYMENT {"network":"stellar:pubnet","txHash":"<hex>"}' };
 }
 
 module.exports = { EXACT_LANES, STELLAR_USDC_ISSUER, STELLAR_PRICE, payToFor, selectLane, cdpSupported, exactLaneStatus, exactRequirements, toCanonicalExact, settleExactCdp, verifyStellar, stellarAccept, isEvmAddress, isSolanaAddress };

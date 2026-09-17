@@ -270,10 +270,10 @@ function buildAccepts(r, priceUsd) {
     });
   }
   if (r.lanes['xrpl:xrp'].payable) {
-    out.push({ scheme: 'exact', network: 'xrpl:mainnet', asset: 'XRP', price: PRICES.xrpl_xrp, payTo: payToXrpl() });
+    out.push({ scheme: 'exact', network: 'xrpl:mainnet', asset: 'XRP', amount: String(xrpl.xrpToDrops(PRICES.xrpl_xrp)), price: PRICES.xrpl_xrp, payTo: payToXrpl(), maxTimeoutSeconds: 300, extra: { unit: 'drops', pay_first: true } });
   }
   if (r.lanes['xrpl:rlusd'].payable) {
-    out.push({ scheme: 'exact', network: 'xrpl:mainnet', asset: 'RLUSD', price: PRICES.xrpl_xrp, payTo: payToXrpl(), issuer: RLUSD_ISSUER });
+    out.push({ scheme: 'exact', network: 'xrpl:mainnet', asset: 'RLUSD', amount: String(PRICES.xrpl_xrp), price: PRICES.xrpl_xrp, payTo: payToXrpl(), issuer: RLUSD_ISSUER, maxTimeoutSeconds: 300, extra: { unit: 'RLUSD', pay_first: true } });
   }
   for (const k of ['polygon:usdc', 'solana:usdc']) {
     if (r.lanes[k] && r.lanes[k].payable) {

@@ -520,7 +520,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,X-PAYMENT,Authorization' });
+    res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,X-PAYMENT,PAYMENT-SIGNATURE,Authorization', 'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED,PAYMENT-RESPONSE,X-PAYMENT-RESPONSE' });
     return res.end();
   }
 
