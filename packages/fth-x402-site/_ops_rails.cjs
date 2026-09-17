@@ -309,20 +309,23 @@ async function verifyXrpl(payment) {
     if (!tx.meta || tx.meta.TransactionResult !== 'tesSUCCESS') return { valid: false, reason: 'xrpl_tx_failed' };
     if (body.Destination !== expectedDest) return { valid: false, reason: 'xrpl_wrong_destination' };
     const delivered = tx.meta.delivered_amount;
+    const _memos = (body.Memos || tx.Memos || []).map((m) => m && m.Memo && m.Memo.MemoData).filter(Boolean);
+    const _rippleDate = tx.date !== undefined ? tx.date : body.date;
+    const _txTime = _rippleDate !== undefined ? Number(_rippleDate) + 946684800 : (tx.close_time_iso ? Math.floor(Date.parse(tx.close_time_iso) / 1000) : 0);
     if (asset === 'XRP') {
       const needDrops = BigInt(xrpl.xrpToDrops(PRICES.xrpl_xrp));
       if (typeof delivered !== 'string') return { valid: false, reason: 'xrpl_not_native_xrp' };
       if (BigInt(delivered) < needDrops) {
         return { valid: false, reason: 'xrpl_underpaid', delivered_drops: delivered, required_drops: needDrops.toString() };
       }
-      return { valid: true, rail: 'xrpl:xrp', txHash, amount_usd: PRICES.xrpl_xrp_usd, paid: (Number(delivered) / 1e6) + ' XRP', payer: body.Account || tx.Account || null };
+      return { valid: true, rail: 'xrpl:xrp', memos: _memos, tx_time: _txTime, txHash, amount_usd: PRICES.xrpl_xrp_usd, paid: (Number(delivered) / 1e6) + ' XRP', payer: body.Account || tx.Account || null };
     }
     if (!delivered || typeof delivered !== 'object') return { valid: false, reason: 'xrpl_not_issued_currency' };
     if (delivered.issuer !== RLUSD_ISSUER) return { valid: false, reason: 'xrpl_wrong_issuer' };
     if (Number(delivered.value) < Number(PRICES.xrpl_xrp)) {
       return { valid: false, reason: 'xrpl_underpaid', delivered: delivered.value, required: PRICES.xrpl_xrp };
     }
-    return { valid: true, rail: 'xrpl:rlusd', txHash, amount_usd: Number(delivered.value), paid: delivered.value + ' RLUSD', payer: body.Account || tx.Account || null };
+    return { valid: true, rail: 'xrpl:rlusd', memos: _memos, tx_time: _txTime, txHash, amount_usd: Number(delivered.value), paid: delivered.value + ' RLUSD', payer: body.Account || tx.Account || null };
   } catch (e) {
     try { if (client) await client.disconnect(); } catch (e2) { /* ignore */ }
     // FAIL CLOSED. Never fall through to a different verifier — that is how the old

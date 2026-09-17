@@ -178,7 +178,7 @@ async function verifyStellar(payment, opts) {
   if (!txHash || !/^[0-9a-f]{64}$/i.test(txHash)) return { valid: false, reason: 'stellar_txhash_missing_or_malformed' };
   if (!treasury) return { valid: false, reason: 'stellar_treasury_unset' };
   let r;
-  try { r = await httpsGetJson(horizon + '/transactions/' + txHash.toLowerCase() + '/payments?limit=50', 10000); }
+  try { r = await httpsGetJson(horizon + '/transactions/' + txHash.toLowerCase() + '/payments?limit=50&join=transactions', 10000); }
   catch (e) { return { valid: false, reason: 'stellar_verifier_unavailable', detail: (e.message || '').slice(0, 120), retryable: true }; }
   if (r.status === 404) return { valid: false, reason: 'stellar_tx_not_found', retryable: false };
   if (r.status !== 200 || !r.json) return { valid: false, reason: 'stellar_horizon_status_' + r.status, retryable: r.status >= 500 };
@@ -186,11 +186,14 @@ async function verifyStellar(payment, opts) {
   const hit = ops.find((o) => (o.type === 'payment' || o.type === 'path_payment_strict_send' || o.type === 'path_payment_strict_receive') && o.to === treasury && o.transaction_successful !== false && o.asset_type !== 'native' && o.asset_code === 'USDC' && o.asset_issuer === STELLAR_USDC_ISSUER);
   if (!hit) return { valid: false, reason: 'stellar_no_matching_usdc_payment_to_treasury' };
   if (Number(hit.amount) < Number(STELLAR_PRICE)) return { valid: false, reason: 'stellar_underpaid', delivered: hit.amount, required: STELLAR_PRICE };
-  return { valid: true, rail: 'stellar:usdc', txHash: txHash.toLowerCase(), amount_usd: Number(hit.amount), paid: hit.amount + ' USDC (Stellar)', payer: hit.from || hit.source_account || null };
+  const _t = hit.transaction || {};
+  const _memos = _t.memo_type === 'hash' && _t.memo ? [Buffer.from(_t.memo, 'base64').toString('hex')] : [];
+  const _txTime = Math.floor(Date.parse(_t.created_at || hit.created_at || 0) / 1000) || 0;
+  return { valid: true, rail: 'stellar:usdc', memos: _memos, tx_time: _txTime, txHash: txHash.toLowerCase(), amount_usd: Number(hit.amount), paid: hit.amount + ' USDC (Stellar)', payer: hit.from || hit.source_account || null };
 }
 
 function stellarAccept(status) {
-  return { scheme: 'exact', network: 'stellar:pubnet', asset: 'USDC', amount: String(Math.round(Number(STELLAR_PRICE) * 1e7)), maxTimeoutSeconds: 300, extra: { unit: 'stroops (7 decimals)', pay_first: true }, issuer: STELLAR_USDC_ISSUER, price: STELLAR_PRICE, payTo: status.payTo, pay_first: true, proof: 'present the transaction hash as X-PAYMENT {"network":"stellar:pubnet","txHash":"<hex>"}' };
+  return { scheme: 'exact', network: 'stellar:pubnet', asset: 'USDC', amount: String(Math.round(Number(STELLAR_PRICE) * 1e7)), maxTimeoutSeconds: 300, extra: { unit: 'stroops (7 decimals)', pay_first: true }, issuer: STELLAR_USDC_ISSUER, price: STELLAR_PRICE, payTo: status.payTo, pay_first: true, proof: 'send with memo type HASH = the memo_sha256 from this 402, then present X-PAYMENT {"network":"stellar:pubnet","txHash":"<hex>","nonce":"<nonce>"}' };
 }
 
 module.exports = { EXACT_LANES, STELLAR_USDC_ISSUER, STELLAR_PRICE, payToFor, selectLane, cdpSupported, exactLaneStatus, exactRequirements, toCanonicalExact, settleExactCdp, verifyStellar, stellarAccept, isEvmAddress, isSolanaAddress };

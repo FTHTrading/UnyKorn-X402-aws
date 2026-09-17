@@ -304,6 +304,7 @@ function taskPrice(taskName) {
   return Number.isFinite(p) && p > 0 ? p : rails.PRICES.base_usdc_usd;
 }
 const lanesMod = require('./_ops_lanes.cjs');
+const paynonce = require('./_ops_paynonce.cjs');
 
 function bazaarExtension(taskName) {
   const ex = BAZAAR_EXAMPLES[taskName]; if (!ex) return null;
@@ -336,6 +337,13 @@ async function sendChallenge(res, taskName) {
       lanes: r.lanes,
       retry_after_seconds: 300
     }, { 'Retry-After': '300' });
+  }
+  // Pay-first lanes get a per-challenge nonce: memo = sha256(nonce), present nonce with the tx hash.
+  const pf = paynonce.issue(taskName);
+  for (const a of accepts) {
+    if (a.network === 'xrpl:mainnet' || a.network === 'stellar:pubnet') {
+      a.extra = Object.assign({}, a.extra, { nonce: pf.nonce, memo_sha256: pf.memo_sha256, nonce_expires_at: pf.expires_at, instructions: paynonce.instructions(a.network) });
+    }
   }
   const ext = bazaarExtension(taskName);
   const payload = { x402Version: 2, error: 'Payment required', resource: resourceDoc(taskName), accepts, ...(ext ? { extensions: ext } : {}) };
@@ -394,6 +402,15 @@ async function handlePaid(req, res, taskName, body) {
     }, { 'Retry-After': '300' });
   }
 
+  // ---- step 0: pay-first lanes must present the nonce from their 402 (cheap check before any chain call) ----
+  let payNonce = null;
+  if (isXrpl || isStellar) {
+    payNonce = paynonce.check(payment.nonce, taskName, isXrpl ? 'xrpl' : 'stellar');
+    if (!payNonce.ok) {
+      return send(res, 402, { error: 'payment_not_bound', reason: payNonce.reason, message: 'Pay-first payments must carry the memo from a fresh 402 challenge and present its nonce. Request this endpoint without X-PAYMENT to get one. Nothing was charged by this refusal.' });
+    }
+  }
+
   // ---- step 1: establish that money actually moved to us ----
   let proof;
   if (isXrpl) {
@@ -408,7 +425,7 @@ async function handlePaid(req, res, taskName, body) {
           : 'That proof did not verify as a settled payment of the required amount to our address.'
       });
     }
-    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)', payer: v.payer || null };
+    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)', payer: v.payer || null, memos: v.memos || [], tx_time: v.tx_time || 0 };
   } else if (isStellar) {
     const v = await rails.verifyStellar(payment);
     if (!v.valid) {
@@ -421,7 +438,7 @@ async function handlePaid(req, res, taskName, body) {
           : 'That proof did not verify as a settled USDC payment of the required amount to our Stellar address.'
       });
     }
-    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)', payer: v.payer || null };
+    proof = { rail: v.rail, txHash: v.txHash, amount_usd: v.amount_usd, paid: v.paid, settled_by: 'payer (pay-first rail)', payer: v.payer || null, memos: v.memos || [], tx_time: v.tx_time || 0 };
   } else {
     const s = await rails.settleExact(payment, laneKey, { resourceUrl: PUBLIC_ORIGIN + CATALOG[taskName].path, extensions: bazaarExtension(taskName), priceUsd: taskPrice(taskName) });
     if (!s.ok) {
@@ -435,6 +452,12 @@ async function handlePaid(req, res, taskName, body) {
   }
 
   // ---- step 2: burn the proof so it cannot buy twice ----
+  if (payNonce) {
+    const b = paynonce.bind(payNonce, proof.memos, proof.tx_time, isXrpl ? 'xrpl' : 'stellar');
+    if (!b.ok) {
+      return send(res, 402, { error: 'payment_not_bound', reason: b.reason, message: 'That on-chain payment is not bound to this challenge (memo must equal sha256(nonce) and the payment must be sent after the challenge). It was not claimed.' });
+    }
+  }
   const claimed = ledger.claim(proof.rail, proof.txHash, { task: taskName });
   if (!claimed.ok) {
     alerts.alert('warn', 'x402 REPLAY refused', { Lane: proof.rail, Tx: proof.txHash, FirstSpent: claimed.consumedAt }, 'replay:' + proof.txHash);
