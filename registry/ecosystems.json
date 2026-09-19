@@ -1,0 +1,412 @@
+{
+  "meta": {
+    "version": 1,
+    "updatedAt": "2026-05-22T00:00:00Z",
+    "count": 35,
+    "registerDoc": "docs/ECOSYSTEM_REGISTER.md",
+    "composeFile": "deploy/ecosystems/docker-compose.yml",
+    "roadmapDoc": "docs/CONTAINER_ROADMAP.md"
+  },
+  "defaults": {
+    "x402GatewayUrl": "http://127.0.0.1:4020",
+    "apostleUrl": "http://127.0.0.1:7332",
+    "openclawGatewayUrl": "http://127.0.0.1:18789",
+    "nerveUrl": "http://127.0.0.1:3080",
+    "facilitatorPublicUrl": "https://x402.unykorn.org",
+    "paidEdgeUrl": "https://paid.unykorn.org"
+  },
+  "ecosystems": [
+    {
+      "id": "agape",
+      "name": "AGAPE Solana Estate",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\packages\\agape-anchor",
+      "purpose": "Sovereignty root — identity, content commit, rights stream",
+      "ports": { "solanaValidator": 8899, "solanaFaucet": 9900 },
+      "status": "building",
+      "container": { "profile": "agape", "image": "solanalabs/solana:stable", "optional": true },
+      "ownerAgent": "agape-guardian",
+      "integrationPath": "integrations/agape"
+    },
+    {
+      "id": "apostle",
+      "name": "Apostle Chain",
+      "repoPath": "C:\\Users\\Kevan\\apostle-chain-real",
+      "repoPathStub": "C:\\Users\\Kevan\\apostle-chain",
+      "purpose": "ATP settlement for x402 mesh",
+      "ports": { "http": 7332 },
+      "status": "active",
+      "container": { "profile": "apostle", "buildContextEnv": "APOSTLE_CHAIN_DIR" },
+      "ownerAgent": "x402-ranger",
+      "integrationPath": "integrations/apostle"
+    },
+    {
+      "id": "x402-gateway",
+      "name": "x402 Credit Gateway",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\packages\\x402-credit-gateway",
+      "purpose": "Facilitator verify, metering, treasury-scan",
+      "ports": { "http": 4020, "pm2Dev": 8402 },
+      "status": "active",
+      "container": { "profile": "x402-gateway", "image": "unykorn/x402-gateway:latest" },
+      "ownerAgent": "x402-ranger"
+    },
+    {
+      "id": "x402-proxy",
+      "name": "x402 Edge Proxy",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\workers\\x402-proxy",
+      "purpose": "HTTP 402 paid routes",
+      "ports": {},
+      "publicUrls": ["https://paid.unykorn.org", "https://pay.drunks.app"],
+      "status": "active",
+      "container": { "packaging": "cloudflare-worker" },
+      "ownerAgent": "x402-ranger"
+    },
+    {
+      "id": "concentrations",
+      "name": "Concentrations x402",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\integrations\\concentrations-x402",
+      "purpose": "Treasury concentration workstream",
+      "ports": {},
+      "status": "building",
+      "container": { "profile": null },
+      "ownerAgent": "x402-ranger",
+      "integrationPath": "integrations/concentrations-x402"
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw Gateway",
+      "repoPath": "C:\\Users\\Kevan\\.openclaw",
+      "purpose": "Agent gateway and sessions",
+      "ports": { "http": 18789 },
+      "status": "active",
+      "container": { "profile": "openclaw", "hostNative": true },
+      "ownerAgent": "main"
+    },
+    {
+      "id": "nerve",
+      "name": "Nerve Cockpit",
+      "repoPath": "C:\\Users\\Kevan\\openclaw-nerve",
+      "purpose": "Operator UI and gateway WS proxy",
+      "ports": { "http": 3080, "https": 3443 },
+      "status": "active",
+      "container": { "hostNative": true },
+      "ownerAgent": null
+    },
+    {
+      "id": "clawdcode",
+      "name": "Clawdcode (OpenClaw operator stack)",
+      "repoPath": "C:\\Users\\Kevan\\.openclaw",
+      "relatedRepoPaths": [
+        "C:\\Users\\Kevan\\openclaw-nerve",
+        "C:\\Users\\Kevan\\UnyKorn-X402-aws\\packages\\clawdbot",
+        "C:\\Users\\Kevan\\UnyKorn-X402-aws"
+      ],
+      "purpose": "Collective local operator toolchain — gateway, Nerve, ClawdBot, DONK mesh; desktop 1-click via START_CLAWDCODE_STACK.ps1",
+      "ports": { "gateway": 18789, "nerve": 3080, "clawdbot": 8089 },
+      "status": "active",
+      "container": { "hostNative": true },
+      "ownerAgent": "main",
+      "integrationPath": "integrations/clawdcode",
+      "launcher": "C:\\Users\\Kevan\\.openclaw\\workspace\\scripts\\START_CLAWDCODE_STACK.ps1",
+      "commandCenterLauncher": "C:\\Users\\Kevan\\.openclaw\\workspace\\scripts\\START_COMMAND_CENTER.ps1",
+      "desktopDoc": "C:\\Users\\Kevan\\.openclaw\\workspace\\docs\\DESKTOP_LAUNCHERS.md"
+    },
+    {
+      "id": "clawdbot",
+      "name": "ClawdBot",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\packages\\clawdbot",
+      "purpose": "OpenClaw task executor",
+      "ports": { "http": 8089 },
+      "status": "active",
+      "container": { "profile": "clawdbot" },
+      "ownerAgent": "infra-watchdog",
+      "integrationPath": "integrations/clawdbot"
+    },
+    {
+      "id": "troptions-os",
+      "name": "Troptions OS (Nano Bana 3D)",
+      "repoPath": "C:\\Users\\Kevan\\troptions-os",
+      "relatedRepoPath": "C:\\Users\\Kevan\\troptions",
+      "purpose": "Premium agentic browser shell — landing, onboarding, OS on :5000",
+      "ports": { "nanoBanaDev": 5000 },
+      "publicUrls": [],
+      "status": "building",
+      "container": { "hostNative": true, "appPath": "apps/nano-bana-3d" },
+      "ownerAgent": "troptions-scout",
+      "integrationPath": "integrations/troptions-os",
+      "registerDoc": "docs/TROPTIONS_SYSTEM_REGISTER.json"
+    },
+    {
+      "id": "troptions-browser",
+      "name": "Troptions Browser",
+      "repoPath": "C:\\Users\\Kevan\\browser",
+      "appPath": "apps\\sovereign-desktop",
+      "purpose": "Phase 2 Electron shell — Nano Bana 3D default; Phase 4 Chromium fork scaffold",
+      "ports": { "nanoBanaShell": 5000, "legacyNextOs": 3000 },
+      "publicUrls": [],
+      "status": "building",
+      "container": { "hostNative": true, "launcher": "START_TROPTIONS_BROWSER.ps1" },
+      "ownerAgent": "troptions-scout",
+      "integrationPath": "integrations/troptions-browser",
+      "relatedRepoPath": "C:\\Users\\Kevan\\troptions-os"
+    },
+    {
+      "id": "troptions",
+      "name": "Troptions OS",
+      "repoPath": "C:\\Users\\Kevan\\troptions",
+      "purpose": "Institutional digital asset control plane",
+      "ports": { "nextDev": 3000 },
+      "publicUrls": [
+        "https://troptions.unykorn.org",
+        "https://troptionslive.unykorn.org",
+        "https://troptions.drunks.app"
+      ],
+      "status": "active",
+      "container": {
+        "profile": "troptions",
+        "production": "cloudflare-opennext",
+        "wranglerConfig": "wrangler.jsonc"
+      },
+      "ownerAgent": "troptions-scout"
+    },
+    {
+      "id": "troptions-tv",
+      "name": "Troptions TV (TTN)",
+      "repoPath": "C:\\Users\\Kevan\\troptions",
+      "purpose": "TTN broadcast endpoint leaf under AGAPE",
+      "ports": {},
+      "publicUrls": ["https://troptionslive.unykorn.org"],
+      "status": "building",
+      "container": { "profile": "troptions", "sharedWith": "troptions" },
+      "ownerAgent": "troptions-scout",
+      "integrationPath": "integrations/troptions-tv",
+      "x402GateUrl": "https://paid.unykorn.org"
+    },
+    {
+      "id": "finn",
+      "name": "Finn Sovereign Agent",
+      "repoPath": "C:\\Users\\Kevan\\Finn",
+      "purpose": "Local agent, biometrics, voice, Oracle spine",
+      "ports": { "statusGateway": 7710, "rendererHttp": 8890, "rendererWs": 8891 },
+      "status": "active",
+      "container": { "phase": 2, "hostNative": true },
+      "ownerAgent": "infra-watchdog",
+      "integrationPath": "integrations/finn"
+    },
+    {
+      "id": "genesis",
+      "name": "Genesis Protocol",
+      "repoPath": "C:\\Users\\Kevan\\Genesis",
+      "purpose": "Deterministic simulation engine",
+      "ports": {},
+      "status": "active",
+      "container": { "profile": "genesis", "dockerfile": true },
+      "ownerAgent": "infra-watchdog",
+      "integrationPath": "integrations/genesis"
+    },
+    {
+      "id": "needai",
+      "name": "NEED AI Phone Service",
+      "repoPath": "C:\\Users\\Kevan\\needai",
+      "purpose": "Telnyx vanity numbers, AI answering",
+      "ports": { "next": 3000 },
+      "status": "active",
+      "container": { "profile": "needai" },
+      "ownerAgent": "x402-ranger",
+      "integrationPath": "integrations/needai"
+    },
+    {
+      "id": "solana-launcher",
+      "name": "Solana Token Launcher",
+      "repoPath": "C:\\Users\\Kevan\\solana-launcher",
+      "purpose": "SaaS SPL token launch + Stripe",
+      "ports": { "nextDev": 3000 },
+      "status": "active",
+      "container": { "phase": 3 },
+      "ownerAgent": "troptions-scout",
+      "integrationPath": "integrations/solana-launcher"
+    },
+    {
+      "id": "lps1-bridge",
+      "name": "LPS-1 Bridge",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\integrations\\lps1-bridge",
+      "purpose": "Provenance bridge to SNP memorial flow",
+      "ports": {},
+      "status": "building",
+      "container": null,
+      "ownerAgent": "agape-guardian",
+      "integrationPath": "integrations/lps1-bridge"
+    },
+    {
+      "id": "snp",
+      "name": "Sovereign Namespace Protocol",
+      "repoPath": "OneDrive - FTH Trading\\05-Sovereign\\sovereign-namespace-protocol",
+      "purpose": "Namespace CLI and resolver",
+      "ports": {},
+      "status": "external",
+      "container": null,
+      "ownerAgent": "agape-guardian",
+      "integrationPath": "integrations/snp"
+    },
+    {
+      "id": "3fs-channel",
+      "name": "3Fs Demo Channel",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\packages\\3fs-channel",
+      "purpose": "Demo content station under AGAPE estate",
+      "ports": {},
+      "status": "demo",
+      "container": null,
+      "ownerAgent": "agape-guardian"
+    },
+    {
+      "id": "child-first",
+      "name": "Child First Platform",
+      "repoPath": null,
+      "purpose": "Polygon child welfare transparency platform",
+      "ports": {},
+      "status": "live-off-repo",
+      "container": null,
+      "ownerAgent": "agape-guardian",
+      "integrationPath": "integrations/child-first"
+    },
+    {
+      "id": "revenue-watcher",
+      "name": "Revenue Watcher",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\packages\\x402-credit-gateway",
+      "purpose": "Poll gateway ATP and alert",
+      "ports": {},
+      "status": "active",
+      "container": { "profile": "core" },
+      "ownerAgent": "x402-ranger"
+    },
+    {
+      "id": "clawdhub",
+      "name": "ClawdHub",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\packages\\clawdhub",
+      "purpose": "Operator hub API",
+      "ports": { "http": 8099 },
+      "status": "active",
+      "container": null,
+      "ownerAgent": "infra-watchdog"
+    },
+    {
+      "id": "broker-dealer",
+      "name": "Broker-Dealer",
+      "repoPath": "C:\\Users\\Kevan\\Broker-Dealer",
+      "purpose": "SEC/FINRA trading platform",
+      "ports": {},
+      "status": "external",
+      "container": null,
+      "ownerAgent": "infra-watchdog"
+    },
+    {
+      "id": "rwa-os",
+      "name": "RWA OS",
+      "repoPath": "C:\\Users\\Kevan\\rwa-os",
+      "purpose": "Real-world asset tokenization",
+      "ports": {},
+      "status": "building",
+      "container": null,
+      "ownerAgent": "troptions-scout"
+    },
+    {
+      "id": "genesis-world",
+      "name": "Genesis World",
+      "repoPath": "C:\\Users\\Kevan\\genesis-world",
+      "purpose": "World sim + Drunks CF app",
+      "ports": {},
+      "status": "building",
+      "container": { "packaging": "cloudflare-worker" },
+      "ownerAgent": "infra-watchdog"
+    },
+    {
+      "id": "sovereign-vault",
+      "name": "Sovereign Vault Index",
+      "repoPath": "C:\\Users\\Kevan\\sovereign-vault",
+      "purpose": "Encrypted wallet metadata catalog",
+      "ports": {},
+      "status": "ready",
+      "container": null,
+      "ownerAgent": "vault-custodian"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama Local",
+      "repoPath": null,
+      "purpose": "Local LLM inference",
+      "ports": { "http": 11434 },
+      "status": "active",
+      "container": { "hostNative": true },
+      "ownerAgent": "infra-watchdog"
+    },
+    {
+      "id": "nginx-unykorn",
+      "name": "Nginx (compose)",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws\\docker\\nginx",
+      "purpose": "Reverse proxy for prod compose",
+      "ports": { "http": 80, "https": 443 },
+      "status": "optional",
+      "container": { "profile": "full" },
+      "ownerAgent": "infra-watchdog"
+    },
+    {
+      "id": "fifa-troptions",
+      "name": "FIFA Troptions",
+      "repoPath": "C:\\Users\\Kevan\\fifa troptions",
+      "purpose": "Sports crossover worker",
+      "ports": {},
+      "status": "building",
+      "container": { "packaging": "cloudflare-worker" },
+      "ownerAgent": "troptions-scout"
+    },
+    {
+      "id": "troptions-l1",
+      "name": "Troptions L1",
+      "repoPath": "C:\\Users\\Kevan\\Troptions-L1",
+      "purpose": "L1 experiments",
+      "ports": {},
+      "status": "idle",
+      "container": null,
+      "ownerAgent": "troptions-scout"
+    },
+    {
+      "id": "unified-orchestrator",
+      "name": "Unified Orchestrator",
+      "repoPath": "C:\\Users\\Kevan\\unified-orchestrator",
+      "purpose": "Cross-repo orchestration",
+      "ports": {},
+      "status": "idle",
+      "container": null,
+      "ownerAgent": "main"
+    },
+    {
+      "id": "clawd-teleynx",
+      "name": "Clawd Telnyx",
+      "repoPath": "C:\\Users\\Kevan\\clawd-teleynx",
+      "purpose": "Telnyx bridge for Clawd",
+      "ports": {},
+      "status": "building",
+      "container": null,
+      "ownerAgent": "infra-watchdog"
+    },
+    {
+      "id": "usdf",
+      "name": "USDF / FTH Stablecoin Rail",
+      "repoPath": "C:\\Users\\Kevan\\fth-stablecoin-rail",
+      "purpose": "Multi-chain stablecoin settlement",
+      "ports": {},
+      "status": "building",
+      "container": null,
+      "ownerAgent": "x402-ranger"
+    },
+    {
+      "id": "unykorn-x402",
+      "name": "UnyKorn X402 Monorepo",
+      "repoPath": "C:\\Users\\Kevan\\UnyKorn-X402-aws",
+      "purpose": "Hub for x402, AGAPE, integrations, compose",
+      "ports": {},
+      "status": "active",
+      "container": { "composeRoot": "deploy/ecosystems/docker-compose.yml" },
+      "ownerAgent": "x402-ranger"
+    }
+  ]
+}

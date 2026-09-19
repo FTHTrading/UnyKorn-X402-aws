@@ -1,0 +1,264 @@
+{
+  "version": "1",
+  "updated": "2026-05-22T12:00:00Z",
+  "description": "Sovereign tool arsenal — includes atlas-derived owned endpoints (see links-api.json)",
+  "atlas_source": "scripts/atlas_master_safe_v2.py",
+  "categories": ["links", "hf", "git", "mcp", "openclaw_builtin", "atlas_scanner"],
+  "entries": [
+    {
+      "id": "atlas-master-safe-v2",
+      "category": "atlas_scanner",
+      "name": "UNYKORN Atlas (safe v2 dry-run)",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/scripts/atlas_master_safe_v2.py",
+      "agent_owner": "infra-watchdog",
+      "sovereignty_tier": "owned",
+      "notes": "Read-only: ledgers, repos, PM2, CSV reports. Source: Desktop atlas_master_safe_v2.py"
+    },
+    {
+      "id": "atlas-safe-runner",
+      "category": "atlas_scanner",
+      "name": "run-atlas-safe.ps1",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/scripts/run-atlas-safe.ps1",
+      "agent_owner": "infra-watchdog",
+      "sovereignty_tier": "owned",
+      "notes": "No move/copy/delete/launch"
+    },
+    {
+      "id": "links-api-registry",
+      "category": "links",
+      "name": "Links API (atlas + mesh)",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/registry/links-api.json",
+      "agent_owner": "infra-watchdog",
+      "sovereignty_tier": "owned",
+      "notes": "30 atlas_derived owned endpoints; pair with ATLAS_MASTER.md"
+    },
+    {
+      "id": "ecosystems-json",
+      "category": "links",
+      "name": "Ecosystem register (JSON)",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/registry/ecosystems.json",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "atlas-paid-edge",
+      "category": "links",
+      "name": "x402 paid gateway",
+      "url": "https://paid.unykorn.org",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "03_Payment_Revenue"
+    },
+    {
+      "id": "atlas-facilitator",
+      "category": "links",
+      "name": "x402 facilitator",
+      "url": "https://x402.unykorn.org/health",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "03_Payment_Revenue"
+    },
+    {
+      "id": "atlas-drunks-proxy",
+      "category": "links",
+      "name": "Drunks x402 proxy",
+      "url": "https://pay.drunks.app",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "03_Payment_Revenue"
+    },
+    {
+      "id": "atlas-apostle-local",
+      "category": "links",
+      "name": "Apostle chain",
+      "url": "http://127.0.0.1:7332/health",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "02_Blockchain_Execution_Rails"
+    },
+    {
+      "id": "atlas-gateway-local",
+      "category": "links",
+      "name": "x402 credit gateway",
+      "url": "http://127.0.0.1:4020/health",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "03_Payment_Revenue"
+    },
+    {
+      "id": "atlas-openclaw",
+      "category": "links",
+      "name": "OpenClaw gateway",
+      "url": "http://127.0.0.1:18789/",
+      "agent_owner": "main",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "04_AI_Agent_Ops"
+    },
+    {
+      "id": "atlas-nerve",
+      "category": "links",
+      "name": "Nerve cockpit",
+      "url": "http://127.0.0.1:3080",
+      "local_path": "C:/Users/Kevan/openclaw-nerve",
+      "agent_owner": "infra-watchdog",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "08_Portals_Dashboards"
+    },
+    {
+      "id": "atlas-clawdbot",
+      "category": "links",
+      "name": "ClawdBot",
+      "url": "http://127.0.0.1:8089/health",
+      "agent_owner": "infra-watchdog",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "04_AI_Agent_Ops"
+    },
+    {
+      "id": "atlas-ollama",
+      "category": "links",
+      "name": "Ollama",
+      "url": "http://127.0.0.1:11434/api/tags",
+      "agent_owner": "infra-watchdog",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "04_AI_Agent_Ops"
+    },
+    {
+      "id": "atlas-ridgemont",
+      "category": "links",
+      "name": "Ridgemont Academy",
+      "url": "https://ridgemont.unykorn.org",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/apps/ridgemont-high",
+      "agent_owner": "main",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "08_Portals_Dashboards"
+    },
+    {
+      "id": "atlas-troptionslive",
+      "category": "links",
+      "name": "Troptions TV",
+      "url": "https://troptionslive.unykorn.org",
+      "agent_owner": "troptions-scout",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "07_TROPTIONS_Event_Media"
+    },
+    {
+      "id": "atlas-troptions",
+      "category": "links",
+      "name": "Troptions OS",
+      "url": "https://troptions.unykorn.org",
+      "local_path": "C:/Users/Kevan/troptions",
+      "agent_owner": "troptions-scout",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "07_TROPTIONS_Event_Media"
+    },
+    {
+      "id": "atlas-troptions-api",
+      "category": "links",
+      "name": "Troptions API",
+      "url": "https://api.troptions.unykorn.org",
+      "agent_owner": "troptions-scout",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "07_TROPTIONS_Event_Media"
+    },
+    {
+      "id": "atlas-troptions-exchange",
+      "category": "links",
+      "name": "Troptions exchange",
+      "url": "https://troptionsexchange.unykorn.org",
+      "agent_owner": "troptions-scout",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "07_TROPTIONS_Event_Media"
+    },
+    {
+      "id": "atlas-3fs",
+      "category": "links",
+      "name": "3Fs demo resolver",
+      "url": "https://3fs.unykorn.org",
+      "agent_owner": "agape-guardian",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "01_Core_Protocol_Proof"
+    },
+    {
+      "id": "atlas-api-unykorn",
+      "category": "links",
+      "name": "api.unykorn.org",
+      "url": "https://api.unykorn.org",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true,
+      "atlas_category": "08_Portals_Dashboards"
+    },
+    {
+      "id": "git-unykorn-x402",
+      "category": "git",
+      "name": "UnyKorn-X402-aws",
+      "url": "https://github.com/FTHTrading/UnyKorn-X402-aws",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "atlas_derived": true
+    },
+    {
+      "id": "git-programs-agape",
+      "category": "git",
+      "name": "AGAPE Anchor program",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/packages/agape-anchor",
+      "agent_owner": "agape-guardian",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "git-openclaw-nerve",
+      "category": "git",
+      "name": "openclaw-nerve",
+      "local_path": "C:/Users/Kevan/openclaw-nerve",
+      "agent_owner": "infra-watchdog",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "army-health-check",
+      "category": "openclaw_builtin",
+      "name": "army-health-check.ps1",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/scripts/army-health-check.ps1",
+      "agent_owner": "x402-ranger",
+      "sovereignty_tier": "owned",
+      "notes": "Probes atlas-derived public endpoints"
+    },
+    {
+      "id": "mcp-cloudflare-docs",
+      "category": "mcp",
+      "name": "Cloudflare docs MCP",
+      "agent_owner": "main",
+      "sovereignty_tier": "external_readonly"
+    },
+    {
+      "id": "openclaw-browser",
+      "category": "openclaw_builtin",
+      "name": "browser",
+      "agent_owner": "main",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "zenodo-lps1",
+      "category": "links",
+      "name": "LPS-1 Zenodo record",
+      "url": "https://doi.org/10.5281/zenodo.18646886",
+      "agent_owner": "agape-guardian",
+      "sovereignty_tier": "fork"
+    }
+  ]
+}

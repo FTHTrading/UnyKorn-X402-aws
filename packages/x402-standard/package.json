@@ -1,0 +1,11 @@
+{
+  "name": "@unykorn/x402-standard",
+  "version": "1.0.0",
+  "description": "Canonical ATP x402 config + receipt verification for UnyKorn web3 properties",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,92 @@
+{
+  "version": "1",
+  "updated": "2026-05-22T18:00:00Z",
+  "description": "Curated sovereign links — deep links for agents, Nerve, platform hub",
+  "links": [
+    {
+      "id": "platform-hub",
+      "label": "UnyKorn Platform Hub",
+      "url": "https://xrplloans.unykorn.org/platform",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/apps/xrpl-platform-hub",
+      "category": "web",
+      "sovereignty_tier": "owned",
+      "notes": "Top 20 properties + featured Ridgemont faculty; mirror from apps/xrpl-platform-hub"
+    },
+    {
+      "id": "cloudflare-inventory",
+      "label": "Cloudflare Pages inventory JSON",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/registry/cloudflare-pages-inventory.json",
+      "category": "internal",
+      "sovereignty_tier": "owned",
+      "notes": "129 pasted URLs — run scripts/build-cf-inventory.ps1 to refresh"
+    },
+    {
+      "id": "cloudflare-dns-master",
+      "label": "DNS master doc",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/docs/CLOUDFLARE_DNS_MASTER.md",
+      "category": "internal",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "ridgemont-faculty-80s",
+      "label": "Ridgemont Faculty (70s/80s)",
+      "url": "https://ridgemont.unykorn.org/faculty",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/apps/ridgemont-high/faculty.html",
+      "category": "web",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "ridgemont-academy",
+      "label": "Ridgemont AI Academy",
+      "url": "https://ridgemont.unykorn.org",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/apps/ridgemont-high",
+      "category": "web",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "genesis402-hub",
+      "label": "Genesis402 x402 hub",
+      "url": "https://genesis402.com",
+      "local_path": "C:/Users/Kevan/UnyKorn-X402-aws/packages/fth-x402-site",
+      "category": "x402",
+      "sovereignty_tier": "owned",
+      "notes": "Canonical protocol hub — replaces weak x402.unykorn.org marketing page"
+    },
+      "label": "x402 paid gateway",
+      "url": "https://paid.unykorn.org",
+      "category": "x402",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "x402-facilitator",
+      "label": "x402 facilitator (API)",
+      "url": "https://x402.unykorn.org/health",
+      "category": "x402",
+      "sovereignty_tier": "owned",
+      "notes": "Marketing UI deprecated → genesis402.com"
+    },
+    {
+      "id": "goatx-solana-mint",
+      "label": "GoatX ($GOATX) Solana mint",
+      "url": "https://solscan.io/token/9VJQV99t9vaY5vpMkMW3xRyxfhirDfbJXb7ymCpjQMSv",
+      "category": "troptions",
+      "sovereignty_tier": "owned"
+    },
+    {
+      "id": "goatx-raydium-pool",
+      "label": "GoatX/SOL Raydium pool",
+      "url": "https://raydium.io/swap/?inputMint=sol&outputMint=9VJQV99t9vaY5vpMkMW3xRyxfhirDfbJXb7ymCpjQMSv",
+      "category": "troptions",
+      "sovereignty_tier": "owned",
+      "notes": "CPMM pool DTVpfkS7eQea6BVQRdMgc8oTpDvaJHB2G997CVPyR22p"
+    },
+    {
+      "id": "xrpl-standards-preview",
+      "label": "XRPL standards Pages preview",
+      "url": "https://2a6cdbce.xrpl-standards.pages.dev/",
+      "category": "web",
+      "sovereignty_tier": "owned",
+      "project_guess": "xrpl-standards"
+    }
+  ]
+}

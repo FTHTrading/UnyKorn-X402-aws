@@ -1,0 +1,12 @@
+﻿name = "genesis402-apex"
+main = "index.js"
+compatibility_date = "2026-09-02"
+account_id = "07bcc4a189ef176261b818409c95891f"
+
+[[routes]]
+pattern = "genesis402.com/*"
+zone_name = "genesis402.com"
+
+[[routes]]
+pattern = "www.genesis402.com/*"
+zone_name = "genesis402.com"

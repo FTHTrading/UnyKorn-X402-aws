@@ -1,0 +1,20 @@
+[package]
+name = "agape"
+version = "0.1.0"
+description = "AGAPE Phase 0 — Experience Provenance & Digital Inheritance (Solana)"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "agape"
+
+[features]
+idl-build = ["anchor-lang/idl-build"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.1"

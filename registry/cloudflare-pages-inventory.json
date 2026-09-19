@@ -1,0 +1,946 @@
+﻿{
+    "meta":  {
+                 "version":  1,
+                 "updatedAt":  "2026-05-24T00:00:00Z",
+                 "count":  132,
+                 "account":  "kevanbtc@gmail.com",
+                 "hubUrl":  "https://unykorn.ai",
+                 "zonesKnown":  [
+                                    "unykorn.org",
+                                    "unykorn.ai",
+                                    "mensofgod.com",
+                                    "drunks.app",
+                                    "optkas.org",
+                                    "heliosdigital.xyz",
+                                    "xxxiii.io",
+                                    "y3kmarkets.com",
+                                    "nil33.com"
+                                ]
+             },
+    "entries":  [
+                    {
+                        "url":  "https://xrplloans.unykorn.org/platform",
+                        "type":  "custom",
+                        "project_guess":  "xrpl-standards",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://2a6cdbce.xrpl-standards.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "xrpl-standards",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://363b0c1c.xrpl-standards.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "xrpl-standards",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://yess-mensofgod.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://wholesale-lighting.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "wholesale-lighting.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://tax.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "tax.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fthusdf.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fthusdf",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://triton.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "triton.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fth-demo.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fth-demo.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://bot1-f39.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "bot1-f39.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://ridgemont-academy.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "ridgemont-academy",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fthtcb.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fthtcb.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://bio-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "bio-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://cricket-frontend.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "cricket-frontend.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://gamified-cricket.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "gamified-cricket.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://kalishi-edge-dashboard.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "kalishi-edge-dashboard.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://dignity.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "dignity.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://gmiie-dev.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "gmiie-dev.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://legal-chain-web.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "legal-chain-web.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://system-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "system-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://nil33.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "nil33.pages.dev",
+                        "zone":  "nil33.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://x402-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "x402-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://explorer-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "explorer-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://legal-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "legal-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://tronsite-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "tronsite-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://tronfraud-unykorn.pages.dev/login",
+                        "type":  "pages.dev",
+                        "project_guess":  "tronfraud-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://marquis-unykorn.pages.dev/login",
+                        "type":  "pages.dev",
+                        "project_guess":  "marquis-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://law-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "law-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://stoanhedge.mensofgod.com/",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://build.mensofgod.com/",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://childfirst.mensofgod.com/",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://unykorn-explorer.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "unykorn-explorer.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://chi-mensofgod.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://x402-site-a5m.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "x402-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fitzherbert-university.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fitzherbert-university.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://eternalchain-v2.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "eternalchain-v2.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://eternalchain.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "eternalchain.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://234f3067.super-s.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "super-s.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://gmiie-news.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "gmiie-news.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://mensofgod.com/",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://mensofgod.com/mog",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://www.mensofgod.com/guide",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://drunks-app.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "drunks-app.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://2500-donkeys.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "2500-donkeys.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://unykorn-ico.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "unykorn-ico.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://buck-fraud-system.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "buck-fraud-system.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://b01f5329.unykorn-institutional.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "unykorn-institutional.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://0b249214.unykorn-institutional.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "unykorn-institutional.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://y3kmarkets.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "y3kmarkets.pages.dev",
+                        "zone":  "y3kmarkets.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://unykorn-gold-portal.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "unykorn-gold-portal.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://mog-liquidity-desk.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://dr.optkas.org/",
+                        "type":  "custom",
+                        "project_guess":  "optkas-site",
+                        "zone":  "optkas.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://unykorn-4c2.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "unykorn-4c2.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://avax-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "avax-unykorn.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://a07de520.needai-platform.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://freelance-command-center-8z7.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "freelance-command-center-8z7.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://donk.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "donk.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://helios-films.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "helios-digital-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://xxxiii-io.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "xxxiii-io.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://doc-intelligence.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "doc-intelligence.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://www.mensofgod.com/intake",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://optkas-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "optkas-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://4fb1847f.bio-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "bio-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://bio.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "bio-unykorn",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://optkas-golf-hole.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "optkas-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://optkas.org/",
+                        "type":  "custom",
+                        "project_guess":  "optkas-site",
+                        "zone":  "optkas.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://helios-donk-city.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "helios-digital-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://helios-digital-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "helios-digital-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fifa-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fifa-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://ba6d2057.fifa-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fifa-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://d567975e.fifa-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fifa-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://needai-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://7aa2a519.needai-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://bed7ead5.needai-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://2c76e325.needai-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://51e68082.needai-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://f0d11d87.needai-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://console.optkas.org/",
+                        "type":  "custom",
+                        "project_guess":  "optkas-site",
+                        "zone":  "optkas.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://d458f510.brokerdealer-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "brokerdealer-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://3f5a7287.brokerdealer-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "brokerdealer-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://94513a58.brokerdealer-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "brokerdealer-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://c3f872c6.brokerdealer-unykorn.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "brokerdealer-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://sblc.optkas.org/",
+                        "type":  "custom",
+                        "project_guess":  "optkas-site",
+                        "zone":  "optkas.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fifa-wilkins.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "fifa-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://e32044d3.silver-unykorn-org.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "silver-unykorn-org.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fifa-wilkins.kevanbtc.workers.dev/select-language",
+                        "type":  "workers.dev",
+                        "project_guess":  "fifa-unykorn",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://abf5659d.needai-site.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "needai-site",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://youth.unykorn.org/missions",
+                        "type":  "custom",
+                        "project_guess":  "youth.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://trades.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "trades.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fthedu.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "fthedu.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://brokerdealer.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "brokerdealer-unykorn",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://portfolio.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "portfolio.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://x402.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "x402-unykorn",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://law.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "law.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://tronfraud.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "tronfraud.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://tronsite.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "tronsite.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fthtrading.github.io/sunfarm--platform/",
+                        "type":  "github",
+                        "project_guess":  "fthtrading.github.io",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://mensofgod.com/guide",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fraud.mensofgod.com/buck/",
+                        "type":  "custom",
+                        "project_guess":  "mensofgod-site",
+                        "zone":  "mensofgod.com",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://troptionsexchange.unykorn.org/exchange-os",
+                        "type":  "custom",
+                        "project_guess":  "troptions",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fifa.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "fifa-unykorn",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://black.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "black.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://t.drunks.app/troptions",
+                        "type":  "custom",
+                        "project_guess":  "troptions",
+                        "zone":  "drunks.app",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fifa.unykorn.org/emergency",
+                        "type":  "custom",
+                        "project_guess":  "fifa-unykorn",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://troptionsexchange.unykorn.org/exchange-os/solana",
+                        "type":  "custom",
+                        "project_guess":  "troptions",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://legacy-vault-protocol.vercel.app/",
+                        "type":  "external",
+                        "project_guess":  "legacy-vault-protocol.vercel.app",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://papers.ssrn.com/Sol3/Cf_Dev/AbsByAuth.cfm?per_id=10381097",
+                        "type":  "external",
+                        "project_guess":  "papers.ssrn.com",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://crates.io/crates/genesis-multiverse",
+                        "type":  "external",
+                        "project_guess":  "crates.io",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://www.moltbook.com/u/genesisprotocol",
+                        "type":  "external",
+                        "project_guess":  "www.moltbook.com",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://super-s.pages.dev/genesis",
+                        "type":  "pages.dev",
+                        "project_guess":  "super-s.pages.dev",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://zenodo.org/records/18729652",
+                        "type":  "external",
+                        "project_guess":  "zenodo.org",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://xxxiii.io/briefs/",
+                        "type":  "custom",
+                        "project_guess":  "xxxiii.io",
+                        "zone":  "xxxiii.io",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://news.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "news.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://donkeys.xxxiii.io/",
+                        "type":  "custom",
+                        "project_guess":  "donkeys.xxxiii.io",
+                        "zone":  "xxxiii.io",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://la.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "la.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://xxxiii.io/",
+                        "type":  "custom",
+                        "project_guess":  "xxxiii.io",
+                        "zone":  "xxxiii.io",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://diaintake.netlify.app/",
+                        "type":  "external",
+                        "project_guess":  "diaintake.netlify.app",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fthtrading.github.io/M1/",
+                        "type":  "github",
+                        "project_guess":  "fthtrading.github.io",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://fthtrading.github.io/Ai-Franchise/",
+                        "type":  "github",
+                        "project_guess":  "fthtrading.github.io",
+                        "zone":  null,
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://heliosdigital.xyz/",
+                        "type":  "custom",
+                        "project_guess":  "helios-digital-site",
+                        "zone":  "heliosdigital.xyz",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://ridgemont.unykorn.org/faculty",
+                        "type":  "custom",
+                        "project_guess":  "ridgemont-academy",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://paid.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "paid.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://pay.drunks.app/",
+                        "type":  "custom",
+                        "project_guess":  "pay.drunks.app",
+                        "zone":  "drunks.app",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://troptionslive.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "troptions",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://troptions.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "troptions",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://3fs.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "3fs.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://api.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "api.unykorn.org",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://xrplloans.unykorn.org/",
+                        "type":  "custom",
+                        "project_guess":  "xrpl-standards",
+                        "zone":  "unykorn.org",
+                        "status":  "inventory"
+                    },
+                    {
+                        "url":  "https://unykorn.ai/",
+                        "type":  "custom",
+                        "project_guess":  "unykorn-ai-portal",
+                        "zone":  "unykorn.ai",
+                        "status":  "pending_deploy"
+                    },
+                    {
+                        "url":  "https://unykorn-ai-portal.pages.dev/",
+                        "type":  "pages.dev",
+                        "project_guess":  "unykorn-ai-portal",
+                        "zone":  null,
+                        "status":  "pending_deploy"
+                    },
+                    {
+                        "url":  "https://command.unykorn.ai/",
+                        "type":  "custom",
+                        "project_guess":  "jarvis-hail",
+                        "zone":  "unykorn.ai",
+                        "status":  "pending_dns"
+                    }
+                ]
+}
